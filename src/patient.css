@@ -1,0 +1,77 @@
+.patient-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--sk-space);
+  margin-bottom: var(--sk-space);
+}
+.patient-panel-body { padding: var(--sk-space); }
+.patient-next-visit .eyebrow,.patient-shortcuts .eyebrow,.patient-recent-visits .eyebrow,.patient-profile-details .eyebrow { display: block; margin-bottom: 10px; }
+.patient-appointment-date { display: flex; align-items: center; gap: 12px; color: var(--sk-brand); padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--sk-line); }
+.patient-appointment-date > div { flex: 1; }
+.patient-appointment-date b { display: block; font-size: 15px; font-weight: 500; }
+.patient-appointment-date small { display: block; color: var(--sk-muted); font-size: 12px; margin-top: 4px; }
+.patient-next-visit h2 { font-size: 25px; font-weight: 400; margin-bottom: 8px; }
+.patient-next-visit .notice { margin-block: 22px; }
+.patient-shortcut,.patient-history-row { display: flex; align-items: center; gap: 14px; width: 100%; padding: 18px 0; text-align: left; background: none; color: var(--sk-ink); border: 0; border-bottom: 1px solid var(--sk-line); }
+.patient-shortcut:first-child { padding-top: 0; }
+.patient-shortcut:last-child,.patient-history-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.patient-shortcut > span:nth-child(2),.patient-history-row > span:nth-child(2) { flex: 1; min-width: 0; }
+.patient-shortcut b,.patient-history-row b { display: block; font-size: 14px; font-weight: 500; }
+.patient-shortcut small,.patient-history-row small { display: block; font-size: 12px; color: var(--sk-muted); line-height: 1.8; margin-top: 4px; }
+.patient-shortcut > svg,.patient-history-row > svg { color: var(--sk-brand); flex-shrink: 0; transition: transform .2s; }
+.patient-shortcut:hover > svg,.patient-history-row:hover > svg { transform: translateX(3px); }
+.patient-recent-visits .patient-panel-body { padding-top: 12px; }
+.patient-queue-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(270px, 1fr); gap: var(--sk-space); align-items: start; }
+.patient-queue-guide { padding: 30px; }
+.patient-queue-guide > .icon-tile { margin-bottom: 22px; }
+.patient-queue-guide > .eyebrow { display: block; margin-bottom: 14px; }
+.ws-app .patient-queue-guide h3 { font-size: 24px; font-weight: 400; letter-spacing: -.7px; line-height: 1.4; }
+.patient-queue-guide > ol { list-style: decimal; padding-left: 18px; margin-block: 28px; }
+.patient-queue-guide > ol li { padding-left: 6px; margin-bottom: 24px; color: var(--sk-brand); }
+.patient-queue-guide > ol b { font-size: 13px; font-weight: 500; color: var(--sk-ink); }
+.patient-queue-guide > ol p { font-size: 12px; color: var(--sk-muted); line-height: 1.8; margin-top: 7px; }
+.patient-queue-footnote { font-size: 11px; color: var(--sk-muted); line-height: 1.8; }
+.patient-queue-progress { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 0; margin: 30px 0; list-style: none; }
+.patient-queue-progress li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.patient-queue-progress li:not(:last-child)::after { content: ""; position: absolute; width: calc(100% - 34px); left: calc(50% + 17px); top: 15px; height: 1px; background: var(--sk-line); }
+.patient-queue-progress li > span { width: 30px; height: 30px; border: 1px solid var(--sk-line); border-radius: 50%; display: grid; place-items: center; color: var(--sk-muted); background: var(--sk-surface); font-size: 11px; }
+.patient-queue-progress li small { font-size: 10px; color: var(--sk-muted); }
+.patient-queue-progress li.current > span { background: var(--sk-brand); border-color: var(--sk-brand); color: var(--sk-surface); box-shadow: 0 0 0 5px var(--sk-tint); }
+.patient-queue-progress li.current small { color: var(--sk-brand); font-weight: 500; }
+.patient-queue-progress li.complete > span { background: var(--sk-success-bg); color: var(--sk-success); border-color: var(--sk-success-bg); }
+.patient-queue-progress li.complete::after { background: var(--sk-success); opacity: .3; }
+.patient-profile-layout { display: grid; grid-template-columns: minmax(230px, .8fr) minmax(0, 2fr); gap: var(--sk-space); align-items: start; }
+.patient-profile-identity { padding: 36px 26px; text-align: center; }
+.patient-profile-identity > .avatar.large { display: flex; margin: 0 auto 24px; height: 84px; width: 84px; }
+.patient-profile-identity h2 { font-size: 25px; font-weight: 400; line-height: 1.4; overflow-wrap: anywhere; }
+.patient-profile-identity > .muted { margin-block: 9px 20px; }
+.patient-profile-fixed { display: flex; text-align: left; align-items: flex-start; gap: 9px; padding-top: 25px; margin-top: 28px; border-top: 1px solid var(--sk-line); color: var(--sk-muted); font-size: 11px; line-height: 1.9; }
+.patient-profile-fixed svg { flex-shrink: 0; margin-top: 3px; color: var(--sk-brand); }
+.patient-profile-details .panel-heading { align-items: flex-start; }
+.ws-app .patient-detail-heading { display: flex; align-items: center; gap: 9px; font-size: 14px; padding-bottom: 16px; border-bottom: 1px solid var(--sk-line); color: var(--sk-brand); }
+.patient-profile-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 22px 0 34px; }
+.patient-profile-fields:last-child { margin-bottom: 0; }
+.patient-profile-fields dt { font-size: 11px; color: var(--sk-muted); margin-bottom: 8px; }
+.patient-profile-fields dd { margin: 0; font-size: 14px; color: var(--sk-ink); overflow-wrap: anywhere; line-height: 1.8; }
+.patient-profile-fields .full-width { grid-column: 1 / -1; }
+@media (max-width: 1050px) {
+  .patient-overview-grid,.patient-queue-layout { grid-template-columns: 1fr; }
+  .patient-profile-layout { grid-template-columns: 1fr; }
+  .patient-profile-identity > .avatar.large { margin-bottom: 15px; }
+  .patient-profile-fixed { max-width: 400px; margin-inline: auto; }
+}
+@media (max-width: 650px) {
+  .patient-panel-body { padding: 20px; }
+  .patient-appointment-date { gap: 9px; flex-wrap: wrap; }
+  .patient-appointment-date b { font-size: 14px; }
+  .patient-appointment-date > svg { width: 18px; }
+  .patient-next-visit h2 { font-size: 23px; }
+  .patient-shortcut small,.patient-history-row small { font-size: 11px; }
+  .patient-history-row { gap: 10px; flex-wrap: wrap; }
+  .patient-history-row > .badge { margin-left: auto; }
+  .patient-queue-guide { padding: 25px; }
+  .patient-profile-details .panel-heading { flex-direction: column; align-items: flex-start; gap: 18px; }
+  .patient-profile-fields { gap: 22px 18px; }
+  .patient-profile-fields dd { font-size: 13px; }
+  .patient-queue-progress li small { font-size: 9px; }
+}

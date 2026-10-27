@@ -1,0 +1,77 @@
+.sky-site {
+  --public-card: #ffffff;
+  --public-soft: #f5f8fc;
+  --public-border: #e6edf5;
+}
+.sky-site .web-header-inner { width: min(1280px, calc(100% - 64px)); }
+.sky-site .web-navigation button { font-size: 12px; padding: 9px 17px; }
+.sky-site .web-login { font-size: 12px !important; }
+.sky-site .web-header .web-button { font-size: 11px !important; padding: 10px 15px; }
+.sky-site .web-button { font-size: 12px !important; }
+.sky-site .web-eyebrow { font-size: 9px; }
+.sky-site .web-section-title p { font-size: 14px; line-height: 1.8; max-width: 520px; }
+.sky-site .web-service p { font-size: 13px; line-height: 1.9; }
+.sky-site .web-service-tag { font-size: 10px; }
+.sky-site .web-service > button { font-size: 12px; }
+.sky-site .web-service { min-width: 0; }
+.sky-site .web-services { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.sky-site .web-doctor-info > span { font-size: 11px; }
+.sky-site .web-doctor-info p { font-size: 11px; flex-wrap: wrap; line-height: 1.7; }
+.sky-site .web-doctor-info button { font-size: 12px; }
+.sky-site .web-doctor h3 { font-size: 21px; line-height: 1.4; }
+.sky-site .web-photo-note { font-size: 10px; line-height: 1.7; }
+.web-doctor-placeholder { height: 100%; background: linear-gradient(145deg, #ecf3fc, #dbe9f5); display: flex; flex-direction: column; gap: 22px; align-items: center; justify-content: center; color: #7089aa; padding: 30px; text-align: center; }
+.web-doctor-placeholder b { font-size: 17px; font-weight: 500; line-height: 1.6; }
+.web-schedule-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 16px 25px; background: var(--public-soft); border: 1px solid var(--public-border); border-radius: 12px; margin-top: 40px; }
+.web-schedule-tools label { font-size: 12px; }
+.web-schedule-tools input,.web-schedule-tools select { font-size: 13px; border-color: var(--public-border); }
+.web-schedule-caption { font-size: 12px; color: var(--web-muted); margin: 27px 0 18px; }
+.web-schedule-list { display: flex; flex-direction: column; gap: 14px; }
+.web-schedule-list article { display: flex; align-items: center; gap: 20px; border: 1px solid var(--public-border); border-radius: 12px; padding: 24px; background: var(--public-card); }
+.web-schedule-list article > div { flex: 1; }
+.web-schedule-list h3 { font-size: 17px; line-height: 1.6; font-weight: 500; }
+.web-schedule-list p { font-size: 12px; color: var(--web-muted); margin-top: 5px; }
+.web-schedule-list small { font-size: 11px; color: #7b8ca3; display: block; margin-top: 8px; }
+.web-quota { font-size: 11px; color: #bb7c68; background: #fcf3ef; border-radius: 6px; padding: 8px 10px; white-space: nowrap; }
+.web-quota.available { color: #4c8b7e; background: #eff8f4; }
+.web-prototype-note { display: flex; align-items: flex-start; gap: 10px; background: #f0f5fc; color: #6c82a3; border: 1px solid #e0eaf8; border-radius: 8px; padding: 16px; font-size: 12px; line-height: 1.9; margin-top: 25px; }
+.web-prototype-note > svg { flex-shrink: 0; margin-top: 3px; }
+.web-schedule-empty { text-align: center; padding: 65px 25px; border: 1px dashed var(--public-border); border-radius: 12px; color: var(--web-muted); }
+.web-schedule-empty > svg { margin: 0 auto 20px; }
+.web-schedule-empty h3 { margin-bottom: 12px; font-weight: 500; color: var(--web-ink); }
+.web-schedule-empty p { font-size: 13px; line-height: 1.8; }
+.sky-site .web-real-map { display: flex; flex-direction: column; padding: 0; overflow: hidden; background: var(--public-soft); }
+.web-real-map iframe { width: 100%; flex: 1; min-height: 380px; border: 0; }
+.sky-site .web-real-map small { position: static; padding: 12px; font-size: 10px; color: var(--web-muted); }
+.sky-site .web-auth-form > small { font-size: 10px; line-height: 1.9; }
+.sky-site .web-footer-column button,.sky-site .web-footer-contact > a { font-size: 12px; }
+.sky-site .web-footer-about > p { font-size: 13px; }
+@media (max-width: 1000px) {
+  .sky-site .web-header-inner { width: calc(100% - 40px); gap: 15px; }
+  .sky-site .web-navigation button { padding-inline: 12px; font-size: 11px; }
+  .sky-site .web-header-actions { gap: 12px; }
+  .web-schedule-list article { gap: 15px; flex-wrap: wrap; }
+  .web-schedule-list article > div { flex-basis: 60%; }
+}
+@media (max-width: 650px) {
+  .sky-site .web-header .web-button { display: none; }
+  .sky-site .web-brand { font-size: 21px !important; }
+  .sky-site .web-header-inner { width: calc(100% - 36px); }
+  .sky-site .web-navigation { gap: 0; }
+  .sky-site .web-navigation button { font-size: 10px; padding-inline: 9px; }
+  .sky-site .web-services { grid-template-columns: 1fr; }
+  .sky-site .web-section-title p { font-size: 13px; }
+  .sky-site .web-service p { font-size: 13px; min-height: 0; }
+  .web-schedule-tools { grid-template-columns: 1fr; gap: 0; padding: 10px 18px; margin-top: 28px; }
+  .web-schedule-tools label { margin-block: 12px; }
+  .web-schedule-list article { padding: 20px; gap: 12px; }
+  .web-schedule-list article > .web-service-icon { display: none; }
+  .web-schedule-list article > div { flex-basis: 100%; }
+  .web-schedule-list h3 { font-size: 17px; }
+  .web-schedule-list .web-button { margin-left: auto; font-size: 10px !important; }
+  .web-quota { font-size: 10px; }
+  .sky-site .web-footer-column button,.sky-site .web-footer-contact > a { font-size: 11px; }
+}
+@media (max-width: 560px) {
+  .sky-site .web-navigation button { font-size: 13px; padding: 12px 15px; }
+}

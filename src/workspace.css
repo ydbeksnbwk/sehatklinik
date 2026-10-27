@@ -1,0 +1,166 @@
+.ws-app {
+  --ws-ink: #233551;
+  --ws-muted: #7b8ba1;
+  --ws-blue: #2563eb;
+  --ws-line: #e7edf5;
+  --ws-soft: #f3f7fd;
+  --ws-radius: 12px;
+  color: var(--ws-ink);
+}
+.ws-brand { background: none; border: 0; text-align: left; }
+.ws-app .sidebar { overflow-y: auto; }
+.ws-app .sidebar-bottom { padding-top: 30px; }
+.ws-app .content { max-width: 1600px; }
+.ws-app .page-heading { margin-block: 28px; }
+.ws-app .page-heading p { font-size: 12px; line-height: 1.8; color: var(--ws-muted); }
+.ws-app .page-heading h1 { font-size: 28px; }
+.ws-app .panel { border-radius: var(--ws-radius); }
+.ws-app .panel-heading p { font-size: 11px; line-height: 1.6; }
+.ws-app .primary,.ws-app .secondary,.ws-app .destructive { font-size: 12px; min-height: 40px; }
+.ws-app .table-tools { flex-wrap: wrap; padding-block: 22px; }
+.ws-app .search { max-width: 300px; min-height: 39px; background: white; }
+.ws-app .search input { font-size: 11px; }
+.ws-app .filters select { font-size: 10px; min-height: 39px; max-width: 155px; }
+.ws-app th { font-size: 10px; padding-block: 14px; }
+.ws-app td { font-size: 11px; padding-block: 18px; }
+.ws-app td b { font-size: 11px; }
+.ws-app td small { font-size: 9px; }
+.ws-app .badge { font-size: 10px; border-radius: 5px; padding: 6px 8px; }
+.ws-app .count { font-size: 10px; }
+.ws-app .queue-number { font-size: 11px; }
+.ws-app .pagination { font-size: 10px; padding: 17px 20px; }
+.ws-app .pagination button { width: 28px; height: 28px; font-size: 11px; }
+.ws-app .text-button { font-size: 11px; }
+.ws-app .stat-top { font-size: 12px; }
+.ws-app .stat-value { font-size: 34px; margin-top: 12px; }
+.ws-app .stat-bottom { font-size: 10px; min-height: 16px; }
+.ws-demo-strip { display: flex; align-items: center; gap: 9px; border: 1px solid #e2eaf8; color: #7186a5; background: #eff5fd; border-radius: 7px; padding: 11px 14px; font-size: 10px; line-height: 1.6; }
+.ws-demo-strip > svg { flex-shrink: 0; }
+.ws-demo-date { margin-left: auto; white-space: nowrap; font-size: 9px; letter-spacing: 1px; }
+.ws-preview-label { color: var(--ws-muted); font-size: 10px; }
+.ws-overview { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr); gap: 22px; margin-bottom: 24px; align-items: start; }
+.ws-operational { grid-template-columns: minmax(0, 2.4fr) minmax(270px, 1fr); }
+.ws-distribution-row { margin: 25px 25px 0; }
+.ws-distribution-row > div:first-child { display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-bottom: 10px; }
+.ws-distribution-row b { font-size: 13px; font-weight: 600; }
+.ws-distribution-row small { color: var(--ws-muted); font-size: 10px; font-weight: 400; }
+.ws-quota-track { height: 5px; border-radius: 10px; background: #edf2fa; overflow: hidden; }
+.ws-quota-track > span { display: block; height: 100%; background: #739bf0; border-radius: inherit; }
+.ws-distribution .schedule-link { margin-top: 27px; font-size: 11px; padding-block: 18px; }
+.ws-sessions { padding-bottom: 10px; }
+.ws-session { display: flex; align-items: center; gap: 10px; margin-inline: 20px; padding-block: 19px; border-bottom: 1px solid var(--ws-line); }
+.ws-session:last-child { border: 0; }
+.ws-session > div { min-width: 0; flex: 1; }
+.ws-session b { font-size: 11px; font-weight: 550; display: block; }
+.ws-session small { color: var(--ws-muted); font-size: 10px; display: block; margin-top: 6px; }
+.ws-session .ws-quota-track { margin-top: 10px; max-width: 150px; height: 3px; }
+.ws-quota { color: #478b7a; background: #eff9f4; padding: 5px 7px; border-radius: 4px; font-size: 9px; white-space: nowrap; }
+.ws-quota.full { color: #c77e6b; background: #fff4ef; }
+.ws-workflow { margin-bottom: 24px; }
+.ws-workflow-steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; padding: 25px; }
+.ws-workflow-steps > div { position: relative; }
+.ws-workflow-steps > div > span { display: grid; place-items: center; width: 34px; height: 34px; color: #5a82cc; background: var(--ws-soft); border: 1px solid #e7eef9; border-radius: 10px; margin-bottom: 13px; }
+.ws-workflow-steps b { display: block; font-size: 12px; font-weight: 550; }
+.ws-workflow-steps small { display: block; font-size: 10px; color: var(--ws-muted); margin-top: 6px; }
+.ws-workflow-steps > div > svg { position: absolute; right: 20px; top: 10px; color: #c5d2e5; }
+.ws-app .empty { display: flex; flex-direction: column; gap: 14px; align-items: center; }
+.ws-app .empty > p { font-size: 12px; line-height: 1.8; }
+.ws-booking-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr); gap: 25px; align-items: start; }
+.ws-booking-grid .form-panel { max-width: none; }
+.ws-app .form-panel > .eyebrow { display: block; margin-bottom: 12px; }
+.ws-app .form-panel form > .eyebrow { display: block; margin-bottom: 12px; }
+.ws-app .form-panel .muted { line-height: 1.8; }
+.ws-app .confirmation { padding-top: 15px; }
+.ws-app .confirmation .primary { margin-top: 8px; }
+.ws-app .patient-welcome { background: linear-gradient(115deg, #eef5ff, #f7faff); }
+.ws-app .patient-welcome h2 { color: #244574; }
+.ws-ticket { margin-bottom: 20px; }
+.ws-ticket .ticket { margin-block: 20px; font-size: 58px; letter-spacing: -2px; }
+.ws-ticket-meta { display: flex; justify-content: center; gap: 24px; font-size: 11px; margin-top: 22px; }
+.ws-ticket-meta > span { display: flex; align-items: center; gap: 7px; color: var(--ws-muted); }
+.ws-app .notice { font-size: 11px; line-height: 1.8; }
+.ws-app .notice > svg { flex-shrink: 0; }
+.ws-center { justify-content: center; }
+.ws-error { display: flex; align-items: center; gap: 10px; background: #fff3f2; color: #bc5148; border: 1px solid #f4d7d3; border-radius: 8px; padding: 14px; margin-block: 18px; font-size: 12px; line-height: 1.7; }
+.ws-summary { margin-block: 20px; }
+.ws-summary > div:not(.notice) { display: grid; grid-template-columns: 140px 1fr; gap: 20px; border-bottom: 1px solid var(--ws-line); padding: 16px 0; align-items: start; font-size: 12px; line-height: 1.7; }
+.ws-summary > div > span { color: var(--ws-muted); }
+.ws-summary b { font-weight: 500; overflow-wrap: anywhere; }
+.ws-summary b small { display: block; color: var(--ws-muted); font-size: 11px; font-weight: 400; margin-top: 4px; }
+.ws-report-range { display: flex; gap: 18px; align-items: center; padding: 0 22px; margin-top: 14px; background: #fbfcfe; border-block: 1px solid var(--ws-line); }
+.ws-report-range label { flex: 1; max-width: 240px; margin-block: 18px; }
+.ws-report-range > div { margin-left: auto; text-align: right; }
+.ws-report-range > div b { display: block; font-size: 28px; letter-spacing: -1px; }
+.ws-report-range > div small { font-size: 10px; color: var(--ws-muted); }
+.ws-spaced-table { margin-top: 24px; }
+.ws-sip { color: var(--ws-muted); font-size: 11px; }
+.ws-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 20px; min-height: 50px; align-content: start; }
+.ws-tags span { font-size: 10px; padding: 5px 8px; background: var(--ws-soft); color: #5e7da9; border-radius: 5px; }
+.ws-inset { margin-inline: 22px; }
+.ws-detail { max-width: 760px; padding: 30px; }
+.ws-detail h2 { margin-top: 9px; }
+.ws-detail-status { display: flex; gap: 20px; align-items: center; padding: 16px; background: #fafcfe; border: 1px solid var(--ws-line); border-radius: 8px; flex-wrap: wrap; }
+.ws-detail-status > span:not(:first-child) { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--ws-muted); }
+.ws-subheading { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 16px; }
+.ws-subheading > b { font-size: 12px; font-weight: 550; }
+.ws-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.ws-form-grid.three { grid-template-columns: repeat(3, 1fr); }
+.ws-form-grid label { min-width: 0; margin-block: 12px; }
+.ws-action-card { background: #f8fafd; padding: 18px; border: 1px solid var(--ws-line); border-radius: 8px; margin-top: 18px; }
+.ws-action-card p { font-size: 12px; line-height: 1.8; color: var(--ws-muted); margin-top: 10px; }
+.ws-action-card .ws-subheading { padding-top: 0; }
+.ws-form-hint { text-align: right; color: var(--ws-muted); font-size: 10px; margin-top: 12px; line-height: 1.8; }
+.ws-medical-summary { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--ws-line); }
+.ws-medical-summary > .muted { margin-top: 12px; }
+.ws-editor { max-width: 600px; }
+.ws-checklist { border: 1px solid var(--ws-line); padding: 15px; border-radius: 8px; margin-top: 20px; }
+.ws-checklist legend { color: var(--ws-muted); font-size: 11px; padding-inline: 5px; }
+.ws-checklist label { display: flex; align-items: center; gap: 9px; margin: 12px 0; }
+.ws-checklist input { width: 16px; height: 16px; min-height: 0; margin: 0; accent-color: var(--ws-blue); }
+.ws-mobile-shade { display: none; }
+@media (max-width: 1250px) {
+  .ws-overview.ws-operational { grid-template-columns: 1fr; }
+  .ws-operational > .ws-sessions { display: none; }
+  .ws-app .sidebar { width: 216px; }
+}
+@media (max-width: 1000px) {
+  .ws-overview,.ws-booking-grid { grid-template-columns: 1fr; }
+  .ws-booking-grid > div { display: none; }
+  .ws-app .sidebar { width: 190px; }
+  .ws-workflow-steps { gap: 10px; padding-inline: 18px; }
+  .ws-workflow-steps small { font-size: 9px; }
+  .ws-workflow-steps > div > svg { right: 3px; }
+  .ws-app .filters { flex-wrap: wrap; }
+}
+@media (max-width: 650px) {
+  .ws-app .sidebar { width: 242px; }
+  .ws-app.nav-open:after { display: none; }
+  .ws-mobile-shade { display: block; position: fixed; inset: 0; z-index: 25; border: 0; background: #162b4a50; }
+  .ws-demo-strip { font-size: 9px; align-items: start; }
+  .ws-demo-date,.ws-preview-label { display: none; }
+  .ws-app .page-heading h1 { font-size: 25px; }
+  .ws-app .page-heading p { font-size: 11px; }
+  .ws-app .heading-actions { flex-wrap: wrap; }
+  .ws-app .stat-top { font-size: 10px; }
+  .ws-app .stat-bottom { font-size: 9px; }
+  .ws-app .stat-value { font-size: 29px; }
+  .ws-workflow-steps { display: flex; overflow-x: auto; gap: 20px; padding: 22px 18px; }
+  .ws-workflow-steps > div { min-width: 110px; }
+  .ws-workflow-steps > div > svg { right: 0; }
+  .ws-app .table-tools .search { max-width: none; }
+  .ws-app .filters select { min-width: 85px; max-width: 100%; font-size: 9px; }
+  .ws-app .pagination { font-size: 9px; }
+  .ws-app .form-panel { padding: 24px 20px; }
+  .ws-app .patient-welcome h2 { font-size: 24px; }
+  .ws-report-range { flex-wrap: wrap; padding: 15px; gap: 12px; }
+  .ws-report-range label { margin: 0; max-width: none; }
+  .ws-report-range > div { width: 100%; display: flex; gap: 12px; align-items: center; margin: 0; }
+  .ws-report-range > div b { font-size: 22px; }
+  .ws-detail { padding: 22px; }
+  .ws-detail-status { gap: 12px; }
+  .ws-summary > div:not(.notice) { grid-template-columns: 100px 1fr; gap: 12px; font-size: 11px; }
+  .ws-form-grid.three { grid-template-columns: 1fr; gap: 0; }
+  .ws-app .doctor-card { padding: 24px; }
+  .ws-app .modal-actions { justify-content: stretch; }
+  .ws-app .modal-actions button { flex: 1; }
+}

@@ -1,0 +1,319 @@
+/* Shared visual language; page styles retain responsibility for layout. */
+:root {
+  --sk-font: 'DM Sans', sans-serif;
+  --sk-brand: #293b70;
+  --sk-brand-hover: #1e2e59;
+  --sk-ink: #283653;
+  --sk-text: #53627a;
+  --sk-muted: #6c7990;
+  --sk-line: #e5eaf2;
+  --sk-surface: #ffffff;
+  --sk-canvas: #f6f8fc;
+  --sk-tint: #edf2fa;
+  --sk-tint-strong: #dde7f6;
+  --sk-success: #327867;
+  --sk-success-bg: #edf7f2;
+  --sk-warning: #946c32;
+  --sk-warning-bg: #fcf5e9;
+  --sk-danger: #b25257;
+  --sk-danger-bg: #fcf0f0;
+  --sk-radius: 18px;
+  --sk-control-radius: 10px;
+  --sk-pill: 999px;
+  --sk-shadow: 0 6px 24px #293b7005;
+  --sk-space: 24px;
+}
+
+body { font-family: var(--sk-font); color: var(--sk-ink); background: var(--sk-canvas); }
+.web.sky-site,.ws-app {
+  --web-blue: var(--sk-brand);
+  --web-ink: var(--sk-ink);
+  --web-muted: var(--sk-muted);
+  --web-line: var(--sk-line);
+  --web-light: var(--sk-tint);
+  --public-card: var(--sk-surface);
+  --public-soft: var(--sk-canvas);
+  --public-border: var(--sk-line);
+  --ws-ink: var(--sk-ink);
+  --ws-muted: var(--sk-muted);
+  --ws-blue: var(--sk-brand);
+  --ws-line: var(--sk-line);
+  --ws-soft: var(--sk-tint);
+  --ws-radius: var(--sk-radius);
+  font-family: var(--sk-font);
+  color: var(--sk-ink);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+/* Brand and navigation */
+.ws-app .brand,.sky-site .web-brand {
+  color: var(--sk-brand);
+  font-size: 25px !important;
+  font-weight: 600 !important;
+  letter-spacing: -1px;
+  gap: 10px;
+}
+.ws-app .brand-light,.sky-site .web-brand b { font-weight: 400; }
+.ws-app .brand small,.sky-site .web-brand small {
+  font-size: 7px;
+  font-weight: 500;
+  letter-spacing: 1.7px;
+  color: var(--sk-muted);
+  margin-top: 7px;
+  line-height: 1.6;
+}
+.ws-app .brand-icon,.sky-site .web-brand-mark {
+  width: 38px;
+  height: 38px;
+  background: var(--sk-brand);
+  color: var(--sk-surface);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ws-app .brand-icon svg,.sky-site .web-brand-mark svg { width: 23px; height: 23px; }
+.ws-app .sidebar { border-color: var(--sk-line); background: var(--sk-surface); }
+.ws-app .workspace { background: var(--sk-canvas); border-color: var(--sk-line); border-radius: var(--sk-control-radius); padding: 14px 10px; }
+.ws-app .workspace-icon { background: var(--sk-tint); color: var(--sk-brand); border-radius: var(--sk-control-radius); }
+.ws-app .workspace b { font-size: 12px; font-weight: 500; }
+.ws-app .workspace small { font-size: 11px; color: var(--sk-muted); }
+.ws-app .nav-label { color: var(--sk-muted); font-size: 10px; letter-spacing: 1.4px; }
+.ws-app nav { gap: 7px; }
+.ws-app nav button { min-height: 44px; border-radius: var(--sk-pill); font-size: 13px; color: var(--sk-text); font-weight: 400; }
+.ws-app nav button:hover { background: var(--sk-canvas); }
+.ws-app nav button.active,.sky-site .web-navigation button.selected { color: var(--sk-surface); background: var(--sk-brand); font-weight: 500; }
+.ws-app .nav-active-dot { background: var(--sk-surface); opacity: .8; }
+.sky-site .web-navigation { background: var(--sk-canvas); border-color: var(--sk-line); padding: 5px; box-shadow: none; }
+.sky-site.is-home .web-navigation { background: #ffffffc4; border-color: #ffffffd9; }
+.sky-site .web-navigation button { font-size: 13px; font-weight: 400; padding: 9px 17px; }
+.sky-site .web-header-inner { min-height: 100px; }
+.ws-app .topbar { background: var(--sk-surface); border-color: var(--sk-line); }
+.ws-app .breadcrumb { font-size: 12px; color: var(--sk-muted); }
+.ws-app .breadcrumb b { color: var(--sk-text); }
+.ws-app .role-select,.sky-site .web-preview-label select { border-color: var(--sk-line); background: var(--sk-canvas); border-radius: var(--sk-pill); }
+.ws-app .role-select { padding: 7px 10px; }
+.ws-app .role-select select { color: var(--sk-text); font-size: 11px; }
+.ws-app .profile b { color: var(--sk-ink); font-size: 12px; font-weight: 500; }
+.ws-app .profile small { color: var(--sk-muted); font-size: 11px; }
+
+/* One action hierarchy across marketing, booking and clinical screens. */
+.ws-app .primary,.ws-app .secondary,.ws-app .destructive,
+.sky-site .web-button,.sky-site .web-header .web-button {
+  min-height: 44px;
+  border-radius: var(--sk-pill);
+  padding: 11px 19px;
+  font-family: var(--sk-font);
+  font-size: 13px !important;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.5;
+  box-shadow: none;
+  gap: 10px;
+}
+.ws-app .primary,.sky-site .web-button,.sky-site .web-header .web-button {
+  color: var(--sk-surface);
+  border: 1px solid var(--sk-brand);
+  background: var(--sk-brand);
+}
+.ws-app .primary:hover,.sky-site .web-button:hover,.sky-site .web-header .web-button:hover { background: var(--sk-brand-hover); border-color: var(--sk-brand-hover); box-shadow: none; transform: none; }
+.ws-app .secondary { color: var(--sk-brand); background: var(--sk-surface); border-color: var(--sk-line); }
+.ws-app .secondary:hover { background: var(--sk-tint); }
+.ws-app .destructive { background: var(--sk-danger); border-color: var(--sk-danger); }
+.ws-app .text-button,.ws-app .schedule-link,.sky-site .web-inline-link,.sky-site .web-doctor-info button { color: var(--sk-brand); font-size: 13px !important; font-weight: 500; }
+.sky-site .web-login { color: var(--sk-brand); font-size: 13px !important; }
+.ws-app .square { width: 36px; height: 36px; border-radius: var(--sk-control-radius); border-color: var(--sk-line); color: var(--sk-brand); }
+.ws-app .danger-link { color: var(--sk-danger); font-size: 12px; }
+.ws-app .primary:disabled,.sky-site .web-button:disabled { opacity: .4; }
+:is(.ws-app,.sky-site) :is(button,a,input,select,textarea):focus-visible { outline: 3px solid var(--sk-tint-strong); outline-offset: 3px; }
+
+/* Shared typography hierarchy and comfortable reading density. */
+.ws-app .page-heading h1 { font-size: 32px; font-weight: 500; line-height: 1.25; letter-spacing: -1px; color: var(--sk-ink); }
+.ws-app .page-heading p { font-size: 14px; color: var(--sk-muted); line-height: 1.8; margin-top: 10px; }
+.ws-app .page-overline,.ws-app .eyebrow,.sky-site .web-eyebrow { color: var(--sk-muted); font-size: 10px; font-weight: 500; letter-spacing: 1.6px; }
+.ws-app .page-overline span { background: var(--sk-brand); }
+.ws-app h3 { font-size: 16px; font-weight: 500; color: var(--sk-ink); letter-spacing: -.3px; }
+.ws-app .panel-heading h3 { font-size: 16px; }
+.ws-app .panel-heading p,.ws-app .muted { font-size: 12px; color: var(--sk-muted); line-height: 1.8; }
+.sky-site .web-section-title h2,.sky-site .web-how h2,.sky-editorial-heading h2 { font-size: 36px; font-weight: 500; line-height: 1.25; letter-spacing: -1px; }
+.sky-site .web-inner-page > .web-section-title h2 { font-size: 44px; font-weight: 500; max-width: 720px; }
+.sky-site .web-section-title p,.sky-site .web-how > div > p,.sky-editorial-heading > p { font-size: 14px; line-height: 1.85; color: var(--sk-muted); }
+.sky-site .web-service h3,.sky-site .web-doctor h3 { font-size: 22px; font-weight: 500; letter-spacing: -.6px; }
+.sky-site .web-service p,.sky-site .web-service > button,.sky-site .web-doctor-info p { font-size: 13px; color: var(--sk-text); }
+.sky-site .web-service-tag,.sky-site .web-doctor-info > span,.sky-site .web-photo-note { font-size: 11px; color: var(--sk-muted); }
+.sky-hero h1 { color: var(--sk-ink); font-weight: 500; }
+.sky-hero-heading > p { font-size: 15px; line-height: 1.8; color: var(--sk-text); }
+.sky-kicker { font-size: 9px; color: var(--sk-text); letter-spacing: 1.5px; }
+.sky-hero-bottom { font-size: 11px; color: var(--sk-text); }
+
+/* Consistent card treatment; cloud imagery is reserved for the public hero. */
+.ws-app .panel,.ws-app .stat,.sky-site .web-service,.sky-site .web-doctor,
+.sky-site .web-auth-form,.web-schedule-list article,.sky-site .web-location-info {
+  border: 1px solid var(--sk-line);
+  border-radius: var(--sk-radius);
+  background: var(--sk-surface);
+  box-shadow: var(--sk-shadow);
+}
+.ws-app .stats { gap: 18px; }
+.ws-app .stat { padding: 22px; }
+.ws-app .stat-top { color: var(--sk-text); font-size: 13px; font-weight: 400; }
+.ws-app .stat-value { color: var(--sk-brand); font-size: 38px; font-weight: 500; letter-spacing: -1.5px; }
+.ws-app .stat-bottom { font-size: 11px; color: var(--sk-muted); }
+.ws-app .panel-heading { padding: 24px 24px 0; }
+.ws-app .ws-overview { gap: var(--sk-space); }
+.ws-app .ws-session { margin-inline: var(--sk-space); border-color: var(--sk-line); }
+.ws-app .ws-session b { color: var(--sk-ink); font-size: 12px; font-weight: 500; }
+.ws-app .ws-session small { font-size: 11px; }
+.ws-app .ws-distribution-row { margin-inline: var(--sk-space); }
+.ws-app .ws-distribution-row > div:first-child { font-size: 13px; color: var(--sk-text); }
+.ws-app .ws-quota-track { background: var(--sk-tint); height: 6px; }
+.ws-app .ws-quota-track > span { background: var(--sk-brand); opacity: .65; }
+.ws-app .ws-workflow-steps { padding: var(--sk-space); }
+.ws-app .ws-workflow-steps > div > span { border-radius: var(--sk-control-radius); background: var(--sk-tint); border-color: var(--sk-line); color: var(--sk-brand); }
+.ws-app .ws-workflow-steps b { font-size: 13px; font-weight: 500; }
+.ws-app .ws-workflow-steps small { font-size: 11px; color: var(--sk-muted); }
+.sky-site .web-services { padding: 0; background: none; border-radius: 0; gap: var(--sk-space); }
+.sky-site .web-service { padding: 28px; }
+.sky-site .web-service:hover { border-color: var(--sk-tint-strong); box-shadow: var(--sk-shadow); }
+.sky-site .web-service-top { margin-bottom: 30px; }
+.sky-site .web-service p { min-height: 78px; }
+.sky-site .web-service > button { border-color: var(--sk-line); color: var(--sk-brand); padding-top: 20px; margin-top: 22px; }
+.sky-site .web-service-tag { color: var(--sk-muted); }
+.sky-site .web-doctor { overflow: hidden; }
+.sky-site .web-doctor-photo { border-radius: 0; height: 280px; background: var(--sk-tint); }
+.sky-site .web-doctor-info { padding: 24px; }
+.sky-site .web-doctor-photo > span { font-size: 10px; }
+.sky-site .web-section { padding-block: 72px; }
+.sky-site .web-how-wrap { background: var(--sk-canvas); border-block: 1px solid var(--sk-line); }
+.sky-site .web-how { gap: 80px; padding-block: 64px; }
+.sky-site .web-steps > div { border: 1px solid var(--sk-line); background: var(--sk-surface); border-radius: var(--sk-radius); padding: 24px; box-shadow: none; }
+.sky-site .web-steps > div > span { color: var(--sk-brand); background: var(--sk-tint); border-radius: var(--sk-control-radius); font-size: 16px; }
+.sky-site .web-steps h3 { font-size: 16px; font-weight: 500; }
+.sky-site .web-steps p { color: var(--sk-muted); font-size: 13px; line-height: 1.7; }
+.sky-site .web-how-safe { color: var(--sk-muted); font-size: 11px; }
+.sky-site .web-cta { background: var(--sk-tint); border: 1px solid var(--sk-line); border-radius: var(--sk-radius); padding: 48px; }
+.sky-site .web-cta h2 { font-size: 32px; font-weight: 500; letter-spacing: -1px; }
+.sky-site .web-cta p { font-size: 14px; color: var(--sk-text); }
+.sky-site .web-footer { background: var(--sk-canvas); border-color: var(--sk-line); }
+.sky-site .web-footer h3 { font-size: 13px; color: var(--sk-ink); font-weight: 500; }
+.sky-site .web-footer-column button,.sky-site .web-footer-contact > a,.sky-site .web-footer-about > p { color: var(--sk-text); font-size: 13px; }
+.sky-site .web-footer-bottom,.ws-app .content-footer { font-size: 10px; color: var(--sk-muted); border-color: var(--sk-line); }
+.ws-app .help-card { border-color: var(--sk-line); border-radius: var(--sk-radius); background: var(--sk-canvas); }
+.ws-app .help-symbol { color: var(--sk-brand); }
+.ws-app .help-card b { font-size: 12px; font-weight: 500; }
+.ws-app .help-card p { font-size: 11px; line-height: 1.8; color: var(--sk-muted); }
+.ws-app .sidebar-link { color: var(--sk-text); font-size: 12px; }
+
+/* Forms, tables and semantic states use the same palette everywhere. */
+.ws-app label,.sky-site label { color: var(--sk-text); font-size: 12px; font-weight: 500; }
+.ws-app label input,.ws-app label select,.ws-app label textarea,
+.sky-site label input,.sky-site label select,.sky-site label textarea {
+  border-color: var(--sk-line);
+  border-radius: var(--sk-control-radius);
+  background: var(--sk-surface);
+  color: var(--sk-ink);
+  font-family: var(--sk-font);
+  font-size: 14px;
+  min-height: 46px;
+  box-shadow: none;
+}
+.ws-app .ws-checklist input { min-height: 0; accent-color: var(--sk-brand); }
+.ws-app input::placeholder,.ws-app textarea::placeholder,.sky-site input::placeholder,.sky-site textarea::placeholder { color: var(--sk-muted); opacity: .8; }
+.ws-app .search,.ws-app .filters select { border-color: var(--sk-line); border-radius: var(--sk-control-radius); color: var(--sk-text); min-height: 42px; }
+.ws-app .search input { font-size: 12px; color: var(--sk-text); }
+.ws-app .filters select { font-size: 11px; }
+.ws-app th { font-size: 11px; font-weight: 500; color: var(--sk-text); background: var(--sk-canvas); border-color: var(--sk-line); }
+.ws-app td { font-size: 12px; color: var(--sk-text); border-color: var(--sk-line); }
+.ws-app td b { font-size: 12px; font-weight: 500; color: var(--sk-ink); }
+.ws-app td small { color: var(--sk-muted); font-size: 10px; }
+.ws-app .queue-number { color: var(--sk-brand); background: var(--sk-tint); border-color: transparent; border-radius: 7px; font-size: 12px; font-weight: 500; }
+.ws-app .avatar,.ws-app .icon-tile,.sky-site .web-service-icon { background: var(--sk-tint); color: var(--sk-brand); }
+.ws-app .icon-tile,.sky-site .web-service-icon { width: 40px; height: 40px; border-radius: var(--sk-control-radius); }
+.ws-app .icon-tile.green { background: var(--sk-success-bg); color: var(--sk-success); }
+.ws-app .icon-tile.amber { background: var(--sk-warning-bg); color: var(--sk-warning); }
+.ws-app .icon-tile.red { background: var(--sk-danger-bg); color: var(--sk-danger); }
+.ws-app .badge,.ws-app .count,.ws-app .ws-quota,.web-quota { font-size: 10px; font-weight: 500; border-radius: var(--sk-pill); padding: 5px 9px; }
+.ws-app .badge.blue,.ws-app .count { background: var(--sk-tint); color: var(--sk-brand); }
+.ws-app .badge.green,.ws-app .ws-quota,.web-quota.available { background: var(--sk-success-bg); color: var(--sk-success); }
+.ws-app .badge.orange { background: var(--sk-warning-bg); color: var(--sk-warning); }
+.ws-app .badge.red,.ws-app .ws-quota.full,.web-quota { background: var(--sk-danger-bg); color: var(--sk-danger); }
+.ws-app .notice,.ws-app .ws-demo-strip,.web-prototype-note {
+  color: var(--sk-text);
+  background: var(--sk-tint);
+  border-color: var(--sk-line);
+  border-radius: var(--sk-control-radius);
+}
+.ws-app .ws-demo-strip { background: var(--sk-surface); color: var(--sk-muted); }
+.ws-app .notice,.web-prototype-note { font-size: 12px; }
+.ws-app .steps { border-color: var(--sk-line); }
+.ws-app .steps .current { color: var(--sk-brand); }
+.ws-app .steps .current b { color: var(--sk-surface); background: var(--sk-brand); font-weight: 500; }
+.ws-app .patient-welcome { background: var(--sk-tint); border-color: var(--sk-line); border-radius: var(--sk-radius); padding: 36px; }
+.ws-app .patient-welcome h2 { color: var(--sk-ink); font-weight: 500; font-size: 30px; }
+.ws-app .patient-welcome p,.ws-app .health-tips p,.ws-app .confirmation p { color: var(--sk-muted); font-size: 14px; }
+.ws-app .patient-welcome > svg { color: var(--sk-brand); opacity: .15; }
+.ws-app .ticket { color: var(--sk-brand); font-weight: 500; }
+.ws-app .modal,.sky-site .web-dialog { border-radius: var(--sk-radius); border: 1px solid var(--sk-line); box-shadow: 0 24px 80px #293b701a; }
+.ws-app .modal h2,.sky-site .web-dialog h2 { color: var(--sk-ink); font-weight: 500; }
+.ws-app .ws-action-card,.ws-app .ws-detail-status,.web-schedule-tools { border-color: var(--sk-line); border-radius: var(--sk-control-radius); background: var(--sk-canvas); }
+.ws-app .ws-summary > div:not(.notice) { border-color: var(--sk-line); }
+.ws-app .ws-tags span { border-radius: var(--sk-pill); background: var(--sk-tint); color: var(--sk-brand); }
+.ws-app .pagination { color: var(--sk-muted); }
+.ws-app .pagination button { border-radius: 50%; border-color: var(--sk-line); }
+.ws-app .pagination button.active { color: var(--sk-surface); background: var(--sk-brand); border-color: var(--sk-brand); }
+
+@media (max-width: 1100px) {
+  .sky-site .web-header-inner { gap: 14px; }
+  .sky-site .web-navigation button { padding-inline: 12px; font-size: 12px; }
+  .sky-site .web-header .web-button { padding-inline: 14px; font-size: 11px !important; }
+  .ws-app .brand { font-size: 23px !important; }
+  .ws-app .brand small { font-size: 6px; letter-spacing: 1.1px; }
+  .ws-app nav button { font-size: 12px; gap: 9px; }
+  .ws-app .workspace b { font-size: 11px; }
+  .sky-site .web-how { gap: 40px; }
+}
+@media (max-width: 800px) {
+  .sky-site .web-header .web-button { display: none; }
+  .sky-site .web-brand { font-size: 23px !important; }
+  .sky-site .web-navigation button { padding-inline: 10px; }
+  .ws-app .page-heading h1 { font-size: 28px; }
+  .ws-app .stat { padding: 18px; }
+  .ws-app .ws-workflow-steps small { font-size: 10px; }
+}
+@media (max-width: 650px) {
+  .ws-app .page-heading h1 { font-size: 27px; }
+  .ws-app .page-heading p { font-size: 13px; }
+  .ws-app .panel-heading { padding: 20px 18px 0; flex-wrap: wrap; }
+  .ws-app .panel-heading h3 { font-size: 15px; }
+  .ws-app .stat { padding: 17px; }
+  .ws-app .stat-top { font-size: 11px; }
+  .ws-app .stat-value { font-size: 32px; }
+  .ws-app .stat-bottom { font-size: 10px; line-height: 1.7; }
+  .ws-app .icon-tile { width: 30px; height: 30px; }
+  .ws-app .profile small { font-size: 10px; }
+  .ws-app .primary,.ws-app .secondary,.ws-app .destructive { font-size: 12px !important; padding-inline: 15px; }
+  .ws-app .patient-welcome { padding: 24px; }
+  .ws-app .patient-welcome h2 { font-size: 27px; }
+  .ws-app .ws-workflow-steps { padding: 20px; }
+  .sky-site .web-section-title h2,.sky-site .web-how h2,.sky-editorial-heading h2 { font-size: 30px; }
+  .sky-site .web-inner-page > .web-section-title h2 { font-size: 34px; }
+  .sky-site .web-service { padding: 25px; }
+  .sky-site .web-service p { min-height: 0; }
+  .sky-site .web-section { padding-block: 48px; }
+  .sky-site .web-how { padding-block: 40px; }
+  .sky-site .web-steps > div { padding: 20px; }
+  .sky-site .web-cta { padding: 30px 24px; }
+  .sky-site .web-cta h2 { font-size: 28px; }
+  .ws-app .brand { font-size: 25px !important; }
+  .ws-app .brand small { font-size: 7px; letter-spacing: 1.7px; }
+}
+@media (max-width: 560px) {
+  .sky-site .web-header-inner { min-height: 82px; }
+  .sky-site .web-navigation { border-radius: var(--sk-radius); background: var(--sk-surface); }
+  .sky-site .web-navigation button { font-size: 14px; padding: 12px 16px; }
+  .sky-site .web-brand-mark { width: 35px; height: 35px; }
+  .sky-hero h1 { font-size: 40px; letter-spacing: -1.8px; }
+  .sky-hero-heading > p { font-size: 13px; max-width: 300px; }
+  .sky-kicker { font-size: 7px; letter-spacing: 1px; }
+  .sky-hero-bottom { font-size: 9px; gap: 15px; }
+  .sky-site .sky-hero-heading > .web-button { font-size: 12px !important; }
+}
