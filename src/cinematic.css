@@ -39,26 +39,43 @@
 
 /* One panoramic atmosphere, including pages beyond the home screen. */
 .cinema-public { position: relative; isolation: isolate; overflow: clip; }
-.cinema-public.is-inner { background: linear-gradient(180deg, var(--cinema-sky), #f9fcff 720px, var(--sk-surface) 1150px); }
+.cinema-public.is-inner { background: white; }
 .cinema-public.is-inner::before {
   content: "";
   position: absolute;
   inset: 0 0 auto;
-  height: 1000px;
-  background: linear-gradient(180deg, #dcedfac4, #eaf4fc9c 45%, #ffffff 98%), url('/images/soft-clouds.jpg') center 25% / cover;
-  z-index: -1;
+  height: 850px;
+  background: linear-gradient(180deg,#bae6f399 0%,#d3edfa26 48%,white 96%), url('/images/soft-clouds.jpg') center 35% / cover;
   pointer-events: none;
 }
-.cinema-public .web-header { background: transparent; border: 0; }
+.cinema-public .web-header { background: transparent !important; border: 0 !important; position: relative; z-index: 10; }
 .cinema-public .web-header-inner { min-height: 106px; }
 .cinema-public .web-navigation {
-  background: #ffffff87;
-  border: 1px solid var(--cinema-edge);
+  background: #ffffffc4 !important;
+  border: 1px solid #ffffffd9 !important;
   backdrop-filter: blur(16px);
-  box-shadow: 0 4px 24px #35537804;
+  box-shadow: 0 4px 20px #3553780a;
 }
-.cinema-public .web-header .web-button { background: #ffffffb0; color: var(--sk-brand); border: 1px solid var(--cinema-edge); }
-.cinema-public .web-header .web-button:hover { color: var(--sk-surface); background: var(--sk-brand); border-color: var(--sk-brand); }
+.cinema-public .web-header .web-button {
+  background: white !important;
+  color: var(--web-blue) !important;
+  border: 1px solid #ffffffd9 !important;
+  box-shadow: 0 2px 10px #293b7012 !important;
+  border-radius: 30px !important;
+  font-size: 11px !important;
+  padding: 9px 17px !important;
+  min-height: 36px !important;
+  gap: 10px !important;
+  font-weight: 500 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  transition: all .2s ease !important;
+}
+.cinema-public .web-header .web-button:hover {
+  background: #f8fbff !important;
+  box-shadow: 0 4px 16px #293b7020 !important;
+  transform: translateY(-1px);
+}
 .cinema-public .web-inner-page { padding-top: 14px; padding-bottom: 70px; }
 .cinema-public .cinema-page-hero {
   position: relative;

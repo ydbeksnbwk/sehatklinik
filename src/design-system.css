@@ -83,9 +83,10 @@ body { font-family: var(--sk-font); color: var(--sk-ink); background: var(--sk-c
 .ws-app nav button:hover { background: var(--sk-canvas); }
 .ws-app nav button.active,.sky-site .web-navigation button.selected { color: var(--sk-surface); background: var(--sk-brand); font-weight: 500; }
 .ws-app .nav-active-dot { background: var(--sk-surface); opacity: .8; }
-.sky-site .web-navigation { background: var(--sk-canvas); border-color: var(--sk-line); padding: 5px; box-shadow: none; }
-.sky-site.is-home .web-navigation { background: #ffffffc4; border-color: #ffffffd9; }
-.sky-site .web-navigation button { font-size: 13px; font-weight: 400; padding: 9px 17px; }
+.sky-site .web-navigation,
+.sky-site.is-home .web-navigation,
+.sky-site.is-inner .web-navigation { background: #ffffffc4; border: 1px solid #ffffffd9; border-radius: 30px; padding: 5px; box-shadow: 0 4px 20px #3553780a; backdrop-filter: blur(16px); }
+.sky-site .web-navigation button { font-size: 12px; font-weight: 500; padding: 8px 18px; }
 .sky-site .web-header-inner { min-height: 100px; }
 .ws-app .topbar { background: var(--sk-surface); border-color: var(--sk-line); }
 .ws-app .breadcrumb { font-size: 12px; color: var(--sk-muted); }

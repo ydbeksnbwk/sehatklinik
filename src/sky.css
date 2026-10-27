@@ -10,21 +10,22 @@
 .sky-site .web-container {max-width:1120px}
 .sky-site.is-home {background:white}
 .sky-site.is-home:before {content:'';position:absolute;inset:0 0 auto;height:850px;background:linear-gradient(180deg,#bae6f399 0%,#d3edfa26 48%,white 96%),url('/images/soft-clouds.jpg') center 35%/cover;pointer-events:none}
-.sky-site .web-header {background:white;border:0;position:relative;backdrop-filter:none}
-.sky-site.is-home .web-header {background:transparent}
+.sky-site .web-header {background:transparent;border:0;position:relative;backdrop-filter:none}
+.sky-site.is-home .web-header,.sky-site.is-inner .web-header {background:transparent}
 .sky-site .web-header-inner {min-height:106px;width:min(1280px,calc(100% - 112px));gap:25px}
 .sky-site .web-brand {font-weight:500!important;font-size:24px!important;letter-spacing:-1px}
 .sky-site .web-brand small {letter-spacing:2px;font-size:6px;color:#586b89}
 .sky-site .web-brand-mark {background:var(--web-blue);border-radius:50%;height:34px;width:34px}
 .sky-site .web-brand-mark svg {width:22px}
-.sky-site .web-navigation {background:#ffffffdc;border:1px solid #ffffffb3;border-radius:30px;gap:4px;padding:5px;box-shadow:0 3px 12px #35547704}
-.sky-site .web-navigation button {padding:8px 22px;font-size:10px;color:#727988;display:block;font-weight:400;border-radius:25px}
-.sky-site .web-navigation button.selected {background:var(--web-blue);color:white}
+.sky-site .web-navigation {background:#ffffffc4;border:1px solid #ffffffd9;border-radius:30px;gap:4px;padding:5px;box-shadow:0 4px 20px #3553780a;backdrop-filter:blur(16px)}
+.sky-site .web-navigation button {padding:8px 20px;font-size:11px;color:#586885;display:inline-block;font-weight:500;border-radius:25px;transition:all .2s ease}
+.sky-site .web-navigation button.selected {background:var(--web-blue);color:white;box-shadow:0 2px 8px #293b7026}
 .sky-site .web-navigation button.selected:after {display:none}
-.sky-site .web-navigation button:hover:not(.selected) {background:#f3f6fa;color:var(--web-blue)}
+.sky-site .web-navigation button:hover:not(.selected) {background:#ffffffcc;color:var(--web-blue)}
 .sky-site .web-header-actions {gap:20px}
-.sky-site .web-login {font-size:11px!important}
-.sky-site .web-header .web-button {background:white;color:var(--web-blue);border:0;box-shadow:none;border-radius:30px;font-size:9px!important;padding:8px 13px;min-height:33px;gap:13px}
+.sky-site .web-login {font-size:12px!important;font-weight:500!important;color:var(--web-blue)!important}
+.sky-site .web-header .web-button {background:white!important;color:var(--web-blue)!important;border:1px solid #ffffffd9!important;box-shadow:0 2px 10px #293b7012!important;border-radius:30px;font-size:11px!important;padding:9px 17px;min-height:36px;gap:10px;font-weight:500;display:inline-flex;align-items:center;transition:all .2s ease}
+.sky-site .web-header .web-button:hover {background:#f8fbff!important;box-shadow:0 4px 16px #293b7020!important;transform:translateY(-1px)}
 .sky-site .web-button {border-radius:30px;font-weight:400;box-shadow:none;font-size:11px!important;padding:10px 15px;gap:18px;min-height:40px}
 .sky-site .web-button:hover {background:#1e2e5c;box-shadow:0 5px 15px #293b7014}
 .sky-site .web-eyebrow {font-size:7px;letter-spacing:1.7px;font-weight:500;color:#828a9c}
