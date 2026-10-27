@@ -4,7 +4,7 @@
 }
 .web button,.web a {touch-action:manipulation}
 .web button {font:inherit}
-.web-container {width:min(1180px,calc(100% - 96px));margin-inline:auto}
+.web-container {width:min(1240px,calc(100% - 64px));margin-inline:auto}
 .web-announcement {background:var(--web-light);border-bottom:1px solid #eaf0f8;font-size:11px;color:#5c7292}
 .web-announcement>div {width:min(1180px,calc(100% - 96px));margin:auto;display:flex;justify-content:space-between;padding:10px 0}
 .web-announcement span,.web-announcement a {display:flex;align-items:center;gap:8px}
@@ -132,7 +132,7 @@
 .web-preview-label {margin:0;display:flex;gap:8px;align-items:center;font-size:8px;color:#9daabb;font-weight:400}
 .web-preview-label select {width:auto;min-height:0;display:inline-block;margin:0;padding:4px 5px;font-size:8px;border-radius:5px;border-color:#e3eaf3;background:transparent;color:#6d85a7}
 .web-inner-page {padding-block:66px 75px;min-height:580px}
-.web-inner-page>.web-section-title {margin-bottom:35px;max-width:650px}
+.web-inner-page>.web-section-title:not(.cinema-page-hero) {margin-bottom:35px;max-width:650px}
 .web-inner-page>.web-section-title h2 {font-size:42px;letter-spacing:-1.8px}
 .web-care-note {background:var(--web-light);border:1px solid #e4edf9;border-radius:12px;display:flex;align-items:center;gap:17px;margin-top:35px;padding:25px;color:#7292bc}
 .web-care-note h3 {font-size:13px;color:#4c688c;font-weight:550}

@@ -7,7 +7,7 @@
   font-family:'DM Sans',sans-serif;
   position:relative;
 }
-.sky-site .web-container {max-width:1120px}
+.sky-site .web-container {max-width:1240px}
 .sky-site.is-home {background:white}
 .sky-site.is-home:before {content:'';position:absolute;inset:0 0 auto;height:850px;background:linear-gradient(180deg,#bae6f399 0%,#d3edfa26 48%,white 96%),url('/images/soft-clouds.jpg') center 35%/cover;pointer-events:none}
 .sky-site .web-header {background:transparent;border:0;position:relative;backdrop-filter:none}
