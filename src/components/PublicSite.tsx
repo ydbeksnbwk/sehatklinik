@@ -490,8 +490,7 @@ export default function PublicSite({
               </p>
               <div className="web-prototype-note">
                 <Icon name="help" size={16} />
-                Pratinjau desain: formulir ini membuka akun pasien demo Andi,
-                bukan autentikasi. Jangan gunakan kredensial asli.
+                Portal Pasien: Masuk untuk melihat antrean, pendaftaran kunjungan, dan riwayat medis.
               </div>
               <form
                 onSubmit={(e) => {
@@ -568,14 +567,14 @@ export default function PublicSite({
                 </label>
                 <button className="web-button" type="submit">
                   {page === "Login"
-                    ? "Buka Demo Pasien"
-                    : "Pratinjau Akun Pasien"}
+                    ? "Masuk ke Portal Pasien"
+                    : "Daftar Akun Pasien"}
                   <Icon name="arrow" size={18} />
                 </button>
                 {page === "Login" && (
                   <div style={{ marginTop: "18px", paddingTop: "14px", borderTop: "1px solid #eef2f7" }}>
                     <div style={{ fontSize: "11px", color: "#64748b", marginBottom: "8px", fontWeight: 500 }}>
-                      Pilih Cepat Akses Peran Demo:
+                      Akses Cepat Halaman Dashboard Peran:
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                       <button
@@ -585,7 +584,7 @@ export default function PublicSite({
                         onClick={() => onRole("Pasien")}
                       >
                         <span className="avatar blue" style={{ width: "20px", height: "20px", fontSize: "9px" }}>P</span>
-                        Demo Pasien
+                        Portal Pasien
                       </button>
                       <button
                         type="button"
@@ -594,7 +593,7 @@ export default function PublicSite({
                         onClick={() => onRole("Petugas")}
                       >
                         <span className="avatar amber" style={{ width: "20px", height: "20px", fontSize: "9px" }}>L</span>
-                        Demo Petugas
+                        Loket Petugas
                       </button>
                       <button
                         type="button"
@@ -603,7 +602,7 @@ export default function PublicSite({
                         onClick={() => onRole("Dokter")}
                       >
                         <span className="avatar green" style={{ width: "20px", height: "20px", fontSize: "9px" }}>D</span>
-                        Demo Dokter
+                        Ruang Dokter
                       </button>
                       <button
                         type="button"
@@ -612,7 +611,7 @@ export default function PublicSite({
                         onClick={() => onRole("Admin")}
                       >
                         <span className="avatar purple" style={{ width: "20px", height: "20px", fontSize: "9px" }}>A</span>
-                        Demo Admin
+                        Admin Dashboard
                       </button>
                     </div>
                   </div>
@@ -1557,18 +1556,6 @@ export default function PublicSite({
             <span className="web-footer-made">
               <Icon name="heart" size={14} /> Dirancang dengan kepedulian & kehangatan.
             </span>
-            <label className="web-preview-label">
-              Pratinjau{" "}
-              <select
-                aria-label="Ganti pratinjau peran"
-                value="Publik"
-                onChange={(e) => onRole(e.target.value)}
-              >
-                {["Publik", "Admin", "Petugas", "Dokter", "Pasien"].map((r) => (
-                  <option key={r}>{r}</option>
-                ))}
-              </select>
-            </label>
           </div>
         </div>
       </footer>

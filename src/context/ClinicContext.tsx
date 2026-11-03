@@ -334,12 +334,12 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           const path = window.location.pathname
           if (path === "/admin") setRole("Admin")
           else if (path === "/petugas") setRole("Petugas")
-          else if (path === "/dokter-dashboard") setRole("Dokter")
+          else if (path === "/dokter-dashboard" || path === "/dokter/dashboard") setRole("Dokter")
           else if (path === "/pasien") setRole("Pasien")
           else if (path === "/dashboard") {
             setRole(data.role && data.role !== "Publik" ? data.role : "Pasien")
           } else if (
-            ["/layanan", "/dokter", "/jadwal", "/lokasi", "/profil", "/login", "/daftar"].includes(path)
+            ["/layanan", "/jadwal", "/lokasi", "/profil", "/login", "/daftar"].includes(path) || path === "/dokter"
           ) {
             setRole("Publik")
           } else if (data.role) {

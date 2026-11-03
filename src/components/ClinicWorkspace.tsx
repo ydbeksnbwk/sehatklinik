@@ -202,7 +202,14 @@ export default function ClinicWorkspace({
     if (initialRole && role !== initialRole) {
       setRole(initialRole)
     }
-    if (initialPage && page !== initialPage) {
+    if (typeof window !== "undefined") {
+      const tab = new URLSearchParams(window.location.search).get("tab")
+      if (tab) {
+        setPage(tab)
+      } else if (initialPage && page !== initialPage) {
+        setPage(initialPage)
+      }
+    } else if (initialPage && page !== initialPage) {
       setPage(initialPage)
     }
   }, [initialRole, initialPage])
@@ -210,6 +217,7 @@ export default function ClinicWorkspace({
   useEffect(() => {
     const handlePopState = () => {
       const path = window.location.pathname
+      const tab = new URLSearchParams(window.location.search).get("tab")
       if (path === "/") {
         setRole("Publik")
         setPage("Beranda")
@@ -236,21 +244,18 @@ export default function ClinicWorkspace({
         setPage("Daftar")
       } else if (path === "/admin") {
         setRole("Admin")
-        setPage("Dashboard")
+        setPage(tab || "Dashboard")
       } else if (path === "/petugas") {
         setRole("Petugas")
-        setPage("Dashboard")
+        setPage(tab || "Dashboard")
       } else if (path === "/dokter-dashboard") {
         setRole("Dokter")
-        setPage("Dashboard")
+        setPage(tab || "Dashboard")
       } else if (path === "/pasien") {
         setRole("Pasien")
-        setPage("Dashboard")
+        setPage(tab || "Dashboard")
       } else if (path.startsWith("/dashboard")) {
-        const params = new URLSearchParams(window.location.search)
-        const tab = params.get("tab")
-        if (tab) setPage(tab)
-        else setPage("Dashboard")
+        setPage(tab || "Dashboard")
       }
     }
     handlePopState()
@@ -316,7 +321,7 @@ export default function ClinicWorkspace({
     setReceipt(null)
     setError("")
     if (typeof window !== "undefined") {
-      const routeMap: Record<string, string> = {
+      const publicRoutes: Record<string, string> = {
         Beranda: "/",
         Profil: "/profil",
         Layanan: "/layanan",
@@ -325,23 +330,41 @@ export default function ClinicWorkspace({
         Lokasi: "/lokasi",
         Login: "/login",
         Daftar: "/daftar",
-        Dashboard: "/dashboard",
       }
-      const path =
-        routeMap[target] || `/dashboard?tab=${encodeURIComponent(target)}`
-      if (window.location.pathname !== path) {
+      const roleBasePaths: Record<Role, string> = {
+        Publik: "/",
+        Pasien: "/pasien",
+        Petugas: "/petugas",
+        Dokter: "/dokter-dashboard",
+        Admin: "/admin",
+      }
+
+      let path: string
+      if (role === "Publik") {
+        path = publicRoutes[target] || "/"
+      } else {
+        const basePath = roleBasePaths[role] || "/pasien"
+        path =
+          target === "Dashboard"
+            ? basePath
+            : `${basePath}?tab=${encodeURIComponent(target)}`
+      }
+
+      const currentFullPath = window.location.pathname + window.location.search
+      if (currentFullPath !== path) {
         window.history.pushState(null, "", path)
       }
       window.scrollTo({ top: 0, behavior: "smooth" })
     }
   }
   const switchRole = (value: string) => {
-    setRole(value as Role)
+    const nextRole = value as Role
+    setRole(nextRole)
     setSelected(null)
     setEditor(null)
     setBooking((b) => ({ ...b, patient: "RM-00128" }))
     if (typeof window !== "undefined") {
-      if (value === "Publik") {
+      if (nextRole === "Publik") {
         sessionStorage.removeItem("sehatklinik_notif_prompted_Pasien")
         sessionStorage.removeItem("sehatklinik_notif_prompted_Dokter")
         sessionStorage.removeItem("sehatklinik_notif_prompted_Petugas")
@@ -354,12 +377,19 @@ export default function ClinicWorkspace({
           }
         }, 300)
       }
-      const nextPath = value === "Publik" ? "/" : "/dashboard"
+      const rolePaths: Record<Role, string> = {
+        Publik: "/",
+        Pasien: "/pasien",
+        Petugas: "/petugas",
+        Dokter: "/dokter-dashboard",
+        Admin: "/admin",
+      }
+      const nextPath = rolePaths[nextRole] || "/"
       if (window.location.pathname !== nextPath) {
         window.history.pushState(null, "", nextPath)
       }
     }
-    navigate(value === "Publik" ? "Beranda" : "Dashboard")
+    navigate(nextRole === "Publik" ? "Beranda" : "Dashboard")
   }
   const scoped = visits.filter((v) =>
     role === "Pasien"
@@ -2692,8 +2722,8 @@ export default function ClinicWorkspace({
             Kembali ke Website
           </button>
           <div className="sidebar-foot">
-            <span className="green-dot" /> Prototipe interaktif
-            <small>Data fiktif · Tidak untuk pelayanan nyata</small>
+            <span className="green-dot" /> Sistem Aktif
+            <small>Sistem Informasi Klinik Kesehatan</small>
           </div>
         </div>
       </aside>
@@ -2719,19 +2749,6 @@ export default function ClinicWorkspace({
             </b>
           </div>
           <div className="topbar-right">
-            <div className="role-select">
-              <span className="preview-dot" />
-              <span className="ws-preview-label">Pratinjau</span>
-              <select
-                aria-label="Pratinjau peran"
-                value={role}
-                onChange={(e) => switchRole(e.target.value)}
-              >
-                {["Publik", "Pasien", "Petugas", "Dokter", "Admin"].map((r) => (
-                  <option key={r}>{r}</option>
-                ))}
-              </select>
-            </div>
             <button
               id="topbar-notif-bell"
               className="notif-bell-btn"
@@ -2771,14 +2788,6 @@ export default function ClinicWorkspace({
           </div>
         </header>
         <main className="content">
-          <div className="ws-demo-strip">
-            <Icon name="help" size={15} />
-            <span>
-              Mode prototipe · Data fiktif, tidak tersimpan setelah refresh.
-              Pemilih peran hanya untuk pratinjau desain.
-            </span>
-            <span className="ws-demo-date">26 OKT 2026</span>
-          </div>
           <div className="page-heading">
             <div className="cinema-workspace-art" aria-hidden="true">
               <span className="cinema-workspace-orbit" />
