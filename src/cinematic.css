@@ -47,6 +47,11 @@
   height: 850px;
   background: linear-gradient(180deg,#bae6f399 0%,#d3edfa26 48%,white 96%), url('/images/soft-clouds.jpg') center 35% / cover;
   pointer-events: none;
+  z-index: 0;
+}
+.cinema-public main {
+  position: relative;
+  z-index: 2;
 }
 .cinema-public .web-header { background: transparent !important; border: 0 !important; position: relative; z-index: 10; }
 .cinema-public .web-header-inner { min-height: 106px; }

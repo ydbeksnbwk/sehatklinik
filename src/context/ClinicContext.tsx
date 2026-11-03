@@ -15,6 +15,9 @@ import {
   schedulesSeed,
   servicesSeed,
   visitsSeed,
+  notificationsSeed,
+  notificationJobsSeed,
+  clinicDetailSeed,
   remaining,
   type Role,
   type Visit,
@@ -23,6 +26,10 @@ import {
   type Service,
   type Schedule,
   type Examination,
+  type NotificationItem,
+  type NotificationJob,
+  type NotificationType,
+  type ClinicProfileDetail,
 } from "../clinic-data"
 
 export type ClinicUser = {
@@ -40,6 +47,18 @@ export type ClinicProfile = {
   latitude: string
   longitude: string
   hours: string
+  emergencyPhone?: string
+  whatsapp?: string
+  email?: string
+  tagline?: string
+  history?: string
+  vision?: string
+  mission?: string[]
+  values?: { title: string; subtitle?: string; desc: string; icon: string }[]
+  accreditation?: string
+  accreditationNumber?: string
+  facilities?: { name: string; category?: string; desc: string; icon: string }[]
+  stats?: { value: string; label: string; sub: string }[]
 }
 
 export type BookingState = {
@@ -81,6 +100,25 @@ type ClinicContextType = {
 
   clinic: ClinicProfile
   setClinic: React.Dispatch<React.SetStateAction<ClinicProfile>>
+
+  // Notification State & Operations (SRS & API Contract)
+  notifications: NotificationItem[]
+  notificationJobs: NotificationJob[]
+  notificationDrawerOpen: boolean
+  setNotificationDrawerOpen: (val: boolean) => void
+  webPushPermission: "default" | "granted" | "denied"
+  unreadCount: number
+  addNotification: (
+    notif: Omit<NotificationItem, "id" | "timestamp" | "isRead">,
+    pushBrowser?: boolean
+  ) => void
+  markNotificationAsRead: (id: string) => void
+  markAllNotificationsAsRead: () => void
+  deleteNotification: (id: string) => void
+  clearAllNotifications: () => void
+  requestWebPushPermission: () => Promise<void>
+  sendDemoPushNotification: (customType?: NotificationType) => void
+  retryNotificationJob: (id: string) => void
 
   mobile: boolean
   setMobile: (val: boolean) => void
@@ -148,13 +186,25 @@ type ClinicContextType = {
 }
 
 const defaultClinic: ClinicProfile = {
-  name: "Klinik Sehat Sentosa",
-  description: "Pelayanan kesehatan untuk seluruh keluarga.",
-  address: "Jl. Melati No. 18, Jakarta Selatan",
-  phone: "021-555-0123",
-  latitude: "-6.2615",
-  longitude: "106.8106",
-  hours: "Senin – Sabtu, 08.00 – 20.00 WIB",
+  name: clinicDetailSeed.name,
+  description: clinicDetailSeed.description,
+  address: clinicDetailSeed.address,
+  phone: clinicDetailSeed.phone,
+  latitude: clinicDetailSeed.latitude,
+  longitude: clinicDetailSeed.longitude,
+  hours: clinicDetailSeed.hours,
+  emergencyPhone: clinicDetailSeed.emergencyPhone,
+  whatsapp: clinicDetailSeed.whatsapp,
+  email: clinicDetailSeed.email,
+  tagline: clinicDetailSeed.tagline,
+  history: clinicDetailSeed.history,
+  vision: clinicDetailSeed.vision,
+  mission: clinicDetailSeed.mission,
+  values: clinicDetailSeed.values,
+  accreditation: clinicDetailSeed.accreditation,
+  accreditationNumber: clinicDetailSeed.accreditationNumber,
+  facilities: clinicDetailSeed.facilities,
+  stats: clinicDetailSeed.stats,
 }
 
 const defaultUsers: ClinicUser[] = [
@@ -180,6 +230,31 @@ const defaultUsers: ClinicUser[] = [
 
 const ClinicContext = createContext<ClinicContextType | null>(null)
 
+// Soft chime sound helper
+function playChime() {
+  if (typeof window === "undefined") return
+  try {
+    const AudioContextClass =
+      window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    if (!AudioContextClass) return
+    const ctx = new AudioContextClass()
+    const now = ctx.currentTime
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = "sine"
+    osc.frequency.setValueAtTime(587.33, now) // D5
+    osc.frequency.exponentialRampToValueAtTime(880, now + 0.12) // A5
+    gain.gain.setValueAtTime(0.08, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35)
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start(now)
+    osc.stop(now + 0.35)
+  } catch {
+    // Ignore audio autoplay restrictions
+  }
+}
+
 export function ClinicProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role>("Publik")
   const [page, setPage] = useState("Beranda")
@@ -191,6 +266,12 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   const [schedules, setSchedules] = useState<Schedule[]>(schedulesSeed)
   const [users, setUsers] = useState<ClinicUser[]>(defaultUsers)
   const [clinic, setClinic] = useState<ClinicProfile>(defaultClinic)
+
+  // Notification States
+  const [notifications, setNotifications] = useState<NotificationItem[]>(notificationsSeed)
+  const [notificationJobs, setNotificationJobs] = useState<NotificationJob[]>(notificationJobsSeed)
+  const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false)
+  const [webPushPermission, setWebPushPermission] = useState<"default" | "granted" | "denied">("default")
 
   const [mobile, setMobile] = useState(false)
   const [search, setSearch] = useState("")
@@ -220,6 +301,13 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   const [editingProfile, setEditingProfile] = useState(false)
   const [initialized, setInitialized] = useState(false)
 
+  // Check browser Notification permission on mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setWebPushPermission(Notification.permission)
+    }
+  }, [])
+
   // Load state from localStorage on client mount
   useEffect(() => {
     try {
@@ -232,7 +320,16 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         if (data.services) setServices(data.services)
         if (data.schedules) setSchedules(data.schedules)
         if (data.users) setUsers(data.users)
-        if (data.clinic) setClinic(data.clinic)
+        if (data.clinic) setClinic({ ...defaultClinic, ...data.clinic })
+        if (data.notifications) {
+          const isUpdatedFormat = data.notifications.some(
+            (n: { id: string; message?: string }) =>
+              n.id === "notif-001-selesai" && n.message?.includes(" - ")
+          )
+          setNotifications(isUpdatedFormat ? data.notifications : notificationsSeed)
+        }
+        if (data.notificationJobs) setNotificationJobs(data.notificationJobs)
+
         if (typeof window !== "undefined") {
           const path = window.location.pathname
           if (path === "/admin") setRole("Admin")
@@ -242,7 +339,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           else if (path === "/dashboard") {
             setRole(data.role && data.role !== "Publik" ? data.role : "Pasien")
           } else if (
-            ["/layanan", "/dokter", "/jadwal", "/lokasi", "/login", "/daftar"].includes(path)
+            ["/layanan", "/dokter", "/jadwal", "/lokasi", "/profil", "/login", "/daftar"].includes(path)
           ) {
             setRole("Publik")
           } else if (data.role) {
@@ -272,30 +369,203 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           schedules,
           users,
           clinic,
+          notifications,
+          notificationJobs,
         })
       )
     } catch {
       // ignore
     }
-  }, [initialized, role, visits, patients, doctors, services, schedules, users, clinic])
+  }, [initialized, role, visits, patients, doctors, services, schedules, users, clinic, notifications, notificationJobs])
 
   // Dialog ESC listener
   useEffect(() => {
-    if (!selected && !editor) return
+    if (!selected && !editor && !notificationDrawerOpen) return
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setSelected(null)
         setEditor(null)
+        setNotificationDrawerOpen(false)
       }
     }
     document.addEventListener("keydown", handleKey)
     return () => document.removeEventListener("keydown", handleKey)
-  }, [selected, editor])
+  }, [selected, editor, notificationDrawerOpen])
 
   const notify = (message: string) => {
     setToast(message)
     window.setTimeout(() => setToast(""), 4500)
   }
+
+  // Add Notification with Outbox Pattern according to SRS
+  const addNotification = (
+    notif: Omit<NotificationItem, "id" | "timestamp" | "isRead">,
+    pushBrowser = true
+  ) => {
+    const newId = `notif-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+    const newTimestamp = new Date().toISOString()
+    const item: NotificationItem = {
+      ...notif,
+      id: newId,
+      timestamp: newTimestamp,
+      isRead: false,
+    }
+
+    // Add Outbox Job Record (sesuai SRS Bab 3 & 4: tabel notifikasi_job)
+    const jobId = `job-${Date.now()}`
+    const job: NotificationJob = {
+      id: jobId,
+      profileId: notif.targetUserId || (notif.targetRole === "Petugas" ? "USR-PETUGAS" : "USR-SYSTEM"),
+      recipientName:
+        notif.targetRole === "Pasien"
+          ? patient.name
+          : notif.targetRole === "Petugas"
+          ? "Petugas Loket"
+          : notif.targetRole === "Dokter"
+          ? "dr. Nadia Putri"
+          : "Admin / Sistem",
+      recipientRole: notif.targetRole === "Semua" ? "Pasien" : notif.targetRole,
+      eventType: notif.type,
+      visitId: notif.visitId || "KJ-SISTEM",
+      queueNumber: notif.queueNumber,
+      status: "berhasil",
+      attempts: 1,
+      error: null,
+      createdAt: newTimestamp,
+      processedAt: newTimestamp,
+    }
+
+    setNotifications((prev) => [item, ...prev])
+    setNotificationJobs((prev) => [job, ...prev])
+
+    // Play subtle audio cue
+    playChime()
+
+    // Trigger Browser Web Push if permitted
+    if (pushBrowser && typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "granted") {
+        try {
+          new Notification(notif.title, {
+            body: notif.message,
+            icon: "/images/sehatklinik-symbol.png",
+          })
+        } catch {
+          // ignore notification trigger errors
+        }
+      }
+    }
+
+    // Also surface as a toast
+    notify(`🔔 ${notif.title}: ${notif.message.slice(0, 60)}...`)
+  }
+
+  const markNotificationAsRead = (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+    )
+  }
+
+  const markAllNotificationsAsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
+    notify("Semua notifikasi telah ditandai sebagai dibaca.")
+  }
+
+  const deleteNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id))
+  }
+
+  const clearAllNotifications = () => {
+    setNotifications([])
+    notify("Seluruh riwayat notifikasi telah dibersihkan.")
+  }
+
+  const requestWebPushPermission = async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      notify("Browser ini tidak mendukung Web Push Notification.")
+      return
+    }
+    try {
+      const permission = await Notification.requestPermission()
+      setWebPushPermission(permission)
+      if (permission === "granted") {
+        notify("Izin Web Push berhasil diaktifkan! Notifikasi akan dikirim secara real-time.")
+        addNotification({
+          targetRole: "Semua",
+          type: "INFO",
+          title: "Web Push Berhasil Diaktifkan",
+          message: "Anda akan menerima pemberitahuan langsung saat giliran antrean dipanggil atau pendaftaran diverifikasi.",
+        })
+      } else if (permission === "denied") {
+        notify("Izin notifikasi ditolak oleh browser. Anda tetap dapat melihat notifikasi di dalam aplikasi.")
+      }
+    } catch {
+      notify("Gagal meminta izin notifikasi browser.")
+    }
+  }
+
+  const sendDemoPushNotification = (customType?: NotificationType) => {
+    const type = customType || "ANTREAN_DIPANGGIL"
+    if (type === "ANTREAN_DIPANGGIL") {
+      addNotification({
+        targetRole: "Pasien",
+        targetUserId: patient.id,
+        type: "ANTREAN_DIPANGGIL",
+        title: "Giliran Anda Telah Tiba!",
+        message: `Nomor antrean 01-001 (dr. Nadia Putri - Poli Umum) sekarang dipanggil. Silakan menuju Ruang Periksa 1.`,
+        visitId: "KJ-20261026-001",
+        queueNumber: "01-001",
+        actionUrl: "detail",
+      })
+    } else if (type === "GILIRAN_MENDEKAT") {
+      addNotification({
+        targetRole: "Pasien",
+        targetUserId: patient.id,
+        type: "GILIRAN_MENDEKAT",
+        title: "Giliran Antrean Hampir Tiba",
+        message: "Satu pasien lagi sebelum nomor giliran Anda. Mohon bersiap di ruang tunggu.",
+        visitId: "KJ-20261026-001",
+        queueNumber: "01-001",
+        actionUrl: "detail",
+      })
+    } else if (type === "PENDAFTARAN_BARU") {
+      addNotification({
+        targetRole: "Petugas",
+        type: "PENDAFTARAN_BARU",
+        title: "Pendaftaran Online Masuk",
+        message: "Pasien baru mendaftar untuk konsultasi Poli Anak pada sesi jam 09.00 WIB.",
+        actionUrl: "antrean",
+      })
+    } else {
+      addNotification({
+        targetRole: "Semua",
+        type: "INFO",
+        title: "Uji Coba Sistem Notifikasi Web Push",
+        message: "Koneksi worker pengiriman notifikasi BullMQ + Redis terverifikasi aman dan responsif sesuai SRS.",
+      })
+    }
+  }
+
+  const retryNotificationJob = (jobId: string) => {
+    setNotificationJobs((prev) =>
+      prev.map((j) =>
+        j.id === jobId
+          ? {
+              ...j,
+              status: "berhasil",
+              attempts: j.attempts + 1,
+              error: null,
+              processedAt: new Date().toISOString(),
+            }
+          : j
+      )
+    )
+    notify(`Pekerjaan notifikasi ${jobId} berhasil diproses ulang (retry sukses).`)
+  }
+
+  // Active unread notifications for current role
+  const unreadCount = notifications.filter(
+    (n) => !n.isRead && (n.targetRole === "Semua" || n.targetRole === role)
+  ).length
 
   const navigate = (target: string) => {
     setPage(target)
@@ -369,47 +639,111 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       previous.map((v) => (v.id === id ? { ...v, ...changes } : v))
     )
 
+  // Transition queue and trigger business notifications according to SRS & API Contract
   const transition = (v: Visit, target: string) => {
+    const qLabel = `${v.doctor.replace("d", "").padStart(2, "0")}-${String(v.number).padStart(3, "0")}`
+    const pName = patientName(v.patient)
+    const docName = doctorName(v.doctor)
+
     if (
       target === "checkin" &&
       role === "Petugas" &&
       v.status === "Terdaftar" &&
       v.queue === "Menunggu"
-    )
+    ) {
       updateVisit(v.id, { status: "Hadir" })
-    else if (
+      notify(`Pasien ${pName} (${qLabel}) berhasil Check-in. Siap dipanggil.`)
+    } else if (
       target === "call" &&
       ["Petugas", "Dokter"].includes(role) &&
       v.status === "Hadir" &&
       v.queue === "Menunggu"
-    )
+    ) {
       updateVisit(v.id, { queue: "Dipanggil" })
-    else if (target === "start" && role === "Dokter" && v.queue === "Dipanggil")
+
+      // Trigger ANTREAN_DIPANGGIL notification for the patient
+      addNotification({
+        targetRole: "Pasien",
+        targetUserId: v.patient,
+        type: "ANTREAN_DIPANGGIL",
+        title: "Giliran Anda Telah Dipanggil!",
+        message: `Nomor antrean ${qLabel} (${docName}) dipanggil ke ruang periksa. Silakan segera masuk.`,
+        visitId: v.id,
+        queueNumber: qLabel,
+        actionUrl: "detail",
+      })
+
+      // Find the NEXT waiting patient for this doctor and send GILIRAN_MENDEKAT notification (SRS 11)
+      const nextInLine = todayVisits.find(
+        (other) =>
+          other.id !== v.id &&
+          other.doctor === v.doctor &&
+          other.status === "Hadir" &&
+          other.queue === "Menunggu"
+      )
+      if (nextInLine) {
+        const nextQLabel = `${nextInLine.doctor.replace("d", "").padStart(2, "0")}-${String(nextInLine.number).padStart(3, "0")}`
+        addNotification(
+          {
+            targetRole: "Pasien",
+            targetUserId: nextInLine.patient,
+            type: "GILIRAN_MENDEKAT",
+            title: "Giliran Antrean Anda Hampir Tiba",
+            message: `Nomor antrean sebelum Anda (${qLabel}) sedang dipanggil. Mohon bersiap di ruang tunggu untuk nomor Anda ${nextQLabel}.`,
+            visitId: nextInLine.id,
+            queueNumber: nextQLabel,
+            actionUrl: "detail",
+          },
+          false
+        )
+      }
+    } else if (target === "start" && role === "Dokter" && v.queue === "Dipanggil") {
       updateVisit(v.id, { queue: "Sedang Diperiksa" })
-    else if (
+      notify(`Pemeriksaan untuk antrean ${qLabel} dimulai.`)
+    } else if (
       target === "skip" &&
       role === "Petugas" &&
       v.queue === "Dipanggil" &&
       reason.trim()
-    )
+    ) {
       updateVisit(v.id, { queue: "Dilewati", reason })
-    else if (
+      addNotification({
+        targetRole: "Pasien",
+        targetUserId: v.patient,
+        type: "KUNJUNGAN_DIBATALKAN",
+        title: "Antrean Dilewati",
+        message: `Nomor antrean ${qLabel} dilewati karena: ${reason}. Silakan hubungi loket petugas untuk jadwal ulang.`,
+        visitId: v.id,
+        queueNumber: qLabel,
+        actionUrl: "detail",
+      })
+    } else if (
       target === "cancel" &&
       ((role === "Pasien" && v.queue === "Menunggu") ||
         (role === "Petugas" && ["Menunggu", "Dipanggil"].includes(v.queue))) &&
       reason.trim()
-    )
+    ) {
       updateVisit(v.id, { queue: "Dibatalkan", status: "Dibatalkan", reason })
-    else {
+      addNotification({
+        targetRole: "Pasien",
+        targetUserId: v.patient,
+        type: "KUNJUNGAN_DIBATALKAN",
+        title: "Kunjungan Dibatalkan",
+        message: `Kunjungan ${v.id} (${qLabel}) dibatalkan. Alasan: ${reason}. Kuota jadwal telah dikembalikan.`,
+        visitId: v.id,
+        queueNumber: qLabel,
+        actionUrl: "detail",
+      })
+    } else {
       setError(
         "Tindakan tidak tersedia. Periksa status kunjungan dan isi alasan bila diperlukan."
       )
       return
     }
-    notify("Status kunjungan berhasil diperbarui dalam simulasi.")
     setError("")
   }
 
+  // Submit Booking with Automatic Patient & Officer Notifications (SRS 11 & Kontrak API 10)
   const submitBooking = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError("")
@@ -467,6 +801,39 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     setReceipt(next)
     setStep(4)
     setBusy(false)
+
+    const qLabel = `${next.doctor.replace("d", "").padStart(2, "0")}-${String(next.number).padStart(3, "0")}`
+    const dName = doctorName(next.doctor)
+    const sName = serviceName(next.service)
+    const pName = patientName(next.patient)
+
+    // Notifikasi ke Pasien (SRS 11: Pendaftaran berhasil)
+    addNotification({
+      targetRole: "Pasien",
+      targetUserId: next.patient,
+      type: "KUNJUNGAN_TERDAFTAR",
+      title: "Pendaftaran Kunjungan Berhasil!",
+      message: `Kunjungan di ${sName} bersama ${dName} pada ${next.date} telah terdaftar. Nomor antrean Anda: ${qLabel}.`,
+      visitId: next.id,
+      queueNumber: qLabel,
+      actionUrl: "detail",
+    })
+
+    // Notifikasi ke Petugas (SRS 11: Pendaftaran online baru)
+    if (next.source === "Online") {
+      addNotification(
+        {
+          targetRole: "Petugas",
+          type: "PENDAFTARAN_BARU",
+          title: "Pendaftaran Online Baru",
+          message: `Pasien ${pName} mendaftar online ke ${sName} (${dName}) untuk tanggal ${next.date}. Nomor antrean: ${qLabel}.`,
+          visitId: next.id,
+          queueNumber: qLabel,
+          actionUrl: "antrean",
+        },
+        false
+      )
+    }
   }
 
   const saveExamination = (e: FormEvent<HTMLFormElement>) => {
@@ -510,6 +877,8 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     setSchedules(schedulesSeed)
     setUsers(defaultUsers)
     setClinic(defaultClinic)
+    setNotifications(notificationsSeed)
+    setNotificationJobs(notificationJobsSeed)
     setRole("Publik")
     setPage("Beranda")
     localStorage.removeItem("sehatklinik_state_v1")
@@ -525,24 +894,48 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         page,
         setPage,
         navigate,
+
         visits,
         setVisits,
         updateVisit,
         transition,
+
         patients,
         setPatients,
+
         doctors,
         setDoctors,
+
         services,
         setServices,
+
         schedules,
         setSchedules,
+
         users,
         setUsers,
+
         clinic,
         setClinic,
+
+        notifications,
+        notificationJobs,
+        notificationDrawerOpen,
+        setNotificationDrawerOpen,
+        webPushPermission,
+        unreadCount,
+        addNotification,
+        markNotificationAsRead,
+        markAllNotificationsAsRead,
+        deleteNotification,
+        clearAllNotifications,
+        requestWebPushPermission,
+        sendDemoPushNotification,
+        retryNotificationJob,
+
         mobile,
         setMobile,
+
         search,
         setSearch,
         filter,
@@ -555,21 +948,26 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         setRange,
         pagination,
         setPagination,
+
         selected,
         setSelected,
         editor,
         setEditor,
+
         toast,
         setToast,
         notify,
+
         error,
         setError,
         reason,
         setReason,
+
         exam,
         setExam,
         savedExam,
         setSavedExam,
+
         step,
         setStep,
         booking,
@@ -580,6 +978,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         setBusy,
         editingProfile,
         setEditingProfile,
+
         patient,
         doctorName,
         serviceName,
@@ -589,6 +988,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         todayVisits,
         activeVisits,
         selectedVisit,
+
         openVisit,
         submitBooking,
         saveExamination,

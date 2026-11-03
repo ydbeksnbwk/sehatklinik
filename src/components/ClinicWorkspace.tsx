@@ -10,6 +10,7 @@ import {
 import { useClinic } from "../context/ClinicContext"
 import PublicSite from "./PublicSite"
 import BrandArtwork from "./BrandArtwork"
+import NotificationDrawer from "./NotificationDrawer"
 import {
   DEMO_DATE,
   doctorsSeed,
@@ -23,6 +24,8 @@ import {
   type Role,
   type Visit,
   type Patient,
+  type Doctor,
+  type Service,
   type Examination,
 } from "../clinic-data"
 
@@ -38,6 +41,7 @@ const menus: Record<Exclude<Role, "Publik">, [string, string][]> = {
     ["Jadwal Praktik", "calendar"],
     ["Manajemen Pengguna", "users"],
     ["Profil Klinik", "clinic"],
+    ["Pekerjaan Notifikasi", "bell"],
     ["Rekap Kunjungan", "chart"],
   ],
   Petugas: [
@@ -45,6 +49,7 @@ const menus: Record<Exclude<Role, "Publik">, [string, string][]> = {
     ["Antrean Hari Ini", "clock"],
     ["Pendaftaran Walk-in", "plus"],
     ["Data Pasien", "users"],
+    ["Pekerjaan Notifikasi", "bell"],
   ],
   Dokter: [
     ["Dashboard", "grid"],
@@ -167,7 +172,31 @@ export default function ClinicWorkspace({
     setBusy,
     editingProfile,
     setEditingProfile,
+    unreadCount,
+    notificationDrawerOpen,
+    setNotificationDrawerOpen,
+    requestWebPushPermission,
+    notificationJobs,
+    retryNotificationJob,
+    sendDemoPushNotification,
   } = clinicContext
+
+  // Auto pop-up notification and prompt permission when entering a logged-in role
+  useEffect(() => {
+    if (role !== "Publik" && typeof window !== "undefined") {
+      const promptedKey = "sehatklinik_notif_prompted_" + role
+      if (!sessionStorage.getItem(promptedKey)) {
+        sessionStorage.setItem(promptedKey, "1")
+        const timer = setTimeout(() => {
+          setNotificationDrawerOpen(true)
+          if (requestWebPushPermission) {
+            requestWebPushPermission()
+          }
+        }, 400)
+        return () => clearTimeout(timer)
+      }
+    }
+  }, [role, requestWebPushPermission, setNotificationDrawerOpen])
 
   useEffect(() => {
     if (initialRole && role !== initialRole) {
@@ -184,6 +213,9 @@ export default function ClinicWorkspace({
       if (path === "/") {
         setRole("Publik")
         setPage("Beranda")
+      } else if (path === "/profil") {
+        setRole("Publik")
+        setPage("Profil")
       } else if (path === "/layanan") {
         setRole("Publik")
         setPage("Layanan")
@@ -221,6 +253,7 @@ export default function ClinicWorkspace({
         else setPage("Dashboard")
       }
     }
+    handlePopState()
     window.addEventListener("popstate", handlePopState)
     return () => window.removeEventListener("popstate", handlePopState)
   }, [setRole, setPage])
@@ -285,6 +318,7 @@ export default function ClinicWorkspace({
     if (typeof window !== "undefined") {
       const routeMap: Record<string, string> = {
         Beranda: "/",
+        Profil: "/profil",
         Layanan: "/layanan",
         Dokter: "/dokter",
         Jadwal: "/jadwal",
@@ -307,6 +341,19 @@ export default function ClinicWorkspace({
     setEditor(null)
     setBooking((b) => ({ ...b, patient: "RM-00128" }))
     if (typeof window !== "undefined") {
+      if (value === "Publik") {
+        sessionStorage.removeItem("sehatklinik_notif_prompted_Pasien")
+        sessionStorage.removeItem("sehatklinik_notif_prompted_Dokter")
+        sessionStorage.removeItem("sehatklinik_notif_prompted_Petugas")
+        sessionStorage.removeItem("sehatklinik_notif_prompted_Admin")
+      } else {
+        setTimeout(() => {
+          setNotificationDrawerOpen(true)
+          if (requestWebPushPermission) {
+            requestWebPushPermission()
+          }
+        }, 300)
+      }
       const nextPath = value === "Publik" ? "/" : "/dashboard"
       if (window.location.pathname !== nextPath) {
         window.history.pushState(null, "", nextPath)
@@ -1536,13 +1583,30 @@ export default function ClinicWorkspace({
         setError("Pilih setidaknya satu layanan untuk dokter.")
         return
       }
-      const value = {
+      const existingDoc = editor.id
+        ? doctors.find((item) => item.id === editor.id)
+        : null
+      const value: Doctor = {
         id: editor.id || `d${Date.now()}`,
         name: get("name"),
         specialty: get("specialty"),
         sip: get("sip"),
+        str: existingDoc?.str || "31.1.2.100.1.24.999888",
         services: linked,
         active,
+        education: existingDoc?.education || [
+          {
+            degree: "Pendidikan Dokter & Profesi",
+            institution: "Fakultas Kedokteran",
+            year: "2018",
+          },
+        ],
+        experienceYears: existingDoc?.experienceYears || 5,
+        almamater: existingDoc?.almamater || "Universitas Indonesia",
+        certifications: existingDoc?.certifications || [
+          "Sertifikasi Kompetensi Klinis IDI",
+        ],
+        bio: existingDoc?.bio || "Dokter berdedikasi melayani pasien keluarga.",
       }
       setDoctors((d) =>
         editor.id
@@ -1560,12 +1624,44 @@ export default function ClinicWorkspace({
         setError("Nama layanan sudah digunakan.")
         return
       }
-      const value = {
+      const existingSrv = editor.id
+        ? services.find((item) => item.id === editor.id)
+        : null
+      const value: Service = {
         id: editor.id || `s${Date.now()}`,
         name: get("name"),
         description: get("description"),
         duration: Number(get("duration")),
         active,
+        overview: existingSrv?.overview || get("description"),
+        steps: existingSrv?.steps || [
+          {
+            step: 1,
+            title: "Skrining Awal",
+            description: "Pemeriksaan tanda vital",
+          },
+          {
+            step: 2,
+            title: "Anamnesis",
+            description: "Konsultasi keluhan pasien",
+          },
+          {
+            step: 3,
+            title: "Pemeriksaan Fisik",
+            description: "Pemeriksaan organ terarah",
+          },
+          {
+            step: 4,
+            title: "Edukasi & Terapi",
+            description: "Penetapan resep dan rencana kontrol",
+          },
+        ],
+        cases: existingSrv?.cases || ["Pemeriksaan keluhan medis umum"],
+        facilities: existingSrv?.facilities || [
+          "Peralatan diagnostik medis terstandar",
+        ],
+        preparation:
+          existingSrv?.preparation || "Membawa kartu identitas resmi.",
       }
       setServices((s) =>
         editor.id
@@ -1774,7 +1870,21 @@ export default function ClinicWorkspace({
                   <Badge text={d.active ? "Aktif" : "Nonaktif"} />
                   <h3>{d.name}</h3>
                   <p>{d.specialty}</p>
-                  <small className="ws-sip">No. SIP: {d.sip}</small>
+
+                  {/* Riwayat Pendidikan Dokter */}
+                  <div className="doctor-edu-preview" style={{ margin: "8px 0" }}>
+                    <span className="doctor-almamater-pill">
+                      <Icon name="education" size={13} />
+                      {d.almamater}
+                    </span>
+                    <small style={{ display: "block", color: "#64748b", fontSize: "10.5px" }}>
+                      {d.education?.[0]?.degree || "Pendidikan Dokter"} · {d.experienceYears}+ Thn Pengalaman
+                    </small>
+                    <small style={{ display: "block", color: "#94a3b8", fontSize: "10px", marginTop: "2px" }}>
+                      STR: {d.str} · SIP: {d.sip}
+                    </small>
+                  </div>
+
                   <div className="ws-tags">
                     {d.services.map((s) => (
                       <span key={s}>{serviceName(s)}</span>
@@ -1784,7 +1894,7 @@ export default function ClinicWorkspace({
                     className="secondary"
                     onClick={() => showEditor("Dokter", d.id)}
                   >
-                    Edit Dokter & Layanan
+                    Edit Dokter & Pendidikan
                     <Icon name="arrow" size={15} />
                   </button>
                 </section>
@@ -1801,7 +1911,7 @@ export default function ClinicWorkspace({
       return (
         <>
           <div className="section-toolbar">
-            <h3>{services.length} layanan klinik</h3>
+            <h3>{services.length} layanan klinik terpadu</h3>
             <button className="primary" onClick={() => showEditor("Layanan")}>
               <Icon name="plus" size={16} />
               Tambah Layanan
@@ -1820,11 +1930,28 @@ export default function ClinicWorkspace({
                   <Icon name="clock" size={15} />
                   {s.duration} menit per kunjungan
                 </p>
+
+                {/* 4 Tahapan Alur Pelayanan */}
+                {s.steps && s.steps.length > 0 && (
+                  <div style={{ margin: "10px 0", padding: "8px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #edf2f7" }}>
+                    <small style={{ fontWeight: 600, color: "#1e40af", display: "block", marginBottom: "4px" }}>
+                      Alur Pelayanan (4 Tahap):
+                    </small>
+                    <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                      {s.steps.map((st) => (
+                        <span key={st.step} style={{ background: "#eff6ff", color: "#1d4ed8", padding: "2px 6px", borderRadius: "4px", fontSize: "9px" }}>
+                          {st.step}. {st.title.split(" ")[0]}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <button
                   className="secondary"
                   onClick={() => showEditor("Layanan", s.id)}
                 >
-                  Edit Layanan
+                  Edit Layanan & Alur
                 </button>
               </section>
             ))}
@@ -2057,20 +2184,220 @@ export default function ClinicWorkspace({
           </section>
         </div>
       )
+    if (page === "Pekerjaan Notifikasi") {
+      const statusFilter = filter || ""
+      const filteredJobs = notificationJobs.filter(
+        (j) =>
+          (!statusFilter || j.status === statusFilter) &&
+          `${j.id} ${j.recipientName} ${j.eventType} ${j.visitId}`
+            .toLowerCase()
+            .includes(search.toLowerCase()),
+      )
+      return (
+        <section className="panel queue-panel">
+          <div className="panel-heading">
+            <div>
+              <span className="eyebrow">POLA OUTBOX BULLMQ & REDIS</span>
+              <h3>Pelacak Antrean Pekerjaan Notifikasi (Tabel notifikasi_job)</h3>
+              <p>
+                Status pengiriman push notification ke browser secara asinkron sesuai spesifikasi SRS Bab III & IV.
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                className="secondary"
+                onClick={() => sendDemoPushNotification("ANTREAN_DIPANGGIL")}
+              >
+                <Icon name="bell" size={14} />
+                Uji Panggilan Antrean
+              </button>
+              <button
+                className="secondary"
+                onClick={() => sendDemoPushNotification("GILIRAN_MENDEKAT")}
+              >
+                <Icon name="clock" size={14} />
+                Uji Giliran Mendekat
+              </button>
+            </div>
+          </div>
+          <div className="table-tools">
+            <div className="search">
+              <Icon name="search" size={18} />
+              <input
+                aria-label="Cari pekerjaan notifikasi"
+                placeholder="Cari ID job, penerima, atau event…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="filters">
+              <select
+                aria-label="Filter status notifikasi"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+              >
+                <option value="">Semua status ({notificationJobs.length})</option>
+                <option value="berhasil">
+                  Berhasil ({notificationJobs.filter((j) => j.status === "berhasil").length})
+                </option>
+                <option value="menunggu">
+                  Menunggu ({notificationJobs.filter((j) => j.status === "menunggu").length})
+                </option>
+                <option value="gagal">
+                  Gagal ({notificationJobs.filter((j) => j.status === "gagal").length})
+                </option>
+              </select>
+            </div>
+          </div>
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID Job</th>
+                  <th>Penerima</th>
+                  <th>Peran</th>
+                  <th>Jenis Kejadian</th>
+                  <th>No. Antrean</th>
+                  <th>Kunjungan ID</th>
+                  <th>Status Outbox</th>
+                  <th>Percobaan</th>
+                  <th>Keterangan / Error</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredJobs.map((j) => (
+                  <tr key={j.id}>
+                    <td><code>{j.id}</code></td>
+                    <td><b>{j.recipientName}</b></td>
+                    <td><span className="tiny-tag">{j.recipientRole}</span></td>
+                    <td><code>{j.eventType}</code></td>
+                    <td>{j.queueNumber ? <span className="queue-number">{j.queueNumber}</span> : "-"}</td>
+                    <td><small>{j.visitId}</small></td>
+                    <td>
+                      <span
+                        className={`job-status-badge ${
+                          j.status === "berhasil"
+                            ? "status-success"
+                            : j.status === "gagal"
+                            ? "status-failed"
+                            : "status-queued"
+                        }`}
+                      >
+                        <i />
+                        {j.status === "berhasil"
+                          ? "Berhasil"
+                          : j.status === "gagal"
+                          ? "Gagal"
+                          : "Menunggu"}
+                      </span>
+                    </td>
+                    <td>{j.attempts}x</td>
+                    <td>
+                      {j.error ? (
+                        <span style={{ color: "#dc2626", fontSize: "10.5px" }}>
+                          {j.error}
+                        </span>
+                      ) : (
+                        <span style={{ color: "#16a34a", fontSize: "10.5px" }}>
+                          Diproses worker
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      {j.status === "gagal" ? (
+                        <button
+                          className="notif-retry-btn"
+                          onClick={() => retryNotificationJob(j.id)}
+                        >
+                          <Icon name="refresh" size={12} />
+                          Retry
+                        </button>
+                      ) : (
+                        <span style={{ color: "#94a3b8", fontSize: "10px" }}>Tuntas</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {!filteredJobs.length && (
+              <div className="empty">Tidak ada pekerjaan notifikasi yang cocok.</div>
+            )}
+          </div>
+        </section>
+      )
+    }
     if (page === "Profil Saya" || page === "Profil Klinik")
       return (
-        <section className="panel form-panel">
-          <span className="eyebrow">
-            {role === "Admin"
-              ? "IDENTITAS & LOKASI KLINIK"
-              : "INFORMASI PRIBADI"}
-          </span>
-          <h3>{role === "Pasien" ? "Edit Profil" : page}</h3>
-          <p className="muted">
-            {role === "Admin"
-              ? "Informasi untuk halaman publik klinik."
-              : `${patient.id} · Peran pasien tidak dapat diubah.`}
-          </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          {role === "Admin" && (
+            <section className="panel" style={{ padding: "26px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", marginBottom: "18px" }}>
+                <div>
+                  <span className="eyebrow">IDENTITAS FASILITAS KESEHATAN TINGKAT PERTAMA (FKTP)</span>
+                  <h2 style={{ fontSize: "22px", margin: "4px 0", color: "#0f172a" }}>
+                    {clinic.name}
+                  </h2>
+                  <p style={{ color: "#2563eb", fontWeight: 600, fontSize: "12.5px" }}>
+                    {clinic.tagline || "Perawatan Sepenuh Hati, Hidup Lebih Berarti"}
+                  </p>
+                </div>
+                <span className="clinic-accredit-badge">
+                  <Icon name="award" size={15} />
+                  Akreditasi Paripurna Kemenkes
+                </span>
+              </div>
+
+              <p style={{ fontSize: "13px", color: "#475569", lineHeight: 1.7, marginBottom: "20px" }}>
+                {clinic.history || clinic.description}
+              </p>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", padding: "16px", background: "#f8fafc", borderRadius: "10px", border: "1px solid #edf2f7", marginBottom: "20px" }}>
+                {clinic.stats?.map((st) => (
+                  <div key={st.label}>
+                    <b style={{ color: "#2563eb", fontSize: "18px", display: "block" }}>{st.value}</b>
+                    <span style={{ fontSize: "11px", fontWeight: 600, color: "#1e293b" }}>{st.label}</span>
+                    <small style={{ display: "block", color: "#64748b", fontSize: "10px" }}>{st.sub}</small>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px", fontSize: "12px" }}>
+                <div style={{ padding: "14px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "10px" }}>
+                  <b style={{ color: "#0f172a", display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
+                    <Icon name="heart" size={15} /> Visi Rumah Sakit / Klinik
+                  </b>
+                  <p style={{ color: "#64748b", margin: 0, lineHeight: 1.6 }}>{clinic.vision}</p>
+                </div>
+                <div style={{ padding: "14px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "10px" }}>
+                  <b style={{ color: "#0f172a", display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
+                    <Icon name="shield" size={15} /> 4 Nilai Utama Layanan
+                  </b>
+                  <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginTop: "4px" }}>
+                    {clinic.values?.map((v) => (
+                      <span key={v.title} style={{ background: "#eff6ff", color: "#1d4ed8", padding: "3px 8px", borderRadius: "4px", fontSize: "10.5px" }}>
+                        {v.title.split("(")[0]}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          <section className="panel form-panel">
+            <span className="eyebrow">
+              {role === "Admin"
+                ? "EDIT INFORMASI PUBLIK KLINIK"
+                : "INFORMASI PRIBADI"}
+            </span>
+            <h3>{role === "Pasien" ? "Edit Profil" : "Perbarui Data Publik Klinik"}</h3>
+            <p className="muted">
+              {role === "Admin"
+                ? "Perubahan data alamat, kontak darurat, koordinat GPS, dan jam operasional langsung tersinkronisasi ke halaman publik."
+                : `${patient.id} · Peran pasien tidak dapat diubah.`}
+            </p>
           <form
             onSubmit={(e) => {
               e.preventDefault()
@@ -2213,7 +2540,8 @@ export default function ClinicWorkspace({
             </div>
           </form>
         </section>
-      )
+      </div>
+    )
     return (
       <>
         {stats}
@@ -2285,7 +2613,18 @@ export default function ClinicWorkspace({
         page={page}
         navigate={navigate}
         onBook={() => navigate("Login")}
-        onLogin={() => switchRole("Pasien")}
+        onLogin={() => {
+          if (typeof window !== "undefined") {
+            sessionStorage.removeItem("sehatklinik_notif_prompted_Pasien")
+          }
+          switchRole("Pasien")
+          setTimeout(() => {
+            setNotificationDrawerOpen(true)
+            if (requestWebPushPermission) {
+              requestWebPushPermission()
+            }
+          }, 350)
+        }}
         onRole={switchRole}
         doctors={doctors}
         services={services}
@@ -2393,6 +2732,18 @@ export default function ClinicWorkspace({
                 ))}
               </select>
             </div>
+            <button
+              id="topbar-notif-bell"
+              className="notif-bell-btn"
+              onClick={() => setNotificationDrawerOpen(!notificationDrawerOpen)}
+              aria-label="Pusat Notifikasi & Web Push"
+              title="Pusat Notifikasi & Web Push (SRS 11)"
+            >
+              <Icon name="bell" size={18} />
+              {unreadCount > 0 && (
+                <span className="notif-counter-badge">{unreadCount}</span>
+              )}
+            </button>
             <span className="top-divider" />
             <div className="profile">
               <span className="avatar blue">
@@ -3118,6 +3469,7 @@ export default function ClinicWorkspace({
           </section>
         </div>
       )}
+      <NotificationDrawer />
     </div>
   )
 }

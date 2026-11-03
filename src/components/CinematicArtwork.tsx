@@ -17,6 +17,12 @@ export default function CinematicArtwork({ page, Icon }: Props) {
     subtitle: string
     caption: string
   }> = {
+    Profil: {
+      icon: "clinic",
+      title: "Mengenal kami lebih dekat",
+      subtitle: "Kepedulian untuk setiap keluarga",
+      caption: "RUANG SEHAT, CERITA YANG LEBIH BAIK",
+    },
     Layanan: {
       icon: "heart",
       title: "Perawatan yang personal",
@@ -56,13 +62,24 @@ export default function CinematicArtwork({ page, Icon }: Props) {
           src="/images/hero-doctor.png"
           alt=""
         />
-      ) : page === "Layanan" || page === "Lokasi" ? (
+      ) : page === "Profil" || page === "Layanan" || page === "Lokasi" ? (
         <div className="cinema-art-photo">
-          <img src="/images/clinic-consultation.jpg" alt="" />
+          <img
+            src={
+              page === "Profil" || page === "Layanan"
+                ? "/images/layanan-hero.jpg"
+                : "/images/clinic-consultation.jpg"
+            }
+            alt=""
+          />
           <span className="cinema-art-photo-shade" />
           <span className="cinema-art-photo-note">
             <Icon name={detail.icon} size={19} />
-            Sehat dimulai dari rasa nyaman.
+            {page === "Profil"
+              ? "Mengenal kami lebih dekat."
+              : page === "Layanan"
+              ? "Perawatan sepenuh hati."
+              : "Sehat dimulai dari rasa nyaman."}
           </span>
         </div>
       ) : (
