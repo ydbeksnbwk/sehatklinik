@@ -9,7 +9,6 @@ import {
   DEMO_DATE,
   dateLabel,
   remaining,
-  clinicDetailSeed,
   type Doctor,
   type Service,
   type Schedule,
@@ -1305,30 +1304,6 @@ export default function PublicSite({
               </div>
             </section>
 
-            {/* HIGHLIGHT PROFIL KLINIK DI BERANDA */}
-            <section className="web-container web-section" style={{ paddingTop: "20px" }}>
-              <div className="clinic-profile-hero" style={{ marginBottom: "20px" }}>
-                <span className="clinic-hero-pill">
-                  <Icon name="shield" size={14} />
-                  MENGENAL KLINIK SEHAT SENTOSA
-                </span>
-                <h2 style={{ fontSize: "32px", color: "#ffffff", margin: "10px 0 14px", fontWeight: 700 }}>
-                  Dedikasi Pelayanan Kesehatan Primer Keluarga Sejak 2018
-                </h2>
-                <p style={{ color: "#cbd5e1", fontSize: "14px", maxWidth: "720px", lineHeight: 1.7 }}>
-                  {clinicDetailSeed.description} Kami mengintegrasikan kepedulian tenaga medis berpengalaman, fasilitas higienis berstandar Kemenkes RI, dan teknologi antrean cerdas serta notifikasi Web Push real-time.
-                </p>
-                <div className="clinic-stats-row">
-                  {clinicDetailSeed.stats.map((st) => (
-                    <div key={st.label} className="clinic-stat-box">
-                      <b>{st.value}</b>
-                      <span>{st.label}</span>
-                      <small>{st.sub}</small>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
 
             <section className="sky-editorial web-container">
               <div className="sky-editorial-heading">
