@@ -183,9 +183,27 @@ export default function ClinicWorkspace({
     sendDemoPushNotification,
   } = clinicContext
 
+  const [mounted, setMounted] = useState(false)
+  const [modalEmail, setModalEmail] = useState("")
+  const [modalPassword, setModalPassword] = useState("")
+  const [modalShowPassword, setModalShowPassword] = useState(false)
+  const [modalError, setModalError] = useState("")
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const isStaffRole =
+    initialRole === "Admin" ||
+    initialRole === "Petugas" ||
+    initialRole === "Dokter"
+
+  const showAuthModal =
+    mounted && isStaffRole && (!currentUser || currentUser.role !== initialRole)
+
   // Auto pop-up notification and prompt permission when entering a logged-in role
   useEffect(() => {
-    if (role !== "Publik" && typeof window !== "undefined") {
+    if (role !== "Publik" && !showAuthModal && typeof window !== "undefined") {
       const promptedKey = "sehatklinik_notif_prompted_" + role
       if (!sessionStorage.getItem(promptedKey)) {
         sessionStorage.setItem(promptedKey, "1")
@@ -2674,101 +2692,63 @@ export default function ClinicWorkspace({
         clinic={clinic}
       />
     )
-  const isStaffRole =
-    initialRole === "Admin" ||
-    initialRole === "Petugas" ||
-    initialRole === "Dokter"
+  const staffRoleName =
+    initialRole === "Admin"
+      ? "Administrator"
+      : initialRole === "Dokter"
+      ? "Ruang Dokter"
+      : "Loket Petugas"
 
-  if (isStaffRole) {
-    if (!currentUser) {
-      const roleName =
-        initialRole === "Admin"
-          ? "Administrator"
-          : initialRole === "Dokter"
-            ? "Ruang Dokter"
-            : "Loket Petugas"
-      return (
-        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", padding: "24px" }}>
-          <div style={{ maxWidth: "460px", width: "100%", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "36px 30px", textAlign: "center", boxShadow: "0 10px 30px rgba(15,23,42,0.06)" }}>
-            <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "#eff6ff", color: "#2563eb", display: "grid", placeItems: "center", margin: "0 auto 20px" }}>
-              <Icon name="shield" size={32} />
-            </div>
-            <span style={{ fontSize: "11px", fontWeight: 650, letterSpacing: "1.2px", color: "#2563eb", textTransform: "uppercase" }}>Akses Terbatas Staf</span>
-            <h2 style={{ fontSize: "22px", margin: "10px 0 12px", color: "#1e293b", fontWeight: 700 }}>Login Terlebih Dahulu</h2>
-            <p style={{ fontSize: "13px", color: "#64748b", lineHeight: 1.6, marginBottom: "26px" }}>
-              Halaman dashboard <b>{roleName}</b> hanya dapat diakses oleh akun staf yang telah didaftarkan oleh Administrator klinik. Silakan login terlebih dahulu untuk melanjutkan.
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              <button
-                className="web-button"
-                style={{ width: "100%", justifyContent: "center" }}
-                onClick={() => {
-                  window.location.href = `/login?redirect=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname : "/")}`
-                }}
-              >
-                Masuk ke Halaman Login <Icon name="arrow" size={16} />
-              </button>
-              <button
-                className="secondary"
-                style={{ width: "100%", justifyContent: "center" }}
-                onClick={() => {
-                  window.location.href = "/"
-                }}
-              >
-                Kembali ke Beranda
-              </button>
-            </div>
-          </div>
-        </div>
-      )
+  const handleModalLogin = (emailInput?: string, passwordInput?: string) => {
+    const e = emailInput !== undefined ? emailInput : modalEmail
+    const p = passwordInput !== undefined ? passwordInput : modalPassword
+
+    if (!e) {
+      setModalError("Silakan masukkan email Anda.")
+      return
     }
 
-    if (currentUser.role !== initialRole) {
-      const myDashboard =
-        currentUser.role === "Admin"
-          ? "/admin"
-          : currentUser.role === "Dokter"
-            ? "/dokter-dashboard"
-            : currentUser.role === "Petugas"
-              ? "/petugas"
-              : "/pasien"
-      return (
-        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", padding: "24px" }}>
-          <div style={{ maxWidth: "480px", width: "100%", background: "#ffffff", border: "1px solid #fee2e2", borderRadius: "16px", padding: "36px 30px", textAlign: "center", boxShadow: "0 10px 30px rgba(15,23,42,0.06)" }}>
-            <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "#fef2f2", color: "#dc2626", display: "grid", placeItems: "center", margin: "0 auto 20px" }}>
-              <Icon name="shield" size={32} />
-            </div>
-            <span style={{ fontSize: "11px", fontWeight: 650, letterSpacing: "1.2px", color: "#dc2626", textTransform: "uppercase" }}>Peran Tidak Sesuai</span>
-            <h2 style={{ fontSize: "22px", margin: "10px 0 12px", color: "#1e293b", fontWeight: 700 }}>Akses Ditolak</h2>
-            <p style={{ fontSize: "13px", color: "#64748b", lineHeight: 1.6, marginBottom: "26px" }}>
-              Akun Anda terdaftar sebagai <b>{currentUser.role}</b> ({currentUser.name}). Anda tidak memiliki izin untuk membuka halaman dashboard <b>{initialRole}</b>.
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              <button
-                className="web-button"
-                style={{ width: "100%", justifyContent: "center" }}
-                onClick={() => {
-                  window.location.href = myDashboard
-                }}
-              >
-                Buka Dashboard Anda ({currentUser.role}) <Icon name="arrow" size={16} />
-              </button>
-              <button
-                className="secondary"
-                style={{ width: "100%", justifyContent: "center" }}
-                onClick={logout}
-              >
-                Keluar / Ganti Akun
-              </button>
-            </div>
-          </div>
-        </div>
-      )
+    const res = clinicContext.login(e, p)
+    if (!res.success) {
+      setModalError(res.message || "Email atau password salah.")
+      return
+    }
+
+    if (res.user) {
+      if (res.user.role === initialRole) {
+        setModalError("")
+        notify(`Selamat datang, ${res.user.name}! Anda berhasil masuk sebagai ${res.user.role}.`)
+      } else {
+        const rolePaths: Record<string, string> = {
+          Admin: "/admin",
+          Petugas: "/petugas",
+          Dokter: "/dokter-dashboard",
+          Pasien: "/pasien",
+        }
+        const targetPath = rolePaths[res.user.role] || "/dashboard"
+        notify(`Akun Anda (${res.user.name}) terdaftar sebagai ${res.user.role}. Mengalihkan ke ${targetPath}...`)
+        setTimeout(() => {
+          window.location.href = targetPath
+        }, 600)
+      }
     }
   }
 
   return (
-    <div className={`app ws-app ${mobile ? "nav-open" : ""}`}>
+    <>
+      <div
+        className={`app ws-app ${mobile ? "nav-open" : ""}`}
+        style={
+          showAuthModal
+            ? {
+                filter: "blur(4px)",
+                pointerEvents: "none",
+                userSelect: "none",
+                transition: "filter 0.3s ease",
+              }
+            : undefined
+        }
+      >
       {mobile && (
         <button
           className="ws-mobile-shade"
@@ -3598,6 +3578,321 @@ export default function ClinicWorkspace({
         </div>
       )}
       <NotificationDrawer />
-    </div>
+      </div>
+
+      {showAuthModal && (
+        <div
+          className="web-dialog-backdrop"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "grid",
+            placeItems: "center",
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
+            padding: "20px",
+            overflowY: "auto",
+          }}
+        >
+          <div
+            className="web-dialog web-auth-form"
+            style={{
+              width: "100%",
+              maxWidth: "460px",
+              background: "#ffffff",
+              borderRadius: "18px",
+              padding: "32px 28px",
+              boxShadow: "0 20px 50px rgba(15, 23, 42, 0.25)",
+              position: "relative",
+              margin: "auto",
+            }}
+          >
+            <button
+              className="web-dialog-close"
+              aria-label="Kembali ke Beranda"
+              title="Kembali ke Beranda"
+              onClick={() => {
+                window.location.href = "/"
+              }}
+              style={{
+                position: "absolute",
+                right: "18px",
+                top: "18px",
+                background: "transparent",
+                border: 0,
+                cursor: "pointer",
+                color: "#94a3b8",
+                padding: "6px",
+                borderRadius: "8px",
+              }}
+            >
+              <Icon name="close" size={18} />
+            </button>
+
+            <span className="web-service-icon" style={{ marginBottom: "16px" }}>
+              <Icon
+                name={initialRole === "Dokter" ? "heart" : initialRole === "Admin" ? "shield" : "clinic"}
+                size={27}
+              />
+            </span>
+
+            <h2 style={{ fontSize: "22px", margin: "0 0 8px", color: "#1e293b", fontWeight: 700 }}>
+              Masuk Dashboard {staffRoleName}
+            </h2>
+            <p style={{ fontSize: "12px", color: "#64748b", margin: "0 0 16px", lineHeight: 1.6 }}>
+              Halaman ini memerlukan autentikasi akun staf terdaftar. Silakan masuk untuk mengakses panel kendali {initialRole}.
+            </p>
+
+            <div className="web-prototype-note" style={{ marginBottom: "16px" }}>
+              <Icon name="help" size={16} />
+              <span>Akun staf didaftarkan oleh Administrator klinik di Manajemen Pengguna.</span>
+            </div>
+
+            {currentUser && currentUser.role !== initialRole && (
+              <div
+                style={{
+                  background: "#fffbeb",
+                  border: "1px solid #fef3c7",
+                  borderRadius: "10px",
+                  padding: "12px 14px",
+                  marginBottom: "16px",
+                  fontSize: "12px",
+                  color: "#92400e",
+                  lineHeight: 1.5,
+                }}
+              >
+                <b>Peran Tidak Sesuai:</b> Anda saat ini terhubung sebagai <b>{currentUser.name}</b> ({currentUser.role}). Halaman ini khusus untuk peran <b>{initialRole}</b>.
+                <div style={{ marginTop: "10px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    className="secondary"
+                    style={{ padding: "6px 10px", fontSize: "11px" }}
+                    onClick={() => {
+                      const myDashboard =
+                        currentUser.role === "Admin"
+                          ? "/admin"
+                          : currentUser.role === "Dokter"
+                          ? "/dokter-dashboard"
+                          : currentUser.role === "Petugas"
+                          ? "/petugas"
+                          : "/pasien"
+                      window.location.href = myDashboard
+                    }}
+                  >
+                    Buka Dashboard {currentUser.role}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    style={{ padding: "6px 10px", fontSize: "11px", color: "#dc2626" }}
+                    onClick={logout}
+                  >
+                    Ganti Akun
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {modalError && (
+              <div
+                style={{
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  borderRadius: "8px",
+                  padding: "10px 14px",
+                  color: "#b91c1c",
+                  fontSize: "12px",
+                  marginBottom: "16px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <Icon name="help" size={16} />
+                <span>{modalError}</span>
+              </div>
+            )}
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                handleModalLogin()
+              }}
+            >
+              <label style={{ display: "block", marginBottom: "14px", fontSize: "12px", fontWeight: 500, color: "#334155" }}>
+                Email Staf
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={modalEmail}
+                  onChange={(e) => {
+                    setModalEmail(e.target.value)
+                    setModalError("")
+                  }}
+                  placeholder="nama@sehatklinik.id"
+                  style={{ marginTop: "6px" }}
+                />
+              </label>
+
+              <label style={{ display: "block", marginBottom: "16px", fontSize: "12px", fontWeight: 500, color: "#334155" }}>
+                Password
+                <div className="web-password" style={{ marginTop: "6px" }}>
+                  <input
+                    type={modalShowPassword ? "text" : "password"}
+                    required
+                    value={modalPassword}
+                    onChange={(e) => {
+                      setModalPassword(e.target.value)
+                      setModalError("")
+                    }}
+                    autoComplete="current-password"
+                    placeholder="Minimal 6 karakter"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setModalShowPassword(!modalShowPassword)}
+                  >
+                    {modalShowPassword ? "Sembunyikan" : "Lihat"}
+                  </button>
+                </div>
+              </label>
+
+              <button
+                className="web-button"
+                type="submit"
+                style={{ width: "100%", justifyContent: "center" }}
+              >
+                Masuk ke Dashboard {initialRole} <Icon name="arrow" size={18} />
+              </button>
+
+              <div style={{ marginTop: "18px", paddingTop: "14px", borderTop: "1px solid #eef2f7" }}>
+                <div style={{ fontSize: "11px", color: "#64748b", marginBottom: "8px", fontWeight: 500 }}>
+                  Akses Cepat Akun Terdaftar:
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                  {initialRole === "Admin" && (
+                    <button
+                      type="button"
+                      className="secondary"
+                      style={{ gridColumn: "span 2", padding: "9px 12px", fontSize: "11px", justifyContent: "flex-start", gap: "8px", background: "#f5f3ff", borderColor: "#ddd6fe" }}
+                      onClick={() => {
+                        setModalEmail("rina@sehatklinik.id")
+                        setModalPassword("password123")
+                        handleModalLogin("rina@sehatklinik.id", "password123")
+                      }}
+                    >
+                      <span className="avatar purple" style={{ width: "22px", height: "22px", fontSize: "10px" }}>A</span>
+                      <b>Rina Kusuma (Admin)</b> - rina@sehatklinik.id
+                    </button>
+                  )}
+                  {initialRole === "Petugas" && (
+                    <button
+                      type="button"
+                      className="secondary"
+                      style={{ gridColumn: "span 2", padding: "9px 12px", fontSize: "11px", justifyContent: "flex-start", gap: "8px", background: "#fffbeb", borderColor: "#fde68a" }}
+                      onClick={() => {
+                        setModalEmail("dina@sehatklinik.id")
+                        setModalPassword("password123")
+                        handleModalLogin("dina@sehatklinik.id", "password123")
+                      }}
+                    >
+                      <span className="avatar amber" style={{ width: "22px", height: "22px", fontSize: "10px" }}>P</span>
+                      <b>Dina Wulandari (Petugas)</b> - dina@sehatklinik.id
+                    </button>
+                  )}
+                  {initialRole === "Dokter" && (
+                    <button
+                      type="button"
+                      className="secondary"
+                      style={{ gridColumn: "span 2", padding: "9px 12px", fontSize: "11px", justifyContent: "flex-start", gap: "8px", background: "#f0fdf4", borderColor: "#bbf7d0" }}
+                      onClick={() => {
+                        setModalEmail("nadia@sehatklinik.id")
+                        setModalPassword("password123")
+                        handleModalLogin("nadia@sehatklinik.id", "password123")
+                      }}
+                    >
+                      <span className="avatar green" style={{ width: "22px", height: "22px", fontSize: "10px" }}>D</span>
+                      <b>dr. Nadia Putri (Dokter)</b> - nadia@sehatklinik.id
+                    </button>
+                  )}
+                  {initialRole !== "Admin" && (
+                    <button
+                      type="button"
+                      className="secondary"
+                      style={{ padding: "8px 10px", fontSize: "11px", justifyContent: "flex-start", gap: "6px" }}
+                      onClick={() => {
+                        setModalEmail("rina@sehatklinik.id")
+                        setModalPassword("password123")
+                        handleModalLogin("rina@sehatklinik.id", "password123")
+                      }}
+                    >
+                      <span className="avatar purple" style={{ width: "20px", height: "20px", fontSize: "9px" }}>A</span>
+                      Admin
+                    </button>
+                  )}
+                  {initialRole !== "Petugas" && (
+                    <button
+                      type="button"
+                      className="secondary"
+                      style={{ padding: "8px 10px", fontSize: "11px", justifyContent: "flex-start", gap: "6px" }}
+                      onClick={() => {
+                        setModalEmail("dina@sehatklinik.id")
+                        setModalPassword("password123")
+                        handleModalLogin("dina@sehatklinik.id", "password123")
+                      }}
+                    >
+                      <span className="avatar amber" style={{ width: "20px", height: "20px", fontSize: "9px" }}>L</span>
+                      Petugas
+                    </button>
+                  )}
+                  {initialRole !== "Dokter" && (
+                    <button
+                      type="button"
+                      className="secondary"
+                      style={{ padding: "8px 10px", fontSize: "11px", justifyContent: "flex-start", gap: "6px" }}
+                      onClick={() => {
+                        setModalEmail("nadia@sehatklinik.id")
+                        setModalPassword("password123")
+                        handleModalLogin("nadia@sehatklinik.id", "password123")
+                      }}
+                    >
+                      <span className="avatar green" style={{ width: "20px", height: "20px", fontSize: "9px" }}>D</span>
+                      Dokter
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="secondary"
+                    style={{ padding: "8px 10px", fontSize: "11px", justifyContent: "flex-start", gap: "6px" }}
+                    onClick={() => {
+                      setModalEmail("andi@sehatklinik.id")
+                      setModalPassword("password123")
+                      handleModalLogin("andi@sehatklinik.id", "password123")
+                    }}
+                  >
+                    <span className="avatar blue" style={{ width: "20px", height: "20px", fontSize: "9px" }}>P</span>
+                    Pasien
+                  </button>
+                </div>
+              </div>
+            </form>
+
+            <p className="web-auth-switch" style={{ marginTop: "18px", marginBottom: 0 }}>
+              Bukan staf klinik?{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = "/"
+                }}
+              >
+                Kembali ke Beranda
+              </button>
+            </p>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
