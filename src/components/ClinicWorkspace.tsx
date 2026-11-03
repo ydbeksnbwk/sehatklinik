@@ -132,6 +132,8 @@ export default function ClinicWorkspace({
     setSchedules,
     users,
     setUsers,
+    currentUser,
+    logout,
     clinic,
     setClinic,
     mobile,
@@ -1737,15 +1739,24 @@ export default function ClinicWorkspace({
         setError("Email sudah digunakan.")
         return
       }
+      const newStaffName = get("name")
+      const newStaffRole = get("role")
       setUsers((u) => [
         ...u,
         {
-          name: get("name"),
+          name: newStaffName,
           email: get("email"),
-          role: get("role"),
+          role: newStaffRole,
           active: true,
+          password: get("password") || "password123",
         },
       ])
+      setEditor(null)
+      setError("")
+      notify(
+        `Akun staf ${newStaffName} (${newStaffRole}) berhasil didaftarkan. Pengguna kini dapat login ke dashboard ${newStaffRole}.`
+      )
+      return
     }
     setEditor(null)
     setError("")
@@ -2663,6 +2674,99 @@ export default function ClinicWorkspace({
         clinic={clinic}
       />
     )
+  const isStaffRole =
+    initialRole === "Admin" ||
+    initialRole === "Petugas" ||
+    initialRole === "Dokter"
+
+  if (isStaffRole) {
+    if (!currentUser) {
+      const roleName =
+        initialRole === "Admin"
+          ? "Administrator"
+          : initialRole === "Dokter"
+            ? "Ruang Dokter"
+            : "Loket Petugas"
+      return (
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", padding: "24px" }}>
+          <div style={{ maxWidth: "460px", width: "100%", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "36px 30px", textAlign: "center", boxShadow: "0 10px 30px rgba(15,23,42,0.06)" }}>
+            <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "#eff6ff", color: "#2563eb", display: "grid", placeItems: "center", margin: "0 auto 20px" }}>
+              <Icon name="shield" size={32} />
+            </div>
+            <span style={{ fontSize: "11px", fontWeight: 650, letterSpacing: "1.2px", color: "#2563eb", textTransform: "uppercase" }}>Akses Terbatas Staf</span>
+            <h2 style={{ fontSize: "22px", margin: "10px 0 12px", color: "#1e293b", fontWeight: 700 }}>Login Terlebih Dahulu</h2>
+            <p style={{ fontSize: "13px", color: "#64748b", lineHeight: 1.6, marginBottom: "26px" }}>
+              Halaman dashboard <b>{roleName}</b> hanya dapat diakses oleh akun staf yang telah didaftarkan oleh Administrator klinik. Silakan login terlebih dahulu untuk melanjutkan.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <button
+                className="web-button"
+                style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => {
+                  window.location.href = `/login?redirect=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname : "/")}`
+                }}
+              >
+                Masuk ke Halaman Login <Icon name="arrow" size={16} />
+              </button>
+              <button
+                className="secondary"
+                style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => {
+                  window.location.href = "/"
+                }}
+              >
+                Kembali ke Beranda
+              </button>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    if (currentUser.role !== initialRole) {
+      const myDashboard =
+        currentUser.role === "Admin"
+          ? "/admin"
+          : currentUser.role === "Dokter"
+            ? "/dokter-dashboard"
+            : currentUser.role === "Petugas"
+              ? "/petugas"
+              : "/pasien"
+      return (
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", padding: "24px" }}>
+          <div style={{ maxWidth: "480px", width: "100%", background: "#ffffff", border: "1px solid #fee2e2", borderRadius: "16px", padding: "36px 30px", textAlign: "center", boxShadow: "0 10px 30px rgba(15,23,42,0.06)" }}>
+            <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "#fef2f2", color: "#dc2626", display: "grid", placeItems: "center", margin: "0 auto 20px" }}>
+              <Icon name="shield" size={32} />
+            </div>
+            <span style={{ fontSize: "11px", fontWeight: 650, letterSpacing: "1.2px", color: "#dc2626", textTransform: "uppercase" }}>Peran Tidak Sesuai</span>
+            <h2 style={{ fontSize: "22px", margin: "10px 0 12px", color: "#1e293b", fontWeight: 700 }}>Akses Ditolak</h2>
+            <p style={{ fontSize: "13px", color: "#64748b", lineHeight: 1.6, marginBottom: "26px" }}>
+              Akun Anda terdaftar sebagai <b>{currentUser.role}</b> ({currentUser.name}). Anda tidak memiliki izin untuk membuka halaman dashboard <b>{initialRole}</b>.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <button
+                className="web-button"
+                style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => {
+                  window.location.href = myDashboard
+                }}
+              >
+                Buka Dashboard Anda ({currentUser.role}) <Icon name="arrow" size={16} />
+              </button>
+              <button
+                className="secondary"
+                style={{ width: "100%", justifyContent: "center" }}
+                onClick={logout}
+              >
+                Keluar / Ganti Akun
+              </button>
+            </div>
+          </div>
+        </div>
+      )
+    }
+  }
+
   return (
     <div className={`app ws-app ${mobile ? "nav-open" : ""}`}>
       {mobile && (
@@ -2717,9 +2821,9 @@ export default function ClinicWorkspace({
                   : "Hanya data kunjungan dan riwayat milik Anda."}
             </p>
           </div>
-          <button className="sidebar-link" onClick={() => switchRole("Publik")}>
+          <button className="sidebar-link" onClick={logout}>
             <Icon name="logout" size={18} />
-            Kembali ke Website
+            Keluar / Kembali ke Website
           </button>
           <div className="sidebar-foot">
             <span className="green-dot" /> Sistem Aktif
@@ -2764,27 +2868,39 @@ export default function ClinicWorkspace({
             <span className="top-divider" />
             <div className="profile">
               <span className="avatar blue">
-                {role === "Pasien"
-                  ? patient.name.split(" ").map(part => part[0]).join("").slice(0, 2)
-                  : role === "Dokter"
-                    ? "NP"
-                    : role === "Petugas"
-                      ? "DW"
-                      : "RK"}
+                {currentUser?.name
+                  ? currentUser.name.split(" ").map(part => part[0]).join("").slice(0, 2)
+                  : role === "Pasien"
+                    ? patient.name.split(" ").map(part => part[0]).join("").slice(0, 2)
+                    : role === "Dokter"
+                      ? "NP"
+                      : role === "Petugas"
+                        ? "DW"
+                        : "RK"}
               </span>
               <div>
                 <b>
-                  {role === "Pasien"
-                    ? patient.name
-                    : role === "Dokter"
-                      ? "dr. Nadia Putri"
-                      : role === "Petugas"
-                        ? "Dina Wulandari"
-                        : "Rina Kusuma"}
+                  {currentUser?.name ||
+                    (role === "Pasien"
+                      ? patient.name
+                      : role === "Dokter"
+                        ? "dr. Nadia Putri"
+                        : role === "Petugas"
+                          ? "Dina Wulandari"
+                          : "Rina Kusuma")}
                 </b>
-                <small>{role === "Admin" ? "Administrator" : role}</small>
+                <small>{currentUser?.role || (role === "Admin" ? "Administrator" : role)}</small>
               </div>
             </div>
+            <button
+              className="text-button"
+              style={{ color: "#94a3b8", fontSize: "11px", display: "inline-flex", alignItems: "center", gap: "5px", padding: "6px 8px" }}
+              onClick={logout}
+              title="Keluar dari sistem"
+            >
+              <Icon name="logout" size={14} />
+              <span>Keluar</span>
+            </button>
           </div>
         </header>
         <main className="content">
@@ -3430,17 +3546,20 @@ export default function ClinicWorkspace({
               {editor.type === "Pengguna" && (
                 <>
                   <Field label="Email staf">
-                    <input name="email" required type="email" />
+                    <input name="email" required type="email" placeholder="nama@sehatklinik.id" />
                   </Field>
                   <Field label="Peran">
-                    <select name="role">
+                    <select name="role" defaultValue="Petugas">
                       <option>Petugas</option>
                       <option>Dokter</option>
+                      <option>Admin</option>
                     </select>
                   </Field>
+                  <Field label="Password akun">
+                    <input name="password" type="password" placeholder="Minimal 8 karakter" defaultValue="password123" />
+                  </Field>
                   <div className="notice">
-                    Simulasi akun staf saja. Tidak membuat kredensial atau
-                    mengirim undangan.
+                    Akun staf yang didaftarkan langsung aktif dan dapat digunakan untuk login ke dashboard peran masing-masing.
                   </div>
                 </>
               )}

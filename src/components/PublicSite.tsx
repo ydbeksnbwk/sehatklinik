@@ -70,14 +70,36 @@ export default function PublicSite({
   visits,
   clinic,
 }: Props) {
-  const { unreadCount, setNotificationDrawerOpen } = useClinic()
+  const { unreadCount, setNotificationDrawerOpen, login } = useClinic()
   const [menuOpen, setMenuOpen] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [loginEmail, setLoginEmail] = useState("andi@sehatklinik.id")
+  const [loginPassword, setLoginPassword] = useState("password123")
+  const [loginError, setLoginError] = useState("")
   const [doctorDetail, setDoctorDetail] = useState<Doctor | null>(null)
   const [serviceDetail, setServiceDetail] = useState<Service | null>(null)
   const [scheduleDate, setScheduleDate] = useState(DEMO_DATE)
   const [scheduleDoctor, setScheduleDoctor] = useState("")
   const [openAccordion, setOpenAccordion] = useState<string | null>("s1")
+
+  const executeLogin = (emailTarget?: string, passTarget?: string) => {
+    const targetEmail = emailTarget || loginEmail
+    const targetPass = passTarget || loginPassword
+    setLoginError("")
+    const res = login(targetEmail, targetPass)
+    if (!res.success) {
+      setLoginError(res.message)
+      return
+    }
+    const roleRoutes: Record<string, string> = {
+      Admin: "/admin",
+      Petugas: "/petugas",
+      Dokter: "/dokter-dashboard",
+      Pasien: "/pasien",
+    }
+    const dest = roleRoutes[res.user?.role || "Pasien"] || "/pasien"
+    window.location.href = dest
+  }
 
   const servicesDetailData = [
     {
@@ -490,14 +512,22 @@ export default function PublicSite({
               </p>
               <div className="web-prototype-note">
                 <Icon name="help" size={16} />
-                Portal Pasien: Masuk untuk melihat antrean, pendaftaran kunjungan, dan riwayat medis.
+                {page === "Login"
+                  ? "Staf (Petugas, Dokter, Admin) wajib login menggunakan akun yang didaftarkan Administrator. Pasien dapat langsung masuk."
+                  : "Daftar sebagai pasien baru untuk kemudahan reservasi antrean dan riwayat medis."}
               </div>
               <form
                 onSubmit={(e) => {
                   e.preventDefault()
-                  onLogin()
+                  executeLogin()
                 }}
               >
+                {loginError && (
+                  <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", padding: "10px 14px", color: "#b91c1c", fontSize: "12px", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <Icon name="help" size={16} />
+                    <span>{loginError}</span>
+                  </div>
+                )}
                 {page === "Registrasi" && (
                   <>
                     <label>
@@ -540,8 +570,12 @@ export default function PublicSite({
                     type="email"
                     required
                     autoComplete="email"
-                    defaultValue={page === "Login" ? "andi@sehatklinik.id" : ""}
-                    placeholder="nama@email.com"
+                    value={loginEmail}
+                    onChange={(e) => {
+                      setLoginEmail(e.target.value)
+                      setLoginError("")
+                    }}
+                    placeholder="nama@sehatklinik.id"
                   />
                 </label>
                 <label>
@@ -550,12 +584,16 @@ export default function PublicSite({
                     <input
                       type={showPassword ? "text" : "password"}
                       required
-                      minLength={8}
-                      defaultValue={page === "Login" ? "password123" : ""}
+                      minLength={6}
+                      value={loginPassword}
+                      onChange={(e) => {
+                        setLoginPassword(e.target.value)
+                        setLoginError("")
+                      }}
                       autoComplete={
                         page === "Login" ? "current-password" : "new-password"
                       }
-                      placeholder="Minimal 8 karakter"
+                      placeholder="Minimal 6 karakter"
                     />
                     <button
                       type="button"
@@ -567,21 +605,25 @@ export default function PublicSite({
                 </label>
                 <button className="web-button" type="submit">
                   {page === "Login"
-                    ? "Masuk ke Portal Pasien"
+                    ? "Masuk ke Dashboard"
                     : "Daftar Akun Pasien"}
                   <Icon name="arrow" size={18} />
                 </button>
                 {page === "Login" && (
                   <div style={{ marginTop: "18px", paddingTop: "14px", borderTop: "1px solid #eef2f7" }}>
                     <div style={{ fontSize: "11px", color: "#64748b", marginBottom: "8px", fontWeight: 500 }}>
-                      Akses Cepat Halaman Dashboard Peran:
+                      Akses Cepat Akun Terdaftar:
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                       <button
                         type="button"
                         className="secondary"
                         style={{ padding: "8px 10px", fontSize: "11px", justifyContent: "flex-start", gap: "6px" }}
-                        onClick={() => onRole("Pasien")}
+                        onClick={() => {
+                          setLoginEmail("andi@sehatklinik.id")
+                          setLoginPassword("password123")
+                          executeLogin("andi@sehatklinik.id", "password123")
+                        }}
                       >
                         <span className="avatar blue" style={{ width: "20px", height: "20px", fontSize: "9px" }}>P</span>
                         Portal Pasien
@@ -590,7 +632,11 @@ export default function PublicSite({
                         type="button"
                         className="secondary"
                         style={{ padding: "8px 10px", fontSize: "11px", justifyContent: "flex-start", gap: "6px" }}
-                        onClick={() => onRole("Petugas")}
+                        onClick={() => {
+                          setLoginEmail("dina@sehatklinik.id")
+                          setLoginPassword("password123")
+                          executeLogin("dina@sehatklinik.id", "password123")
+                        }}
                       >
                         <span className="avatar amber" style={{ width: "20px", height: "20px", fontSize: "9px" }}>L</span>
                         Loket Petugas
@@ -599,7 +645,11 @@ export default function PublicSite({
                         type="button"
                         className="secondary"
                         style={{ padding: "8px 10px", fontSize: "11px", justifyContent: "flex-start", gap: "6px" }}
-                        onClick={() => onRole("Dokter")}
+                        onClick={() => {
+                          setLoginEmail("nadia@sehatklinik.id")
+                          setLoginPassword("password123")
+                          executeLogin("nadia@sehatklinik.id", "password123")
+                        }}
                       >
                         <span className="avatar green" style={{ width: "20px", height: "20px", fontSize: "9px" }}>D</span>
                         Ruang Dokter
@@ -608,7 +658,11 @@ export default function PublicSite({
                         type="button"
                         className="secondary"
                         style={{ padding: "8px 10px", fontSize: "11px", justifyContent: "flex-start", gap: "6px" }}
-                        onClick={() => onRole("Admin")}
+                        onClick={() => {
+                          setLoginEmail("rina@sehatklinik.id")
+                          setLoginPassword("password123")
+                          executeLogin("rina@sehatklinik.id", "password123")
+                        }}
                       >
                         <span className="avatar purple" style={{ width: "20px", height: "20px", fontSize: "9px" }}>A</span>
                         Admin Dashboard

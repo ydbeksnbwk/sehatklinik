@@ -37,6 +37,7 @@ export type ClinicUser = {
   email: string
   role: string
   active: boolean
+  password?: string
 }
 
 export type ClinicProfile = {
@@ -97,6 +98,11 @@ type ClinicContextType = {
 
   users: ClinicUser[]
   setUsers: React.Dispatch<React.SetStateAction<ClinicUser[]>>
+
+  currentUser: ClinicUser | null
+  setCurrentUser: React.Dispatch<React.SetStateAction<ClinicUser | null>>
+  login: (email: string, password?: string) => { success: boolean; message: string; user?: ClinicUser }
+  logout: () => void
 
   clinic: ClinicProfile
   setClinic: React.Dispatch<React.SetStateAction<ClinicProfile>>
@@ -213,18 +219,21 @@ const defaultUsers: ClinicUser[] = [
     email: "rina@sehatklinik.id",
     role: "Admin",
     active: true,
+    password: "password123",
   },
   {
     name: "Dina Wulandari",
     email: "dina@sehatklinik.id",
     role: "Petugas",
     active: true,
+    password: "password123",
   },
   {
     name: "dr. Nadia Putri",
     email: "nadia@sehatklinik.id",
     role: "Dokter",
     active: true,
+    password: "password123",
   },
 ]
 
@@ -265,6 +274,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   const [services, setServices] = useState<Service[]>(servicesSeed)
   const [schedules, setSchedules] = useState<Schedule[]>(schedulesSeed)
   const [users, setUsers] = useState<ClinicUser[]>(defaultUsers)
+  const [currentUser, setCurrentUser] = useState<ClinicUser | null>(null)
   const [clinic, setClinic] = useState<ClinicProfile>(defaultClinic)
 
   // Notification States
@@ -346,6 +356,13 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
             setRole(data.role)
           }
         }
+        const storedUser = localStorage.getItem("sehatklinik_current_user")
+        if (storedUser) {
+          try {
+            const parsed = JSON.parse(storedUser)
+            setCurrentUser(parsed)
+          } catch {}
+        }
       }
     } catch {
       // ignore parsing error
@@ -373,10 +390,15 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           notificationJobs,
         })
       )
+      if (currentUser) {
+        localStorage.setItem("sehatklinik_current_user", JSON.stringify(currentUser))
+      } else {
+        localStorage.removeItem("sehatklinik_current_user")
+      }
     } catch {
       // ignore
     }
-  }, [initialized, role, visits, patients, doctors, services, schedules, users, clinic, notifications, notificationJobs])
+  }, [initialized, role, visits, patients, doctors, services, schedules, users, currentUser, clinic, notifications, notificationJobs])
 
   // Dialog ESC listener
   useEffect(() => {
@@ -882,7 +904,65 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     setRole("Publik")
     setPage("Beranda")
     localStorage.removeItem("sehatklinik_state_v1")
+    localStorage.removeItem("sehatklinik_current_user")
+    setCurrentUser(null)
     notify("Data sistem berhasil direset ke data awal seed.")
+  }
+
+  const login = (email: string, password?: string) => {
+    const cleanEmail = email.trim().toLowerCase()
+    const staff = users.find((u) => u.email.trim().toLowerCase() === cleanEmail)
+    if (staff) {
+      if (!staff.active) {
+        return {
+          success: false,
+          message: "Akun ini telah dinonaktifkan oleh Administrator klinik.",
+        }
+      }
+      if (staff.password && password && staff.password !== password) {
+        return {
+          success: false,
+          message: "Password yang Anda masukkan salah.",
+        }
+      }
+      setCurrentUser(staff)
+      setRole(staff.role as Role)
+      if (typeof window !== "undefined") {
+        localStorage.setItem("sehatklinik_current_user", JSON.stringify(staff))
+      }
+      return {
+        success: true,
+        message: `Selamat datang, ${staff.name}!`,
+        user: staff,
+      }
+    }
+
+    // Default for patients (no admin registration required)
+    const patientUser: ClinicUser = {
+      name: "Andi Pratama",
+      email: cleanEmail,
+      role: "Pasien",
+      active: true,
+    }
+    setCurrentUser(patientUser)
+    setRole("Pasien")
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sehatklinik_current_user", JSON.stringify(patientUser))
+    }
+    return {
+      success: true,
+      message: "Selamat datang di Portal Pasien!",
+      user: patientUser,
+    }
+  }
+
+  const logout = () => {
+    setCurrentUser(null)
+    setRole("Publik")
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("sehatklinik_current_user")
+      window.location.href = "/"
+    }
   }
 
   return (
@@ -914,6 +994,11 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
 
         users,
         setUsers,
+
+        currentUser,
+        setCurrentUser,
+        login,
+        logout,
 
         clinic,
         setClinic,
