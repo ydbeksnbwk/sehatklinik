@@ -40,6 +40,12 @@
 .sky-hero-heading>p {font-size:12px;line-height:1.65;color:#657890}
 .sky-hero-heading>.web-button {margin-top:24px;padding:6px 7px 6px 18px;gap:18px;min-height:37px;font-size:10px!important}
 .sky-hero-heading>.web-button>span {background:white;color:var(--web-blue);border-radius:50%;display:grid;place-items:center;width:25px;height:25px}
+.sky-hero-actions {display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap;margin:24px auto 0;max-width:600px}
+.sky-hero-actions .web-button {margin-top:0;padding:6px 7px 6px 18px;gap:16px;min-height:38px;font-size:11px!important;border-radius:30px;font-weight:500;display:inline-flex;align-items:center;background:var(--web-blue);color:#ffffff;border:none;cursor:pointer;box-shadow:0 3px 12px rgba(41,54,85,0.18);transition:all .2s ease}
+.sky-hero-actions .web-button:hover {background:#1e2e5c;transform:translateY(-1px);box-shadow:0 5px 16px rgba(41,54,85,0.24)}
+.sky-hero-actions .web-button>span {background:white;color:var(--web-blue);border-radius:50%;display:grid;place-items:center;width:25px;height:25px}
+.sky-hero-actions .sky-hero-secondary-btn {background:#ffffffdb;color:var(--web-blue);border:1px solid #ffffff;border-radius:30px;font-size:11px!important;padding:8px 18px;min-height:38px;gap:9px;font-weight:500;display:inline-flex;align-items:center;backdrop-filter:blur(12px);box-shadow:0 2px 8px rgba(41,54,85,0.08);transition:all .2s ease;cursor:pointer}
+.sky-hero-actions .sky-hero-secondary-btn:hover {background:#ffffff;box-shadow:0 4px 14px rgba(41,54,85,0.15);transform:translateY(-1px)}
 .sky-hero-scene {height:340px;max-width:860px;margin:0 auto;position:relative}
 .sky-hand {position:absolute;width:496px;height:421px;object-fit:contain;left:185px;right:250px;top:-5px;bottom:-39px;z-index:2;filter:brightness(1.24) saturate(.72);mask-image:linear-gradient(to bottom,black 0%,black 57%,transparent 98%)}
 .sky-float {position:absolute;width:264px;z-index:3;border:1px solid #ffffffa6;border-radius:14px;padding:17px 19px;background:#ffffff45;box-shadow:0 4px 20px #3f6c9e03;backdrop-filter:blur(9px);color:#5d718e}

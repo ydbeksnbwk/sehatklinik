@@ -1237,7 +1237,7 @@ export default function PublicSite({
                   <br className="sky-desktop-break" /> yang benar-benar memahami
                   Anda dan keluarga.
                 </p>
-                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "24px" }}>
+                <div className="sky-hero-actions">
                   <button className="web-button" onClick={onBook}>
                     Mulai Hidup Lebih Sehat{" "}
                     <span>
@@ -1245,8 +1245,7 @@ export default function PublicSite({
                     </span>
                   </button>
                   <button
-                    className="web-inline-link"
-                    style={{ background: "#ffffff", padding: "10px 18px", borderRadius: "10px", border: "1px solid #e2e8f0" }}
+                    className="sky-hero-secondary-btn"
                     onClick={() => go("Profil")}
                   >
                     Pelajari Profil Klinik <Icon name="arrow" size={16} />
