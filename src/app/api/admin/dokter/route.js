@@ -83,7 +83,7 @@ export async function POST(request) {
       password,
       email_confirm: true,
       app_metadata: { role: "dokter" },
-      user_metadata: { display_name: nama, nama, role: "dokter" },
+      user_metadata: { display_name: nama, nama },
     });
     if (error) {
       console.error(
