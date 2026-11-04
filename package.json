@@ -3,19 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-<<<<<<< HEAD
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "db:pull": "node --env-file=.env.local ./node_modules/drizzle-kit/bin.cjs pull",
-    "db:migrate": "node --env-file=.env.local scripts/migrate.mjs"
-=======
     "dev": "node ./node_modules/next/dist/bin/next dev",
     "build": "node ./node_modules/next/dist/bin/next build",
     "start": "node ./node_modules/next/dist/bin/next start",
-    "lint": "node ./node_modules/next/dist/bin/next lint"
->>>>>>> origin/main
+    "lint": "node ./node_modules/next/dist/bin/next lint",
+    "db:pull": "node --env-file=.env.local ./node_modules/drizzle-kit/bin.cjs pull",
+    "db:migrate": "node --env-file=.env.local scripts/migrate.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
