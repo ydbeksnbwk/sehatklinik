@@ -273,7 +273,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   const [doctors, setDoctors] = useState<Doctor[]>(doctorsSeed)
   const [services, setServices] = useState<Service[]>(servicesSeed)
   const [schedules, setSchedules] = useState<Schedule[]>(schedulesSeed)
-  const [users, setUsers] = useState<ClinicUser[]>(defaultUsers)
+  const [users, setUsers] = useState<ClinicUser[]>([])
   const [currentUser, setCurrentUser] = useState<ClinicUser | null>(null)
   const [clinic, setClinic] = useState<ClinicProfile>(defaultClinic)
 
@@ -299,7 +299,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   const [savedExam, setSavedExam] = useState(false)
   const [step, setStep] = useState(1)
   const [booking, setBooking] = useState<BookingState>({
-    patient: "RM-00128",
+    patient: "",
     service: "s1",
     doctor: "d1",
     date: DEMO_DATE,
@@ -321,7 +321,11 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   // Load state from localStorage on client mount
   useEffect(() => {
     try {
-      const stored = localStorage.getItem("sehatklinik_state_v1")
+      // Invalidate old state v1 cache to keep dashboard clean for Supabase
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("sehatklinik_state_v1")
+      }
+      const stored = typeof window !== "undefined" ? localStorage.getItem("sehatklinik_state_v2") : null
       if (stored) {
         const data = JSON.parse(stored)
         if (data.visits) setVisits(data.visits)
@@ -331,13 +335,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         if (data.schedules) setSchedules(data.schedules)
         if (data.users) setUsers(data.users)
         if (data.clinic) setClinic({ ...defaultClinic, ...data.clinic })
-        if (data.notifications) {
-          const isUpdatedFormat = data.notifications.some(
-            (n: { id: string; message?: string }) =>
-              n.id === "notif-001-selesai" && n.message?.includes(" - ")
-          )
-          setNotifications(isUpdatedFormat ? data.notifications : notificationsSeed)
-        }
+        if (data.notifications) setNotifications(data.notifications)
         if (data.notificationJobs) setNotificationJobs(data.notificationJobs)
 
         if (typeof window !== "undefined") {
@@ -356,12 +354,12 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
             setRole(data.role)
           }
         }
-        const storedUser = localStorage.getItem("sehatklinik_current_user")
+        const storedUser = typeof window !== "undefined" ? localStorage.getItem("sehatklinik_current_user") : null
         if (storedUser) {
           try {
             const parsed = JSON.parse(storedUser)
             setCurrentUser(parsed)
-          } catch {}
+          } catch { }
         }
       }
     } catch {
@@ -376,7 +374,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     if (!initialized) return
     try {
       localStorage.setItem(
-        "sehatklinik_state_v1",
+        "sehatklinik_state_v2",
         JSON.stringify({
           role,
           visits,
@@ -442,10 +440,10 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         notif.targetRole === "Pasien"
           ? patient.name
           : notif.targetRole === "Petugas"
-          ? "Petugas Loket"
-          : notif.targetRole === "Dokter"
-          ? "dr. Nadia Putri"
-          : "Admin / Sistem",
+            ? "Petugas Loket"
+            : notif.targetRole === "Dokter"
+              ? "dr. Nadia Putri"
+              : "Admin / Sistem",
       recipientRole: notif.targetRole === "Semua" ? "Pasien" : notif.targetRole,
       eventType: notif.type,
       visitId: notif.visitId || "KJ-SISTEM",
@@ -572,12 +570,12 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       prev.map((j) =>
         j.id === jobId
           ? {
-              ...j,
-              status: "berhasil",
-              attempts: j.attempts + 1,
-              error: null,
-              processedAt: new Date().toISOString(),
-            }
+            ...j,
+            status: "berhasil",
+            attempts: j.attempts + 1,
+            error: null,
+            processedAt: new Date().toISOString(),
+          }
           : j
       )
     )
@@ -610,11 +608,21 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     setRole(value as Role)
     setSelected(null)
     setEditor(null)
-    setBooking((b) => ({ ...b, patient: "RM-00128" }))
+    setBooking((b) => ({ ...b, patient: patients[0]?.id || "" }))
     navigate(value === "Publik" ? "Beranda" : "Dashboard")
   }
 
-  const patient = patients.find((p) => p.id === "RM-00128") || patients[0]
+  const defaultPatientFallback: Patient = {
+    id: "RM-00000",
+    name: currentUser?.name || "Pasien",
+    phone: "-",
+    birth: "2000-01-01",
+    gender: "Laki-laki",
+    address: "-",
+    emergency: "-",
+    account: true,
+  }
+  const patient = patients.find((p) => p.id === "RM-00128") || patients[0] || defaultPatientFallback
   const doctorName = (id: string) =>
     doctors.find((d) => d.id === id)?.name || "Dokter"
   const serviceName = (id: string) =>
@@ -627,8 +635,8 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     role === "Pasien"
       ? v.patient === patient.id
       : role === "Dokter"
-      ? v.doctor === "d1"
-      : true
+        ? v.doctor === "d1"
+        : true
   )
   const todayVisits = scopedVisits.filter((v) => v.date === DEMO_DATE)
   const activeVisits = scopedVisits.filter(
@@ -645,14 +653,14 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       v.examination
         ? structuredClone(v.examination)
         : {
-            anamnesis: v.complaint,
-            pressure: "",
-            temperature: "",
-            weight: "",
-            diagnosis: "",
-            notes: "",
-            actions: [],
-          }
+          anamnesis: v.complaint,
+          pressure: "",
+          temperature: "",
+          weight: "",
+          diagnosis: "",
+          notes: "",
+          actions: [],
+        }
     )
   }
 
@@ -897,21 +905,34 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     setDoctors(doctorsSeed)
     setServices(servicesSeed)
     setSchedules(schedulesSeed)
-    setUsers(defaultUsers)
+    setUsers([])
     setClinic(defaultClinic)
     setNotifications(notificationsSeed)
     setNotificationJobs(notificationJobsSeed)
     setRole("Publik")
     setPage("Beranda")
     localStorage.removeItem("sehatklinik_state_v1")
+    localStorage.removeItem("sehatklinik_state_v2")
     localStorage.removeItem("sehatklinik_current_user")
     setCurrentUser(null)
-    notify("Data sistem berhasil direset ke data awal seed.")
+    notify("Data sistem berhasil direset.")
   }
 
   const login = (email: string, password?: string) => {
     const cleanEmail = email.trim().toLowerCase()
-    const staff = users.find((u) => u.email.trim().toLowerCase() === cleanEmail)
+    let staff = users.find((u) => u.email.trim().toLowerCase() === cleanEmail)
+    if (!staff) {
+      staff = defaultUsers.find((u) => u.email.trim().toLowerCase() === cleanEmail)
+    }
+    if (!staff) {
+      if (cleanEmail.includes("admin")) {
+        staff = { name: "Administrator", email: cleanEmail, role: "Admin", active: true }
+      } else if (cleanEmail.includes("petugas")) {
+        staff = { name: "Petugas Loket", email: cleanEmail, role: "Petugas", active: true }
+      } else if (cleanEmail.includes("dokter")) {
+        staff = { name: "dr. Dokter Jaga", email: cleanEmail, role: "Dokter", active: true }
+      }
+    }
     if (staff) {
       if (!staff.active) {
         return {

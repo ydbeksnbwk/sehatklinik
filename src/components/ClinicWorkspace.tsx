@@ -316,7 +316,20 @@ export default function ClinicWorkspace({
       previousFocus?.focus()
     }
   }, [selected, editor])
-  const patient = patients.find((p) => p.id === "RM-00128")!
+  const defaultPatientFallback: Patient = {
+    id: "RM-00000",
+    name: currentUser?.name || "Pasien",
+    phone: "-",
+    birth: "2000-01-01",
+    gender: "Laki-laki",
+    address: "-",
+    emergency: "-",
+    account: true,
+  }
+  const patient =
+    patients.find((p) => p.id === "RM-00128") ||
+    patients[0] ||
+    defaultPatientFallback
   const doctorName = (id: string) =>
     doctors.find((d) => d.id === id)?.name || "Dokter"
   const serviceName = (id: string) =>
@@ -382,7 +395,7 @@ export default function ClinicWorkspace({
     setRole(nextRole)
     setSelected(null)
     setEditor(null)
-    setBooking((b) => ({ ...b, patient: "RM-00128" }))
+    setBooking((b) => ({ ...b, patient: patients[0]?.id || "" }))
     if (typeof window !== "undefined") {
       if (nextRole === "Publik") {
         sessionStorage.removeItem("sehatklinik_notif_prompted_Pasien")
@@ -1384,12 +1397,16 @@ export default function ClinicWorkspace({
                           setBooking({ ...booking, patient: e.target.value })
                         }
                       >
-                        {patients.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} · {p.id}
-                            {!p.account ? " · Tanpa akun" : ""}
-                          </option>
-                        ))}
+                        {patients.length === 0 ? (
+                          <option value="">Belum ada pasien terdaftar</option>
+                        ) : (
+                          patients.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} · {p.id}
+                              {!p.account ? " · Tanpa akun" : ""}
+                            </option>
+                          ))
+                        )}
                       </select>
                     </Field>
                     <button
@@ -2154,6 +2171,9 @@ export default function ClinicWorkspace({
                 ))}
               </tbody>
             </table>
+            {!users.length && (
+              <div className="empty">Belum ada data staf terdaftar. Silakan tambah staf baru.</div>
+            )}
           </div>
           <div className="notice ws-inset">
             <Icon name="shield" size={20} />
