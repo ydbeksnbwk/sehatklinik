@@ -7,6 +7,7 @@ import "../public.css"
 import "../sky.css"
 import "../public-prd.css"
 import "../workspace.css"
+import "../notifications.css"
 import { ClinicProvider } from "@/context/ClinicContext"
 
 export const metadata: Metadata = {
