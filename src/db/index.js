@@ -1,4 +1,6 @@
 import pg from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
+import * as schema from "./schema";
 
 const g = globalThis;
 export const pool =
@@ -9,3 +11,5 @@ export const pool =
     max: 5,
   });
 if (process.env.NODE_ENV !== "production") g.__pgPool = pool;
+
+export const db = drizzle(pool, { schema });
