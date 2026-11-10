@@ -10,6 +10,7 @@ import {
 import { useClinic } from "../context/ClinicContext"
 import PublicSite from "./PublicSite"
 import BrandArtwork from "./BrandArtwork"
+import GenderAvatar from "./GenderAvatar"
 import NotificationDrawer from "./NotificationDrawer"
 import { downloadRekapExcel } from "../utils/exportRekapExcel"
 import {
@@ -831,13 +832,10 @@ export default function ClinicWorkspace({
                     {role !== "Pasien" && (
                       <td>
                         <div className="person">
-                          <span className="avatar blue">
-                            {patientName(v.patient)
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .slice(0, 2)}
-                          </span>
+                          <GenderAvatar
+                            gender={patientObj?.gender}
+                            name={patientName(v.patient)}
+                          />
                           <div>
                             <b>{patientName(v.patient)}</b>
                             <small>
@@ -970,13 +968,7 @@ export default function ClinicWorkspace({
 
             return (
               <div className="ws-session" key={doctorId}>
-                <span className="avatar blue">
-                  {doctorName(doctorId)
-                    .split(" ")
-                    .slice(1, 3)
-                    .map((n) => n[0])
-                    .join("")}
-                </span>
+                <GenderAvatar name={doctorName(doctorId)} />
                 <div>
                   <b>{doctorName(doctorId)}</b>
                   <small>{timeLabels}</small>
@@ -1994,13 +1986,7 @@ export default function ClinicWorkspace({
               )
               .map((d) => (
                 <section className="panel doctor-card" key={d.id}>
-                  <span className="avatar large blue">
-                    {d.name
-                      .split(" ")
-                      .slice(1, 3)
-                      .map((n) => n[0])
-                      .join("")}
-                  </span>
+                  <GenderAvatar size="large" name={d.name} />
                   <Badge text={d.active ? "Aktif" : "Nonaktif"} />
                   <h3>{d.name}</h3>
                   <p>{d.specialty}</p>
@@ -2325,13 +2311,11 @@ export default function ClinicWorkspace({
       return (
         <div className="patient-profile-layout">
           <section className="panel patient-profile-identity">
-            <span className="avatar large blue">
-              {patient.name
-                .split(" ")
-                .map((part) => part[0])
-                .join("")
-                .slice(0, 2)}
-            </span>
+            <GenderAvatar
+              size="large"
+              gender={patient.gender}
+              name={patient.name}
+            />
             <h2>{patient.name}</h2>
             {patient.nik && <p className="muted">NIK: {patient.nik}</p>}
             <Badge text="Pasien" />
@@ -3016,17 +3000,19 @@ export default function ClinicWorkspace({
             </button>
             <span className="top-divider" />
             <div className="profile">
-              <span className="avatar blue">
-                {currentUser?.name
-                  ? currentUser.name.split(" ").map(part => part[0]).join("").slice(0, 2)
-                  : role === "Pasien"
-                    ? patient.name.split(" ").map(part => part[0]).join("").slice(0, 2)
+              <GenderAvatar
+                gender={role === "Pasien" ? patient.gender : undefined}
+                name={
+                  currentUser?.name ||
+                  (role === "Pasien"
+                    ? patient.name
                     : role === "Dokter"
-                      ? "RA"
+                      ? activeDoctor?.name || "dr. Reyhan Adhitama"
                       : role === "Petugas"
-                        ? "DW"
-                        : "RK"}
-              </span>
+                        ? "Dina Wulandari"
+                        : "Rina Kusuma")
+                }
+              />
               <div>
                 <b>
                   {currentUser?.name ||

@@ -110,6 +110,14 @@
 .ws-app .main-wrapper, .ws-app .panel, .ws-app .content { min-width: 0; }
 .ws-app .page-heading { overflow: hidden; }
 .ws-app .table-scroll { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+.ws-app .avatar.avatar-illustrated { overflow: hidden; padding: 0; border: 1.5px solid #d5e5f7; background: #e8f1fc; box-shadow: 0 3px 10px rgba(37, 99, 235, 0.08); transition: transform .25s ease, box-shadow .25s ease; }
+.ws-app .avatar.avatar-illustrated:hover { transform: scale(1.05); box-shadow: 0 6px 16px rgba(37, 99, 235, 0.14); }
+.ws-app .avatar.large.avatar-illustrated { border-width: 2.5px; box-shadow: 0 10px 24px rgba(37, 99, 235, 0.12); }
+.ws-app .avatar-img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: center 18%; border-radius: 50%; }
+@media (prefers-reduced-motion: no-preference) {
+  .ws-app .patient-profile-identity .avatar.large.avatar-illustrated { animation: avatar-float 4.5s ease-in-out infinite; }
+  @keyframes avatar-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+}
 .ws-clinic-profile-panel { padding: 26px 28px; display: flex; flex-direction: column; gap: 22px; }
 .ws-clinic-hero-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
 .ws-clinic-hero-head h2 { margin: 4px 0 6px; font-size: 22px; color: var(--ws-ink); }
