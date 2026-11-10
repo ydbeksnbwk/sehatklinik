@@ -390,7 +390,20 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
 
   // Load real data from Supabase (Doctors, Services, Schedules, Profile, Visits, Patients)
   useEffect(() => {
-    const supabase = createClient()
+    let supabase: ReturnType<typeof createClient> | null = null
+    try {
+      const hasEnv =
+        Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+        Boolean(
+          process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        )
+      if (hasEnv) {
+        supabase = createClient()
+      }
+    } catch {
+      supabase = null
+    }
 
     async function fetchVisits(): Promise<boolean> {
       try {
@@ -440,6 +453,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     }
 
     async function loadSupabaseData() {
+      if (!supabase) return
       try {
         // Sync Supabase Auth session if already logged in
         const { data: authData } = await supabase.auth.getUser()
@@ -629,8 +643,11 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
 
     loadSupabaseData()
 
+    if (!supabase) return
+    const client = supabase
+
     // Real-time synchronization for visits and queues
-    const channel = supabase
+    const channel = client
       .channel("clinic-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "kunjungan" }, () => {
         fetchVisits()
@@ -641,7 +658,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       .subscribe()
 
     return () => {
-      supabase.removeChannel(channel)
+      client.removeChannel(channel)
     }
   }, [])
 
