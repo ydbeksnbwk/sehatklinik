@@ -12,6 +12,7 @@ export type Patient = {
   address: string
   emergency: string
   account: boolean
+  nik?: string
 }
 
 export type DoctorEducation = {
@@ -34,6 +35,7 @@ export type Doctor = {
   almamater: string
   certifications: string[]
   bio: string
+  photoUrl?: string
 }
 
 export type ServiceStep = {
@@ -174,7 +176,7 @@ export const clinicDetailSeed: ClinicProfileDetail = {
   latitude: "-6.2615",
   longitude: "106.8106",
   hours: "Senin – Sabtu, 08.00 – 20.00 WIB (Poli Spesialis & Umum)",
-  history: "Didirikan pada tahun 2018 di kawasan Jakarta Selatan, Klinik Sehat Sentosa lahir dari kepedulian mendalam terhadap kebutuhan keluarga urban akan layanan kesehatan tingkat pertama yang terpercaya, bersih, dan bebas dari kelelahan mengantre fisik. Berawal dari 2 ruang periksa sederhana, kini Klinik Sehat Sentosa telah berkembang menjadi sentra kesehatan primer terakreditasi paripurna yang melayani lebih dari 15.000 kunjungan pasien dengan dukungan sistem informasi rekam medis digital dan antrean cerdas.",
+  history: "Didirikan pada tahun 2018 di kawasan Jakarta Selatan, Klinik Sehat Sentosa lahir dari kepedulian mendalam terhadap kebutuhan keluarga urban akan layanan kesehatan tingkat pertama yang terpercaya, bersih, dan bebas dari kelelahan mengantre fisik. Berawal dari 2 ruang periksa sederhana, kini Klinik Sehat Sentosa telah berkembang menjadi sentra kesehatan primer terakreditasi paripurna yang melayani lebih dari 15.000 kunjungan pasien dengan dukungan sistem informasi kesehatan digital dan antrean cerdas.",
   vision: "Menjadi mitra fasilitas kesehatan primer pilihan utama keluarga di Indonesia yang unggul dalam mutu klinis, berpusat pada kepedulian pasien, dan terdepan dalam adopsi teknologi kesehatan digital.",
   mission: [
     "Menyelenggarakan pelayanan kesehatan primer yang komprehensif, promotif, preventif, kuratif, dan rehabilitatif secara berkesinambungan.",
@@ -186,7 +188,7 @@ export const clinicDetailSeed: ClinicProfileDetail = {
     {
       title: "Kepedulian Tulus (Care & Empathy)",
       subtitle: "Mendengarkan Sebelum Mendiagnosis",
-      desc: "Setiap pasien diperlakukan sebagai pribadi seutuhnya, bukan sekadar nomor rekam medis. Kami mendengar setiap keluhan dengan seksama dan empati.",
+      desc: "Setiap pasien diperlakukan sebagai pribadi seutuhnya, bukan sekadar angka statistik. Kami mendengar setiap keluhan dengan seksama dan empati.",
       icon: "heart"
     },
     {
@@ -666,20 +668,204 @@ export const schedulesSeed: Schedule[] = doctorsSeed.map((d, i) => ({
   day: 1,
   start: i === 2 ? "09:00" : "08:00",
   end: "12:00",
-  quota: i === 0 ? 3 : i === 1 ? 2 : 5,
+  quota: i === 0 ? 10 : i === 1 ? 8 : 5,
   active: true,
 }))
 
-export const patientsSeed: Patient[] = []
+export const patientsSeed: Patient[] = [
+  {
+    id: "RM-00128",
+    name: "Ani Wulandari",
+    nik: "3374019999000001",
+    phone: "0813-0000-0001",
+    birth: "1992-03-14",
+    gender: "Perempuan",
+    address: "Jl. Melati No. 5, Kebayoran Baru, Jakarta Selatan",
+    emergency: "0813-0000-9001 (Suami)",
+    account: true,
+  },
+  {
+    id: "RM-00129",
+    name: "Bagas Saputra",
+    nik: "3374019999000002",
+    phone: "0813-0000-0002",
+    birth: "1988-11-02",
+    gender: "Laki-laki",
+    address: "Jl. Kenanga No. 12, Cilandak, Jakarta Selatan",
+    emergency: "0813-0000-9002 (Istri)",
+    account: false,
+  },
+  {
+    id: "RM-00130",
+    name: "Citra Lestari",
+    nik: "3374019999000003",
+    phone: "0813-0000-0003",
+    birth: "1996-07-21",
+    gender: "Perempuan",
+    address: "Jl. Anggrek No. 3, Kemang, Jakarta Selatan",
+    emergency: "0813-0000-9003 (Orang Tua)",
+    account: true,
+  },
+  {
+    id: "RM-00131",
+    name: "Darmawan Putra",
+    nik: "3374019999000004",
+    phone: "0812-8877-6655",
+    birth: "1983-05-09",
+    gender: "Laki-laki",
+    address: "Jl. Wijaya IX No. 14, Kebayoran Baru, Jakarta Selatan",
+    emergency: "0812-8877-0011 (Keluarga)",
+    account: true,
+  },
+  {
+    id: "RM-00132",
+    name: "Eka Rahmawati",
+    nik: "3374019999000005",
+    phone: "0815-4433-2211",
+    birth: "1994-01-19",
+    gender: "Perempuan",
+    address: "Jl. Gandaria Tengah No. 22, Jakarta Selatan",
+    emergency: "0815-4433-0022 (Ibu)",
+    account: true,
+  },
+  {
+    id: "RM-00133",
+    name: "Fajar Nugroho",
+    nik: "3374019999000006",
+    phone: "0817-9900-1122",
+    birth: "1990-08-30",
+    gender: "Laki-laki",
+    address: "Jl. Cipete Raya No. 8, Jakarta Selatan",
+    emergency: "0817-9900-3344 (Saudara)",
+    account: false,
+  },
+]
 
-export const visitsSeed: Visit[] = []
+export const visitsSeed: Visit[] = [
+  {
+    id: "KJ-20261026-001",
+    patient: "RM-00128",
+    doctor: "d1",
+    service: "s1",
+    schedule: "j1",
+    date: DEMO_DATE,
+    complaint: "Demam sejak 2 hari lalu disertai sakit kepala ringan dan pegal.",
+    source: "Online",
+    status: "Hadir",
+    queue: "Menunggu",
+    number: 1,
+  },
+  {
+    id: "KJ-20261026-002",
+    patient: "RM-00129",
+    doctor: "d1",
+    service: "s1",
+    schedule: "j1",
+    date: DEMO_DATE,
+    complaint: "Batuk berdahak dan tenggorokan terasa gatal sejak kemarin malam.",
+    source: "Walk-in",
+    status: "Terdaftar",
+    queue: "Menunggu",
+    number: 2,
+  },
+  {
+    id: "KJ-20261026-003",
+    patient: "RM-00130",
+    doctor: "d1",
+    service: "s1",
+    schedule: "j1",
+    date: DEMO_DATE,
+    complaint: "Nyeri ulu hati dan mual setelah telat makan siang.",
+    source: "Online",
+    status: "Hadir",
+    queue: "Dipanggil",
+    number: 3,
+  },
+  {
+    id: "KJ-20261026-004",
+    patient: "RM-00131",
+    doctor: "d1",
+    service: "s1",
+    schedule: "j1",
+    date: DEMO_DATE,
+    complaint: "Kontrol tekanan darah rutin dan keluhan kaku di tengkuk.",
+    source: "Online",
+    status: "Hadir",
+    queue: "Sedang Diperiksa",
+    number: 4,
+  },
+  {
+    id: "KJ-20261026-005",
+    patient: "RM-00132",
+    doctor: "d1",
+    service: "s1",
+    schedule: "j1",
+    date: DEMO_DATE,
+    complaint: "Pusing berputar ringan saat bangun tidur sejak pagi.",
+    source: "Online",
+    status: "Selesai",
+    queue: "Selesai",
+    number: 5,
+    examination: {
+      anamnesis:
+        "Pasien mengeluh pusing berputar singkat (< 1 menit) saat perubahan posisi kepala sejak bangun tidur pagi hari. Tidak ada mual hebat atau gangguan pendengaran.",
+      pressure: "118/78",
+      temperature: "36.6",
+      weight: "54",
+      diagnosis: "Benign Paroxysmal Positional Vertigo (BPPV) ringan",
+      notes: "Kondisi stabil, edukasi manuver perubahan posisi perlahan dan hidrasi cukup.",
+      actions: [
+        {
+          name: "Terapi Betahistine 6 mg & Vitamin B Kompleks",
+          description: "Diminum 3x1 tablet sehari sesudah makan selama 5 hari",
+          advice: "Kontrol ulang apabila keluhan masih berlanjut setelah 3 hari",
+        },
+      ],
+    },
+  },
+  {
+    id: "KJ-20261024-001",
+    patient: "RM-00133",
+    doctor: "d1",
+    service: "s1",
+    schedule: "j1",
+    date: "2026-10-24",
+    complaint: "Pilek, bersin-bersin, dan badan terasa lemas 3 hari.",
+    source: "Walk-in",
+    status: "Selesai",
+    queue: "Selesai",
+    number: 1,
+    examination: {
+      anamnesis:
+        "Pasien mengeluhkan hidung tersumbat, bersin berulang, dan badan pegal sejak 3 hari lalu tanpa sesak napas.",
+      pressure: "120/80",
+      temperature: "37.2",
+      weight: "68",
+      diagnosis: "Infeksi Saluran Pernapasan Akut (ISPA) ringan / Nasofaringitis akut",
+      notes: "Disarankan istirahat cukup dan perbanyak konsumsi air hangat.",
+      actions: [
+        {
+          name: "Pemberian Paracetamol 500 mg & Dekongestan oral",
+          description: "Paracetamol bila demam/nyeri, diminum setelah makan",
+          advice: "Kembali periksa jika demam tinggi > 3 hari atau muncul sesak",
+        },
+      ],
+    },
+  },
+]
 
 export const notificationsSeed: NotificationItem[] = []
 
 export const notificationJobsSeed: NotificationJob[] = []
 
-export const queueLabel = (v: Visit) =>
-  `${v.doctor.replace("d", "").padStart(2, "0")}-${String(v.number).padStart(3, "0")}`
+export const queueLabel = (v: Visit, doctorIndex?: number) => {
+  const rawPrefix = /^d\d+$/i.test(v.doctor)
+    ? v.doctor.replace(/^\D+/g, "")
+    : doctorIndex !== undefined && doctorIndex >= 0
+      ? String(doctorIndex + 1)
+      : "01"
+  return `${rawPrefix.padStart(2, "0")}-${String(v.number).padStart(3, "0")}`
+}
 
 export const dateLabel = (date: string) =>
   new Date(`${date}T12:00:00`).toLocaleDateString("id-ID", {

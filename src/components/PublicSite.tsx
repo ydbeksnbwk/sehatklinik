@@ -1,9 +1,8 @@
 "use client"
 
-import { useState, type ComponentType } from "react"
+import { useEffect, useState, type ComponentType } from "react"
 import BrandArtwork from "./BrandArtwork"
 import CinematicArtwork from "./CinematicArtwork"
-import NotificationDrawer from "./NotificationDrawer"
 import { useClinic } from "../context/ClinicContext"
 import {
   DEMO_DATE,
@@ -70,23 +69,76 @@ export default function PublicSite({
   visits,
   clinic,
 }: Props) {
-  const { unreadCount, setNotificationDrawerOpen, login } = useClinic()
+  const { login } = useClinic()
   const [menuOpen, setMenuOpen] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [loginEmail, setLoginEmail] = useState("andi@sehatklinik.id")
-  const [loginPassword, setLoginPassword] = useState("password123")
+  const [loginEmail, setLoginEmail] = useState("")
+  const [loginPassword, setLoginPassword] = useState("")
   const [loginError, setLoginError] = useState("")
+  const [regName, setRegName] = useState("")
+  const [regNik, setRegNik] = useState("")
+  const [regBirth, setRegBirth] = useState("2000-01-01")
+  const [regGender, setRegGender] = useState("Laki-laki")
+  const [regPhone, setRegPhone] = useState("")
+  const [isSubmittingAuth, setIsSubmittingAuth] = useState(false)
   const [doctorDetail, setDoctorDetail] = useState<Doctor | null>(null)
   const [serviceDetail, setServiceDetail] = useState<Service | null>(null)
   const [scheduleDate, setScheduleDate] = useState(DEMO_DATE)
   const [scheduleDoctor, setScheduleDoctor] = useState("")
-  const [openAccordion, setOpenAccordion] = useState<string | null>("s1")
 
-  const executeLogin = (emailTarget?: string, passTarget?: string) => {
+  useEffect(() => {
+    if (!doctorDetail && !serviceDetail) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setDoctorDetail(null)
+        setServiceDetail(null)
+      }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [doctorDetail, serviceDetail])
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoginError("")
+    setIsSubmittingAuth(true)
+
+    try {
+      if (page === "Registrasi") {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: loginEmail,
+            password: loginPassword,
+            nama: regName,
+            nik: regNik,
+            telepon: regPhone,
+            tanggalLahir: regBirth,
+            jenisKelamin: regGender,
+          }),
+        })
+        const json = await res.json()
+        if (!res.ok || json.error) {
+          setLoginError(json.error || "Gagal melakukan registrasi.")
+          setIsSubmittingAuth(false)
+          return
+        }
+      }
+
+      await executeLogin(loginEmail, loginPassword)
+    } catch (err: any) {
+      setLoginError(err.message || "Terjadi kesalahan saat memproses akun.")
+    } finally {
+      setIsSubmittingAuth(false)
+    }
+  }
+
+  const executeLogin = async (emailTarget?: string, passTarget?: string) => {
     const targetEmail = emailTarget || loginEmail
     const targetPass = passTarget || loginPassword
     setLoginError("")
-    const res = login(targetEmail, targetPass)
+    const res = await login(targetEmail, targetPass)
     if (!res.success) {
       setLoginError(res.message)
       return
@@ -101,137 +153,160 @@ export default function PublicSite({
     window.location.href = dest
   }
 
-  const servicesDetailData = [
-    {
-      id: "s1",
-      num: "01",
-      name: "Poli Umum",
-      duration: 30,
-      desc: "Pemeriksaan kesehatan dan penanganan keluhan sehari-hari.",
-      icon: "heart",
-      summary: "Konsultasi awal untuk memahami keluhan sehari-hari, menilai kondisi umum, dan menentukan langkah perawatan berikutnya.",
-      scopes: [
-        "Wawancara keluhan dan riwayat kesehatan",
-        "Pemeriksaan fisik serta tanda vital sesuai kebutuhan",
-        "Edukasi kesehatan dan rencana tindak lanjut"
-      ],
-      preparations: [
-        "Bawa identitas dan bukti pendaftaran.",
-        "Siapkan informasi alergi, obat yang digunakan, dan riwayat keluhan."
-      ],
-      flow: [
-        { step: "01", desc: "Dokter mendengarkan keluhan dan riwayat kesehatan Anda." },
-        { step: "02", desc: "Pemeriksaan dilakukan sesuai kondisi yang ditemukan." },
-        { step: "03", desc: "Dokter menjelaskan hasil, saran perawatan, serta kebutuhan kontrol atau rujukan." }
-      ],
-      alert: "Penanganan disesuaikan dengan hasil pemeriksaan. Bila diperlukan layanan di luar kemampuan klinik, dokter dapat menyarankan rujukan."
-    },
-    {
-      id: "s2",
-      num: "02",
-      name: "Poli Gigi",
-      duration: 45,
-      desc: "Pemeriksaan dan perawatan kesehatan gigi serta mulut.",
-      icon: "shield",
-      summary: "Pemeriksaan dan perawatan kesehatan gigi serta mulut secara terpadu untuk mencegah komplikasi dan mengatasi keluhan.",
-      scopes: [
-        "Pemeriksaan kesehatan gigi, gusi, dan rongga mulut",
-        "Pembersihan karang gigi serta penambalan sesuai indikasi",
-        "Edukasi kebersihan gigi harian dan saran perawatan lanjutan"
-      ],
-      preparations: [
-        "Bawa identitas dan bukti pendaftaran.",
-        "Bila memiliki riwayat keluhan gigi atau alergi obat anestesi, informasikan kepada dokter."
-      ],
-      flow: [
-        { step: "01", desc: "Penyampaian keluhan atau tujuan pemeriksaan gigi." },
-        { step: "02", desc: "Pemeriksaan klinis rongga mulut dan tindakan sesuai kebutuhan." },
-        { step: "03", desc: "Penjelasan hasil, anjuran kebersihan mulut, dan jadwal kontrol bila perlu." }
-      ],
-      alert: "Tindakan khusus atau bedah minor gigi membutuhkan konfirmasi ketersediaan dan kesiapan pasien."
-    },
-    {
-      id: "s3",
-      num: "03",
-      name: "Poli Anak",
-      duration: 30,
-      desc: "Konsultasi kesehatan dan tumbuh kembang anak.",
-      icon: "users",
-      summary: "Pendampingan kesehatan anak melalui konsultasi bersama orang tua atau wali dan pemeriksaan sesuai usia.",
-      scopes: [
-        "Konsultasi keluhan kesehatan anak",
-        "Penilaian kondisi umum dan pertumbuhan sesuai kebutuhan",
-        "Edukasi perawatan di rumah dan tindak lanjut"
-      ],
-      preparations: [
-        "Anak didampingi orang tua atau wali.",
-        "Bawa buku kesehatan anak dan catatan obat bila tersedia."
-      ],
-      flow: [
-        { step: "01", desc: "Orang tua atau wali menjelaskan keluhan serta kebiasaan anak." },
-        { step: "02", desc: "Dokter memeriksa anak sesuai keluhan dan tahap usianya." },
-        { step: "03", desc: "Keluarga menerima penjelasan hasil dan rencana pemantauan." }
-      ],
-      alert: "Imunisasi, pemeriksaan penunjang, dan tindakan khusus tidak otomatis termasuk dalam konsultasi; konfirmasikan ketersediaannya terlebih dahulu."
-    },
-    {
-      id: "s4",
-      num: "04",
-      name: "Konsultasi Gizi",
-      duration: 30,
-      desc: "Pendampingan pola makan sesuai kebutuhan kesehatan.",
-      icon: "heart",
-      summary: "Konsultasi untuk memahami kebiasaan makan dan menyusun arahan gizi yang realistis sesuai kebutuhan kesehatan.",
-      scopes: [
-        "Wawancara pola makan dan gaya hidup",
-        "Penilaian status gizi sesuai kebutuhan",
-        "Edukasi pilihan makanan serta rencana pemantauan"
-      ],
-      preparations: [
-        "Catat pola makan beberapa hari terakhir bila memungkinkan.",
-        "Bawa catatan berat badan dan hasil pemeriksaan sebelumnya bila ada."
-      ],
-      flow: [
-        { step: "01", desc: "Dokter meninjau tujuan konsultasi dan riwayat kesehatan." },
-        { step: "02", desc: "Pola makan serta kondisi gizi dievaluasi." },
-        { step: "03", desc: "Arahan makan dan jadwal evaluasi dibahas bersama." }
-      ],
-      alert: "Rencana gizi bersifat individual. Hasil dan waktu perubahan dapat berbeda pada setiap pasien."
-    },
-    {
-      id: "s5",
-      num: "05",
-      name: "Pemeriksaan Berkala",
-      duration: 45,
-      desc: "Evaluasi kondisi kesehatan dan konsultasi pencegahan.",
-      icon: "check",
-      summary: "Evaluasi kondisi kesehatan menyeluruh untuk mendeteksi risiko sedini mungkin dan merencanakan pencegahan yang tepat.",
-      scopes: [
-        "Pemeriksaan tanda vital dan pengukuran antropometri",
-        "Evaluasi faktor risiko gaya hidup dan riwayat keluarga",
-        "Konsultasi hasil skrining dan rekomendasi pemeliharaan kesehatan"
-      ],
-      preparations: [
-        "Bawa identitas dan resume medis sebelumnya jika ada.",
-        "Istirahat yang cukup sebelum hari pemeriksaan."
-      ],
-      flow: [
-        { step: "01", desc: "Pencatatan data kesehatan awal dan tanda vital dasar." },
-        { step: "02", desc: "Pemeriksaan fisik dan konsultasi riwayat kesehatan bersama dokter." },
-        { step: "03", desc: "Pemberian kesimpulan pemeriksaan dan saran pencegahan berkala." }
-      ],
-      alert: "Pemeriksaan laboratorium tambahan bersifat terpisah dan disesuaikan dengan anjuran dokter."
-    }
-  ]
-
-  const handleSelectServiceDetail = (srvId: string) => {
-    setOpenAccordion(srvId)
-    setTimeout(() => {
-      const el = document.getElementById(`service-accordion-${srvId}`)
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" })
+  const getServiceExtendedMeta = (srv: Service) => {
+    const key = srv.name.toLowerCase()
+    if (key.includes("umum")) {
+      return {
+        summary:
+          "Konsultasi awal untuk memahami keluhan sehari-hari, menilai kondisi umum, dan menentukan langkah perawatan berikutnya.",
+        scopes: [
+          "Wawancara keluhan dan riwayat kesehatan",
+          "Pemeriksaan fisik serta tanda vital sesuai kebutuhan",
+          "Edukasi kesehatan dan rencana tindak lanjut",
+        ],
+        preparations: [
+          "Bawa kartu identitas (KTP/SIM) dan bukti pendaftaran.",
+          "Siapkan informasi alergi, obat yang sedang digunakan, dan riwayat keluhan.",
+        ],
+        flow: [
+          { step: "01", desc: "Dokter mendengarkan keluhan dan riwayat kesehatan Anda." },
+          { step: "02", desc: "Pemeriksaan fisik dan tanda vital dilakukan sesuai kondisi." },
+          { step: "03", desc: "Penjelasan hasil, terapi obat, serta saran kontrol atau rujukan." },
+        ],
+        alert:
+          "Penanganan disesuaikan dengan hasil pemeriksaan. Bila diperlukan layanan spesialis di luar kemampuan klinik, dokter akan menyarankan rujukan.",
       }
-    }, 60)
+    }
+    if (key.includes("gigi")) {
+      return {
+        summary:
+          "Pemeriksaan dan perawatan kesehatan gigi serta rongga mulut secara terpadu untuk mengatasi keluhan dan mencegah komplikasi.",
+        scopes: [
+          "Pemeriksaan kesehatan gigi, gusi, dan rongga mulut",
+          "Pembersihan karang gigi serta penambalan sesuai indikasi",
+          "Edukasi kebersihan gigi harian dan saran perawatan lanjutan",
+        ],
+        preparations: [
+          "Bawa identitas dan bukti pendaftaran kunjungan.",
+          "Informasikan riwayat keluhan gigi atau alergi obat anestesi kepada dokter.",
+        ],
+        flow: [
+          { step: "01", desc: "Penyampaian keluhan atau tujuan pemeriksaan gigi." },
+          { step: "02", desc: "Pemeriksaan klinis rongga mulut dan tindakan sesuai kebutuhan." },
+          { step: "03", desc: "Penjelasan hasil, anjuran perawatan, dan jadwal kontrol berkala." },
+        ],
+        alert:
+          "Tindakan khusus atau bedah minor gigi membutuhkan konfirmasi kondisi klinis dan kesiapan pasien terlebih dahulu.",
+      }
+    }
+    if (key.includes("anak")) {
+      return {
+        summary:
+          "Pendampingan kesehatan anak melalui konsultasi hangat bersama orang tua atau wali dan pemeriksaan sesuai tahap usia.",
+        scopes: [
+          "Konsultasi keluhan kesehatan anak (demam, batuk, alergi)",
+          "Pemantauan tumbuh kembang dan status nutrisi anak",
+          "Edukasi perawatan di rumah dan rencana tindak lanjut",
+        ],
+        preparations: [
+          "Anak wajib didampingi oleh orang tua atau wali.",
+          "Bawa buku kesehatan anak (KIA) dan catatan obat bila tersedia.",
+        ],
+        flow: [
+          { step: "01", desc: "Orang tua atau wali menjelaskan keluhan serta kebiasaan anak." },
+          { step: "02", desc: "Dokter memeriksa anak dengan pendekatan ramah anak." },
+          { step: "03", desc: "Keluarga menerima penjelasan hasil, resep, dan rencana pantau." },
+        ],
+        alert:
+          "Imunisasi tertentu dan pemeriksaan penunjang laboratorium dikonfirmasi ketersediaannya sesuai jadwal dokter spesialis.",
+      }
+    }
+    if (key.includes("kebidanan") || key.includes("kandungan")) {
+      return {
+        summary:
+          "Konsultasi kesehatan reproduksi wanita serta pemantauan kehamilan secara komprehensif, tenang, dan terjaga privasinya.",
+        scopes: [
+          "Pemeriksaan kehamilan rutin dan evaluasi kondisi janin",
+          "Konsultasi kesehatan reproduksi, siklus haid, dan KB",
+          "Edukasi persiapan persalinan serta nutrisi ibu hamil",
+        ],
+        preparations: [
+          "Bawa kartu identitas serta buku kontrol kehamilan (KIA) jika ada.",
+          "Catat riwayat kehamilan atau keluhan yang ingin dikonsultasikan.",
+        ],
+        flow: [
+          { step: "01", desc: "Wawancara riwayat kesehatan reproduksi atau usia kehamilan." },
+          { step: "02", desc: "Pemeriksaan fisik dan evaluasi klinis oleh dokter Sp.OG." },
+          { step: "03", desc: "Penjelasan kondisi serta jadwal kontrol kehamilan berikutnya." },
+        ],
+        alert:
+          "Pemeriksaan penunjang lanjutan seperti USG detail atau laboratorium dijadwalkan sesuai indikasi dokter.",
+      }
+    }
+    if (key.includes("gizi")) {
+      return {
+        summary:
+          "Konsultasi untuk memahami kebiasaan makan dan menyusun arahan gizi yang realistis sesuai kondisi serta target kesehatan.",
+        scopes: [
+          "Evaluasi pola makan harian dan kebiasaan gaya hidup",
+          "Penilaian status gizi dan komposisi tubuh",
+          "Penyusunan panduan menu seimbang sesuai kebutuhan medis",
+        ],
+        preparations: [
+          "Catat pola makan 2–3 hari terakhir bila memungkinkan.",
+          "Bawa data berat badan atau hasil pemeriksaan lab sebelumnya jika ada.",
+        ],
+        flow: [
+          { step: "01", desc: "Dokter meninjau tujuan konsultasi serta riwayat kesehatan." },
+          { step: "02", desc: "Pola makan harian dan status gizi pasien dievaluasi." },
+          { step: "03", desc: "Arahan pola makan realistis dan jadwal evaluasi dibahas bersama." },
+        ],
+        alert:
+          "Rencana gizi bersifat personal dan bertahap; pencapaian target menyesuaikan kondisi klinis masing-masing pasien.",
+      }
+    }
+    if (key.includes("berkala")) {
+      return {
+        summary:
+          "Evaluasi kondisi kesehatan menyeluruh untuk mendeteksi faktor risiko sedini mungkin dan merencanakan pencegahan yang tepat.",
+        scopes: [
+          "Pemeriksaan tanda vital dan pengukuran antropometri",
+          "Evaluasi faktor risiko gaya hidup dan riwayat keluarga",
+          "Konsultasi hasil skrining dan saran pemeliharaan kesehatan",
+        ],
+        preparations: [
+          "Bawa kartu identitas serta catatan hasil pemeriksaan sebelumnya bila ada.",
+          "Istirahat cukup pada malam sebelum jadwal pemeriksaan.",
+        ],
+        flow: [
+          { step: "01", desc: "Pencatatan data kesehatan awal dan pemeriksaan tanda vital." },
+          { step: "02", desc: "Pemeriksaan fisik menyeluruh dan konsultasi bersama dokter." },
+          { step: "03", desc: "Penyampaian kesimpulan skrining dan rekomendasi pencegahan." },
+        ],
+        alert:
+          "Pemeriksaan laboratorium tambahan bersifat terpisah dan disesuaikan dengan anjuran dokter.",
+      }
+    }
+    return {
+      summary: srv.overview || srv.description,
+      scopes: srv.cases?.length
+        ? srv.cases
+        : ["Konsultasi medis dan pemeriksaan kondisi klinis", "Edukasi kesehatan dan rencana terapi"],
+      preparations: srv.preparation
+        ? [srv.preparation, "Bawa kartu identitas serta bukti pendaftaran kunjungan."]
+        : ["Bawa kartu identitas dan bukti pendaftaran kunjungan."],
+      flow: srv.steps?.length
+        ? srv.steps.slice(0, 3).map((st) => ({
+            step: String(st.step).padStart(2, "0"),
+            desc: st.description || st.title,
+          }))
+        : [
+            { step: "01", desc: "Penyampaian keluhan dan riwayat kesehatan." },
+            { step: "02", desc: "Pemeriksaan klinis oleh dokter sesuai layanan." },
+            { step: "03", desc: "Penjelasan hasil dan rencana tindak lanjut." },
+          ],
+      alert: "Penanganan dan tindakan lanjutan disesuaikan dengan hasil pemeriksaan dokter.",
+    }
   }
 
   const careServices = services
@@ -265,7 +340,7 @@ export default function PublicSite({
               schedule.day
             ]
           : "",
-        image: portraits[i % portraits.length],
+        image: d.photoUrl || portraits[i % portraits.length],
       }
     })
 
@@ -299,7 +374,6 @@ export default function PublicSite({
       <div className={`web-section-title ${inner ? "cinema-page-hero" : ""}`}>
         <div className="cinema-title-copy">
           <span className="web-eyebrow">
-            {inner && <i className="cinema-eyebrow-dot" />}
             {eyebrow}
           </span>
           {inner ? <h1>{title}</h1> : <h2>{title}</h2>}
@@ -378,7 +452,7 @@ export default function PublicSite({
               </div>
             )}
             <span>
-              <i /> {d.day ? "Jadwal tersedia" : "Hubungi klinik"}
+              {d.day ? "Jadwal tersedia" : "Hubungi klinik"}
             </span>
           </div>
           <div className="web-doctor-info">
@@ -432,21 +506,27 @@ export default function PublicSite({
                 {p}
               </button>
             ))}
+            <div className="web-nav-mobile-actions">
+              <button
+                type="button"
+                className="web-nav-mobile-login"
+                onClick={() => go("Login")}
+              >
+                Masuk
+              </button>
+              <button
+                type="button"
+                className="web-nav-mobile-cta"
+                onClick={() => {
+                  setMenuOpen(false)
+                  onBook()
+                }}
+              >
+                Daftar Kunjungan <Icon name="arrow" size={16} />
+              </button>
+            </div>
           </nav>
           <div className="web-header-actions">
-            {/* Tombol Notifikasi Web Push */}
-            <button
-              className="notif-bell-btn"
-              onClick={() => setNotificationDrawerOpen(true)}
-              aria-label="Pusat Notifikasi & Web Push"
-              title="Pusat Notifikasi & Web Push"
-            >
-              <Icon name="bell" size={18} />
-              {unreadCount > 0 && (
-                <span className="notif-counter-badge">{unreadCount}</span>
-              )}
-            </button>
-
             <button className="web-login" onClick={() => go("Login")}>
               Masuk
             </button>
@@ -516,12 +596,7 @@ export default function PublicSite({
                   ? "Staf (Petugas, Dokter, Admin) wajib login menggunakan akun yang didaftarkan Administrator. Pasien dapat langsung masuk."
                   : "Daftar sebagai pasien baru untuk kemudahan reservasi antrean dan riwayat medis."}
               </div>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  executeLogin()
-                }}
-              >
+              <form onSubmit={handleAuthSubmit}>
                 {loginError && (
                   <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", padding: "10px 14px", color: "#b91c1c", fontSize: "12px", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
                     <Icon name="help" size={16} />
@@ -535,20 +610,42 @@ export default function PublicSite({
                       <input
                         required
                         autoComplete="name"
+                        value={regName}
+                        onChange={(e) => setRegName(e.target.value)}
                         placeholder="Nama sesuai identitas"
+                      />
+                    </label>
+                    <label>
+                      NIK (Nomor Induk Kependudukan)
+                      <input
+                        required
+                        type="text"
+                        pattern="[0-9]{16}"
+                        maxLength={16}
+                        value={regNik}
+                        onChange={(e) => setRegNik(e.target.value.replace(/\D/g, ""))}
+                        placeholder="16 digit NIK sesuai KTP"
                       />
                     </label>
                     <div className="web-input-grid">
                       <label>
                         Tanggal lahir
-                        <input required type="date" />
+                        <input
+                          required
+                          type="date"
+                          value={regBirth}
+                          onChange={(e) => setRegBirth(e.target.value)}
+                        />
                       </label>
                       <label>
                         Jenis kelamin
-                        <select required>
-                          <option value="">Pilih</option>
-                          <option>Laki-laki</option>
-                          <option>Perempuan</option>
+                        <select
+                          required
+                          value={regGender}
+                          onChange={(e) => setRegGender(e.target.value)}
+                        >
+                          <option value="Laki-laki">Laki-laki</option>
+                          <option value="Perempuan">Perempuan</option>
                         </select>
                       </label>
                     </div>
@@ -559,6 +656,8 @@ export default function PublicSite({
                         type="tel"
                         pattern="[0-9+() -]{8,16}"
                         autoComplete="tel"
+                        value={regPhone}
+                        onChange={(e) => setRegPhone(e.target.value)}
                         placeholder="08xxxxxxxxxx"
                       />
                     </label>
@@ -603,73 +702,14 @@ export default function PublicSite({
                     </button>
                   </div>
                 </label>
-                <button className="web-button" type="submit">
-                  {page === "Login"
-                    ? "Masuk ke Dashboard"
-                    : "Daftar Akun Pasien"}
+                <button className="web-button" type="submit" disabled={isSubmittingAuth}>
+                  {isSubmittingAuth
+                    ? "Memproses..."
+                    : page === "Login"
+                      ? "Masuk ke Dashboard"
+                      : "Daftar Akun Pasien"}
                   <Icon name="arrow" size={18} />
                 </button>
-                {page === "Login" && (
-                  <div style={{ marginTop: "18px", paddingTop: "14px", borderTop: "1px solid #eef2f7" }}>
-                    <div style={{ fontSize: "11px", color: "#64748b", marginBottom: "8px", fontWeight: 500 }}>
-                      Akses Cepat Akun Terdaftar:
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                      <button
-                        type="button"
-                        className="secondary"
-                        style={{ padding: "8px 10px", fontSize: "11px", justifyContent: "flex-start", gap: "6px" }}
-                        onClick={() => {
-                          setLoginEmail("andi@sehatklinik.id")
-                          setLoginPassword("password123")
-                          executeLogin("andi@sehatklinik.id", "password123")
-                        }}
-                      >
-                        <span className="avatar blue" style={{ width: "20px", height: "20px", fontSize: "9px" }}>P</span>
-                        Portal Pasien
-                      </button>
-                      <button
-                        type="button"
-                        className="secondary"
-                        style={{ padding: "8px 10px", fontSize: "11px", justifyContent: "flex-start", gap: "6px" }}
-                        onClick={() => {
-                          setLoginEmail("dina@sehatklinik.id")
-                          setLoginPassword("password123")
-                          executeLogin("dina@sehatklinik.id", "password123")
-                        }}
-                      >
-                        <span className="avatar amber" style={{ width: "20px", height: "20px", fontSize: "9px" }}>L</span>
-                        Loket Petugas
-                      </button>
-                      <button
-                        type="button"
-                        className="secondary"
-                        style={{ padding: "8px 10px", fontSize: "11px", justifyContent: "flex-start", gap: "6px" }}
-                        onClick={() => {
-                          setLoginEmail("nadia@sehatklinik.id")
-                          setLoginPassword("password123")
-                          executeLogin("nadia@sehatklinik.id", "password123")
-                        }}
-                      >
-                        <span className="avatar green" style={{ width: "20px", height: "20px", fontSize: "9px" }}>D</span>
-                        Ruang Dokter
-                      </button>
-                      <button
-                        type="button"
-                        className="secondary"
-                        style={{ padding: "8px 10px", fontSize: "11px", justifyContent: "flex-start", gap: "6px" }}
-                        onClick={() => {
-                          setLoginEmail("rina@sehatklinik.id")
-                          setLoginPassword("password123")
-                          executeLogin("rina@sehatklinik.id", "password123")
-                        }}
-                      >
-                        <span className="avatar purple" style={{ width: "20px", height: "20px", fontSize: "9px" }}>A</span>
-                        Admin Dashboard
-                      </button>
-                    </div>
-                  </div>
-                )}
               </form>
               <p className="web-auth-switch">
                 {page === "Login" ? "Belum punya akun?" : "Sudah punya akun?"}{" "}
@@ -896,197 +936,36 @@ export default function PublicSite({
               text="Pelayanan kesehatan menyeluruh dengan pendekatan yang personal, untuk setiap tahap kehidupan Anda."
             />
 
-            {/* 2. Overview Cards Grid (5 Cards) */}
+            {/* Overview Cards Grid (Klik kartu membuka pop-up detail layanan) */}
             <div className="services-cards-grid">
-              {servicesDetailData.map((s) => (
+              {careServices.map((s, idx) => (
                 <div key={s.id} className="service-new-card">
-                  {/* Decorative corner curve with number */}
                   <div className="service-card-corner-curve">
-                    <span className="service-card-num">{s.num}</span>
+                    <span className="service-card-num">
+                      {String(idx + 1).padStart(2, "0")}
+                    </span>
                   </div>
 
-                  {/* Icon */}
                   <div className="service-card-icon-wrap">
-                    {s.icon === "heart" ? (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-                        <path d="M12 6v6l3 2" />
-                      </svg>
-                    ) : s.icon === "shield" ? (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                        <path d="m9 12 2 2 4-4" />
-                      </svg>
-                    ) : s.icon === "users" ? (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                        <circle cx="9" cy="7" r="4" />
-                        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                      </svg>
-                    ) : (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="9" />
-                        <path d="m9 12 2 2 4-4" />
-                      </svg>
-                    )}
+                    <Icon name={s.icon} size={20} />
                   </div>
 
-                  {/* Body */}
                   <h3 className="service-card-title">{s.name}</h3>
-                  <p className="service-card-desc">{s.desc}</p>
-                  <span className="service-card-duration">Durasi konsultasi ± {s.duration} menit</span>
+                  <p className="service-card-desc">{s.text}</p>
+                  <span className="service-card-duration">{s.tag}</span>
 
                   <div className="service-card-divider" />
 
-                  {/* Action link */}
                   <button
+                    type="button"
                     className="service-card-action-link"
-                    onClick={() => handleSelectServiceDetail(s.id)}
+                    onClick={() => setServiceDetail(s)}
                   >
                     <span>Lihat detail layanan</span>
                     <span className="service-card-arrow">&rarr;</span>
                   </button>
                 </div>
               ))}
-            </div>
-
-            {/* 3. Deep-Dive Accordion Section ("PAHAMI SEBELUM BERKUNJUNG") */}
-            <div id="pahami-layanan" className="services-deepdive-section">
-              <div className="services-deepdive-header">
-                <span className="services-deepdive-eyebrow">PAHAMI SEBELUM BERKUNJUNG</span>
-                <h2 className="services-deepdive-title">Seperti apa pelayanannya?</h2>
-                <p className="services-deepdive-subtitle">
-                  Kenali cakupan konsultasi, persiapan, serta proses perawatan pada setiap layanan.
-                </p>
-              </div>
-
-              <div className="services-accordion-list">
-                {servicesDetailData.map((s) => {
-                  const isOpen = openAccordion === s.id
-                  return (
-                    <div
-                      key={s.id}
-                      id={`service-accordion-${s.id}`}
-                      className={`service-accordion-item ${isOpen ? "is-open" : ""}`}
-                    >
-                      {/* Header Row */}
-                      <div
-                        className="service-accordion-header"
-                        onClick={() => setOpenAccordion(isOpen ? null : s.id)}
-                        role="button"
-                        tabIndex={0}
-                        aria-expanded={isOpen}
-                      >
-                        <div className="service-accordion-icon-badge">
-                          {s.icon === "heart" ? (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-                              <path d="M12 6v6l3 2" />
-                            </svg>
-                          ) : s.icon === "shield" ? (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                              <path d="m9 12 2 2 4-4" />
-                            </svg>
-                          ) : s.icon === "users" ? (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                              <circle cx="9" cy="7" r="4" />
-                              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                            </svg>
-                          ) : (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                              <circle cx="12" cy="12" r="9" />
-                              <path d="m9 12 2 2 4-4" />
-                            </svg>
-                          )}
-                        </div>
-
-                        <div className="service-accordion-title-wrap">
-                          <h3 className="service-accordion-title">{s.name}</h3>
-                          <p className="service-accordion-subtitle">
-                            Estimasi konsultasi {s.duration} menit · lihat cakupan & alur
-                          </p>
-                        </div>
-
-                        <div className={`service-accordion-chevron ${isOpen ? "open" : ""}`}>
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="m6 9 6 6 6-6" />
-                          </svg>
-                        </div>
-                      </div>
-
-                      {/* Expanded Content Body */}
-                      {isOpen && (
-                        <div className="service-accordion-body">
-                          {/* Top intro */}
-                          <p className="service-accordion-summary">{s.summary}</p>
-
-                          {/* 2-Column Grid */}
-                          <div className="service-accordion-columns">
-                            <div className="service-accordion-col">
-                              <h4>Cakupan pelayanan</h4>
-                              <ul>
-                                {s.scopes.map((item, idx) => (
-                                  <li key={idx}>{item}</li>
-                                ))}
-                              </ul>
-                            </div>
-
-                            <div className="service-accordion-col">
-                              <h4>Yang perlu dipersiapkan</h4>
-                              <ul>
-                                {s.preparations.map((item, idx) => (
-                                  <li key={idx}>{item}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          </div>
-
-                          {/* Alur Konsultasi */}
-                          <div className="service-flow-section">
-                            <h4 className="service-flow-title">Alur konsultasi</h4>
-                            <div className="service-flow-grid">
-                              {s.flow.map((fl) => (
-                                <div key={fl.step} className="service-flow-step">
-                                  <div className="service-flow-top-line" />
-                                  <span className="service-flow-num">{fl.step}</span>
-                                  <p className="service-flow-desc">{fl.desc}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Alert Callout */}
-                          <div className="service-alert-box">
-                            <span className="service-alert-icon">
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                                <circle cx="12" cy="12" r="9" />
-                                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                                <line x1="12" y1="17" x2="12.01" y2="17" />
-                              </svg>
-                            </span>
-                            <p>{s.alert}</p>
-                          </div>
-
-                          {/* Action Button */}
-                          <div className="service-accordion-action">
-                            <button
-                              className="service-book-action-btn"
-                              onClick={onBook}
-                            >
-                              <span>Daftar layanan ini</span>
-                              <span className="service-book-arrow">&rarr;</span>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
             </div>
           </section>
         ) : page === "Dokter" ? (
@@ -1331,7 +1210,7 @@ export default function PublicSite({
                 </div>
                 <div className="sky-float sky-float-right">
                   <span className="sky-float-label">
-                    Selalu ada untuk Anda <span className="sky-mini-dot" />
+                    Selalu ada untuk Anda
                   </span>
                   <div className="sky-wave" aria-hidden="true">
                     <svg viewBox="0 0 200 55">
@@ -1599,7 +1478,7 @@ export default function PublicSite({
               </a>
               <div className="web-footer-hours">
                 <span>
-                  <i /> Jam pelayanan
+                  Jam pelayanan
                 </span>
                 <b>{clinic.hours}</b>
               </div>
@@ -1733,93 +1612,108 @@ export default function PublicSite({
       {/* =================================================================
          MODAL RINCIAN DETAIL LAYANAN KLINIK
          ================================================================= */}
-      {serviceDetail && (
-        <div className="web-dialog-backdrop" onClick={() => setServiceDetail(null)}>
-          <section
-            className="web-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="service-dialog-title"
-            style={{ maxWidth: "680px", maxHeight: "88vh", overflowY: "auto" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              className="web-dialog-close"
-              aria-label="Tutup detail layanan"
-              onClick={() => setServiceDetail(null)}
+      {serviceDetail && (() => {
+        const meta = getServiceExtendedMeta(serviceDetail)
+        const serviceIcon =
+          careServices.find((c) => c.id === serviceDetail.id)?.icon || "heart"
+        return (
+          <div className="web-dialog-backdrop" onClick={() => setServiceDetail(null)}>
+            <section
+              className="web-dialog web-dialog-wide"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="service-dialog-title"
+              onClick={(e) => e.stopPropagation()}
             >
-              <Icon name="close" />
-            </button>
+              <button
+                className="web-dialog-close"
+                aria-label="Tutup detail layanan"
+                onClick={() => setServiceDetail(null)}
+              >
+                <Icon name="close" />
+              </button>
 
-            <span className="web-eyebrow">RINCIAN LENGKAP LAYANAN</span>
-            <h2 id="service-dialog-title" style={{ margin: "4px 0 10px" }}>
-              {serviceDetail.name}
-            </h2>
-            <p style={{ color: "#475569", lineHeight: 1.6, fontSize: "13px" }}>
-              {serviceDetail.overview || serviceDetail.description}
-            </p>
-
-            <div style={{ margin: "14px 0", padding: "8px 12px", background: "#eff6ff", borderRadius: "8px", fontSize: "11px", color: "#1e40af" }}>
-              <Icon name="clock" size={14} /> Durasi konsultasi: <b>± {serviceDetail.duration} menit</b> per pasien.
-            </div>
-
-            {serviceDetail.steps && (
-              <div style={{ marginTop: "16px" }}>
-                <h4 style={{ fontSize: "13px", fontWeight: 700, marginBottom: "10px", color: "#0f172a" }}>
-                  Alur Pemeriksaan Medis (4 Tahapan):
-                </h4>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                  {serviceDetail.steps.map((st) => (
-                    <div key={st.step} className="service-step-item">
-                      <span className="service-step-number">{st.step}</span>
-                      <h4>{st.title}</h4>
-                      <p>{st.description}</p>
-                    </div>
-                  ))}
+              <div className="dialog-entity-head">
+                <span className="web-service-icon dialog-entity-icon">
+                  <Icon name={serviceIcon} size={22} />
+                </span>
+                <div>
+                  <span className="web-eyebrow">DETAIL LAYANAN KLINIK</span>
+                  <h2 id="service-dialog-title">{serviceDetail.name}</h2>
+                  <span className="dialog-entity-sub">
+                    Estimasi konsultasi ± {serviceDetail.duration} menit per sesi
+                  </span>
                 </div>
               </div>
-            )}
 
-            {serviceDetail.cases && (
-              <div style={{ marginTop: "16px" }}>
-                <h4 style={{ fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: "#0f172a" }}>
-                  Kasus yang Ditangani:
-                </h4>
-                <div className="service-cases-box">
+              <div className="doctor-legal-row">
+                <span>
+                  <b>Durasi:</b> ± {serviceDetail.duration} menit
+                </span>
+                <span>
+                  <b>Pendaftaran:</b> Online & Walk-in
+                </span>
+                <span>
+                  <b>Status:</b> Tersedia
+                </span>
+              </div>
+
+              <p className="dialog-entity-lead">
+                {meta.summary || serviceDetail.overview || serviceDetail.description}
+              </p>
+
+              <div className="service-modal-columns">
+                <div className="service-modal-col">
+                  <h4>Cakupan pelayanan</h4>
                   <ul>
-                    {serviceDetail.cases.map((c, i) => (
-                      <li key={i}>{c}</li>
+                    {meta.scopes.map((item, idx) => (
+                      <li key={idx}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="service-modal-col">
+                  <h4>Yang perlu dipersiapkan</h4>
+                  <ul>
+                    {meta.preparations.map((item, idx) => (
+                      <li key={idx}>{item}</li>
                     ))}
                   </ul>
                 </div>
               </div>
-            )}
 
-            {serviceDetail.preparation && (
-              <div className="service-prep-box" style={{ marginTop: "16px" }}>
-                <Icon name="info" size={18} />
-                <div>
-                  <b>Panduan Pasien:</b> {serviceDetail.preparation}
+              <div className="service-modal-flow">
+                <h4>Alur konsultasi</h4>
+                <div className="service-modal-flow-grid">
+                  {meta.flow.map((fl) => (
+                    <div key={fl.step} className="service-modal-flow-step">
+                      <span>{fl.step}</span>
+                      <p>{fl.desc}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
-            )}
 
-            <button
-              className="web-button"
-              style={{ width: "100%", justifyContent: "center", marginTop: "20px" }}
-              onClick={() => {
-                setServiceDetail(null)
-                onBook()
-              }}
-            >
-              Daftar ke {serviceDetail.name} <Icon name="arrow" size={17} />
-            </button>
-          </section>
-        </div>
-      )}
+              {meta.alert && (
+                <div className="web-care-note service-modal-note">
+                  <Icon name="info" size={18} />
+                  <p>{meta.alert}</p>
+                </div>
+              )}
 
-      {/* Pusat Notifikasi Drawer (SRS 11 & Web Push) */}
-      <NotificationDrawer />
+              <button
+                className="web-button"
+                onClick={() => {
+                  setServiceDetail(null)
+                  onBook()
+                }}
+              >
+                Daftar Kunjungan ke {serviceDetail.name}{" "}
+                <Icon name="arrow" size={17} />
+              </button>
+            </section>
+          </div>
+        )
+      })()}
     </div>
   )
 }

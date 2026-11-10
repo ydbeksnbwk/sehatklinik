@@ -12,7 +12,7 @@ import { ClinicProvider } from "@/context/ClinicContext"
 
 export const metadata: Metadata = {
   title: "Sistem Informasi Klinik Kesehatan - Klinik Sehat Sentosa",
-  description: "Aplikasi web Sistem Informasi Klinik Kesehatan: pendaftaran daring & walk-in, antrean terpusat, rekam medis & pemeriksaan dokter, serta dashboard multi-peran.",
+  description: "Aplikasi web Sistem Informasi Klinik Kesehatan: pendaftaran daring & walk-in, antrean terpusat, pemeriksaan dokter, serta dashboard multi-peran.",
   icons: {
     icon: "/favicon.svg",
   },

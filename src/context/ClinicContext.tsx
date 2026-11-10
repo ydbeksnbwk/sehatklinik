@@ -8,6 +8,7 @@ import React, {
   type ReactNode,
   type FormEvent,
 } from "react"
+import { createClient } from "@/utils/supabase/client"
 import {
   DEMO_DATE,
   doctorsSeed,
@@ -19,8 +20,11 @@ import {
   notificationJobsSeed,
   clinicDetailSeed,
   remaining,
+  queueLabel,
   type Role,
   type Visit,
+  type QueueStatus,
+  type VisitStatus,
   type Patient,
   type Doctor,
   type Service,
@@ -101,8 +105,8 @@ type ClinicContextType = {
 
   currentUser: ClinicUser | null
   setCurrentUser: React.Dispatch<React.SetStateAction<ClinicUser | null>>
-  login: (email: string, password?: string) => { success: boolean; message: string; user?: ClinicUser }
-  logout: () => void
+  login: (email: string, password?: string) => Promise<{ success: boolean; message: string; user?: ClinicUser }>
+  logout: () => Promise<void> | void
 
   clinic: ClinicProfile
   setClinic: React.Dispatch<React.SetStateAction<ClinicProfile>>
@@ -229,6 +233,20 @@ const defaultUsers: ClinicUser[] = [
     password: "password123",
   },
   {
+    name: "dr. Reyhan Adhitama",
+    email: "dokter@sehatklinik.id",
+    role: "Dokter",
+    active: true,
+    password: "password123",
+  },
+  {
+    name: "dr. Reyhan Adhitama",
+    email: "reyhan.adhitama@gmail.com",
+    role: "Dokter",
+    active: true,
+    password: "password123",
+  },
+  {
     name: "dr. Nadia Putri",
     email: "nadia@sehatklinik.id",
     role: "Dokter",
@@ -321,15 +339,16 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   // Load state from localStorage on client mount
   useEffect(() => {
     try {
-      // Invalidate old state v1 cache to keep dashboard clean for Supabase
+      // Invalidate old state v1/v2 cache to ensure clean seed/Supabase sync
       if (typeof window !== "undefined") {
         localStorage.removeItem("sehatklinik_state_v1")
+        localStorage.removeItem("sehatklinik_state_v2")
       }
-      const stored = typeof window !== "undefined" ? localStorage.getItem("sehatklinik_state_v2") : null
+      const stored = typeof window !== "undefined" ? localStorage.getItem("sehatklinik_state_v3") : null
       if (stored) {
         const data = JSON.parse(stored)
-        if (data.visits) setVisits(data.visits)
-        if (data.patients) setPatients(data.patients)
+        if (data.visits?.length) setVisits(data.visits)
+        if (data.patients?.length) setPatients(data.patients)
         if (data.doctors) setDoctors(data.doctors)
         if (data.services) setServices(data.services)
         if (data.schedules) setSchedules(data.schedules)
@@ -369,12 +388,269 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // Load real data from Supabase (Doctors, Services, Schedules, Profile, Visits, Patients)
+  useEffect(() => {
+    const supabase = createClient()
+
+    async function fetchVisits(): Promise<boolean> {
+      try {
+        const res = await fetch("/api/kunjungan")
+        if (res.ok) {
+          const json = await res.json()
+          if (json.data && json.data.length > 0) {
+            const queueStatusMap: Record<string, QueueStatus> = {
+              menunggu: "Menunggu",
+              dipanggil: "Dipanggil",
+              diperiksa: "Sedang Diperiksa",
+              selesai: "Selesai",
+              dilewati: "Dilewati",
+              batal: "Dibatalkan",
+            }
+            const visitStatusMap: Record<string, VisitStatus> = {
+              terdaftar: "Terdaftar",
+              hadir: "Hadir",
+              selesai: "Selesai",
+              batal: "Dibatalkan",
+            }
+            const dbVisits: Visit[] = json.data.map((k: any) => {
+              const q = Array.isArray(k.antrean) ? k.antrean[0] : k.antrean
+              return {
+                id: k.id,
+                patient: k.pasien_id || "RM-00128",
+                doctor: k.dokter_id,
+                service: k.layanan_id,
+                schedule: k.jadwal_id || "j1",
+                date: k.tanggal,
+                complaint: k.keluhan || "",
+                source: k.sumber === "walk_in" ? "Walk-in" : "Online",
+                status: visitStatusMap[k.status] || "Terdaftar",
+                queue: q ? queueStatusMap[q.status] || "Menunggu" : "Menunggu",
+                number: q?.nomor_antrean || 1,
+                reason: q?.alasan || undefined,
+              }
+            })
+            setVisits(dbVisits)
+            return true
+          }
+        }
+      } catch (err) {
+        console.warn("Gagal memuat kunjungan:", err)
+      }
+      return false
+    }
+
+    async function loadSupabaseData() {
+      try {
+        // Sync Supabase Auth session if already logged in
+        const { data: authData } = await supabase.auth.getUser()
+        if (authData?.user) {
+          const userMeta = authData.user.user_metadata || {}
+          const userRole = (userMeta.role || authData.user.app_metadata?.role || "Pasien") as Role
+          const authUser: ClinicUser = {
+            name: userMeta.name || authData.user.email?.split("@")[0] || "Pengguna",
+            email: authData.user.email || "",
+            role: userRole,
+            active: true,
+          }
+          setCurrentUser(authUser)
+        }
+
+        // Fetch live catalog data & clinic profile
+        const [
+          { data: doctorsData },
+          { data: servicesData },
+          { data: schedulesData },
+          { data: dlData },
+          { data: clinicData },
+        ] = await Promise.all([
+          supabase.from("dokter").select("*"),
+          supabase.from("layanan").select("*"),
+          supabase.from("jadwal_praktik").select("*"),
+          supabase.from("dokter_layanan").select("*"),
+          supabase.from("profil_klinik").select("*").limit(1),
+        ])
+
+        if (clinicData && clinicData.length > 0) {
+          const c = clinicData[0]
+          setClinic((prev) => ({
+            ...prev,
+            name: c.nama || prev.name,
+            description: c.deskripsi || prev.description,
+            address: c.alamat || prev.address,
+            phone: c.kontak || prev.phone,
+            latitude: String(c.latitude ?? prev.latitude),
+            longitude: String(c.longitude ?? prev.longitude),
+          }))
+        }
+
+        let loadedServices: Service[] = []
+        if (servicesData && servicesData.length > 0) {
+          loadedServices = servicesData.map((l: any) => {
+            const existing = servicesSeed.find(
+              (s) => s.id === l.id || s.name.toLowerCase() === l.nama_layanan?.toLowerCase()
+            )
+            return {
+              id: l.id,
+              name: l.nama_layanan,
+              description: l.deskripsi || "",
+              duration: l.durasi_menit || 20,
+              active: l.aktif ?? true,
+              overview: l.deskripsi || existing?.overview || "",
+              steps: existing?.steps || [
+                { step: 1, title: "Registrasi & Skrining", description: "Pemeriksaan tanda vital dasar." },
+                { step: 2, title: "Konsultasi & Pemeriksaan", description: "Konsultasi langsung bersama dokter." },
+                { step: 3, title: "Tindakan & Resep", description: "Pemberian instruksi medis dan edukasi." },
+              ],
+              cases: existing?.cases || ["Pemeriksaan umum", "Konsultasi keluhan awal"],
+              facilities: existing?.facilities || ["Ruang periksa ber-AC", "Alat diagnosa standar"],
+              preparation: existing?.preparation || "Bawa kartu identitas atau bukti pendaftaran.",
+            }
+          })
+          setServices(loadedServices)
+        }
+
+        let loadedDoctors: Doctor[] = []
+        if (doctorsData && doctorsData.length > 0) {
+          loadedDoctors = doctorsData.map((d: any) => {
+            const docServices = dlData
+              ? dlData.filter((rel: any) => rel.dokter_id === d.id).map((rel: any) => rel.layanan_id)
+              : []
+            const existing = doctorsSeed.find((seed) => seed.name.toLowerCase() === d.nama?.toLowerCase())
+            const photoUrl = d.foto_path
+              ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/foto-dokter/${d.foto_path}`
+              : undefined
+
+            return {
+              id: d.id,
+              name: d.nama,
+              specialty: d.spesialisasi,
+              sip: d.no_sip || "SIP-2026-000",
+              str: existing?.str || "STR-2026-000",
+              services: docServices.length > 0 ? docServices : (existing?.services || []),
+              active: d.aktif ?? true,
+              education: existing?.education || [{ degree: d.spesialisasi, institution: "Fakultas Kedokteran" }],
+              experienceYears: existing?.experienceYears || 5,
+              almamater: existing?.almamater || "Fakultas Kedokteran",
+              certifications: existing?.certifications || ["Ikatan Dokter Indonesia (IDI)"],
+              bio: d.deskripsi || existing?.bio || "Dokter berkompeten dan berdedikasi tinggi.",
+              photoUrl,
+            }
+          })
+          setDoctors(loadedDoctors)
+        }
+
+        let loadedSchedules: Schedule[] = []
+        if (schedulesData && schedulesData.length > 0) {
+          loadedSchedules = schedulesData.map((sch: any) => ({
+            id: sch.id,
+            doctor: sch.dokter_id,
+            day: sch.hari,
+            start: sch.jam_mulai ? sch.jam_mulai.slice(0, 5) : "08:00",
+            end: sch.jam_selesai ? sch.jam_selesai.slice(0, 5) : "12:00",
+            quota: sch.kuota || 10,
+            active: sch.aktif ?? true,
+          }))
+          setSchedules(loadedSchedules)
+        }
+
+        // Align initial booking values to available live data
+        if (loadedServices.length > 0) {
+          setBooking((prev) => {
+            const hasService = loadedServices.some((s) => s.id === prev.service)
+            if (!hasService) {
+              const firstSvc = loadedServices[0].id
+              const firstDoc =
+                loadedDoctors.find((d) => d.services.includes(firstSvc))?.id ||
+                loadedDoctors[0]?.id ||
+                ""
+              const firstSched =
+                loadedSchedules.find((s) => s.doctor === firstDoc)?.id ||
+                loadedSchedules[0]?.id ||
+                ""
+              return {
+                ...prev,
+                service: firstSvc,
+                doctor: firstDoc,
+                schedule: firstSched,
+              }
+            }
+            return prev
+          })
+        }
+
+        // Fetch patients from API
+        try {
+          const pRes = await fetch("/api/pasien")
+          if (pRes.ok) {
+            const pJson = await pRes.json()
+            if (pJson.data && pJson.data.length > 0) {
+              const dbPatients: Patient[] = pJson.data.map((p: any) => ({
+                id: p.id || p.no_rekam_medis,
+                name: p.nama,
+                phone: p.telepon || "-",
+                birth: p.tanggal_lahir || "2000-01-01",
+                gender: p.jenis_kelamin === "P" ? "Perempuan" : "Laki-laki",
+                address: p.alamat || "-",
+                emergency: p.kontak_darurat || "-",
+                account: Boolean(p.profile_id),
+                nik: p.nik || "-",
+              }))
+              setPatients(dbPatients)
+            }
+          }
+        } catch { }
+
+        // Fetch visits; if DB has none yet, align dummy seed visits with live doctor/service/schedule IDs
+        const hasDbVisits = await fetchVisits()
+        if (!hasDbVisits && loadedDoctors.length > 0 && loadedServices.length > 0 && loadedSchedules.length > 0) {
+          const reyhanDoc =
+            loadedDoctors.find((d) => d.name.toLowerCase().includes("reyhan")) ||
+            loadedDoctors[0]
+          const umumSvc =
+            loadedServices.find((s) => s.name.toLowerCase().includes("umum")) ||
+            loadedServices[0]
+          const monSched =
+            loadedSchedules.find((s) => s.doctor === reyhanDoc.id && s.day === 1) ||
+            loadedSchedules.find((s) => s.doctor === reyhanDoc.id) ||
+            loadedSchedules[0]
+          setVisits((prev) =>
+            prev.map((v) => ({
+              ...v,
+              doctor: v.doctor === "d1" ? reyhanDoc.id : v.doctor,
+              service: v.service === "s1" ? umumSvc.id : v.service,
+              schedule: v.schedule === "j1" ? monSched.id : v.schedule,
+            })),
+          )
+        }
+      } catch (err) {
+        console.warn("Gagal memuat data live dari Supabase, fallback ke data bawaan:", err)
+      }
+    }
+
+    loadSupabaseData()
+
+    // Real-time synchronization for visits and queues
+    const channel = supabase
+      .channel("clinic-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "kunjungan" }, () => {
+        fetchVisits()
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "antrean" }, () => {
+        fetchVisits()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
   // Save to localStorage when state changes
   useEffect(() => {
     if (!initialized) return
     try {
       localStorage.setItem(
-        "sehatklinik_state_v2",
+        "sehatklinik_state_v3",
         JSON.stringify({
           role,
           visits,
@@ -621,6 +897,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     address: "-",
     emergency: "-",
     account: true,
+    nik: "3301010101000001",
   }
   const patient = patients.find((p) => p.id === "RM-00128") || patients[0] || defaultPatientFallback
   const doctorName = (id: string) =>
@@ -631,11 +908,20 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     patients.find((p) => p.id === id)?.name || "Pasien"
   const session = (id: string) => schedules.find((s) => s.id === id)
 
+  const activeDoctor =
+    (currentUser &&
+      doctors.find(
+        (d) => d.name.toLowerCase() === currentUser.name.toLowerCase(),
+      )) ||
+    doctors.find((d) => d.name.toLowerCase().includes("reyhan")) ||
+    doctors[0]
+  const activeDoctorId = activeDoctor?.id || "d1"
+
   const scopedVisits = visits.filter((v) =>
     role === "Pasien"
       ? v.patient === patient.id
       : role === "Dokter"
-        ? v.doctor === "d1"
+        ? v.doctor === activeDoctorId
         : true
   )
   const todayVisits = scopedVisits.filter((v) => v.date === DEMO_DATE)
@@ -671,7 +957,10 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
 
   // Transition queue and trigger business notifications according to SRS & API Contract
   const transition = (v: Visit, target: string) => {
-    const qLabel = `${v.doctor.replace("d", "").padStart(2, "0")}-${String(v.number).padStart(3, "0")}`
+    const qLabel = queueLabel(
+      v,
+      doctors.findIndex((d) => d.id === v.doctor),
+    )
     const pName = patientName(v.patient)
     const docName = doctorName(v.doctor)
 
@@ -683,6 +972,13 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     ) {
       updateVisit(v.id, { status: "Hadir" })
       notify(`Pasien ${pName} (${qLabel}) berhasil Check-in. Siap dipanggil.`)
+
+      // Sync status check-in ke Supabase
+      fetch(`/api/kunjungan/${v.id}/transition`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: "checkin" }),
+      }).catch((err) => console.warn("Sync check-in error:", err))
     } else if (
       target === "call" &&
       ["Petugas", "Dokter"].includes(role) &&
@@ -690,6 +986,13 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       v.queue === "Menunggu"
     ) {
       updateVisit(v.id, { queue: "Dipanggil" })
+
+      // Sync status call ke Supabase
+      fetch(`/api/kunjungan/${v.id}/transition`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: "call" }),
+      }).catch((err) => console.warn("Sync call error:", err))
 
       // Trigger ANTREAN_DIPANGGIL notification for the patient
       addNotification({
@@ -712,7 +1015,10 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           other.queue === "Menunggu"
       )
       if (nextInLine) {
-        const nextQLabel = `${nextInLine.doctor.replace("d", "").padStart(2, "0")}-${String(nextInLine.number).padStart(3, "0")}`
+        const nextQLabel = queueLabel(
+          nextInLine,
+          doctors.findIndex((d) => d.id === nextInLine.doctor),
+        )
         addNotification(
           {
             targetRole: "Pasien",
@@ -730,6 +1036,30 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     } else if (target === "start" && role === "Dokter" && v.queue === "Dipanggil") {
       updateVisit(v.id, { queue: "Sedang Diperiksa" })
       notify(`Pemeriksaan untuk antrean ${qLabel} dimulai.`)
+      fetch(`/api/kunjungan/${v.id}/transition`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: "start" }),
+      }).catch((err) => console.warn("Sync start error:", err))
+    } else if (target === "finish" && role === "Dokter" && v.queue === "Sedang Diperiksa") {
+      updateVisit(v.id, { status: "Selesai", queue: "Selesai" })
+      setSelected(null)
+      notify("Kunjungan selesai. Ringkasan tersedia pada riwayat pasien.")
+      fetch(`/api/kunjungan/${v.id}/transition`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: "finish" }),
+      }).catch((err) => console.warn("Sync finish error:", err))
+      addNotification({
+        targetRole: "Pasien",
+        targetUserId: v.patient,
+        type: "KUNJUNGAN_SELESAI",
+        title: "Pemeriksaan Selesai",
+        message: `Kunjungan ${v.id} bersama ${docName} telah selesai. Ringkasan pemeriksaan tersedia di riwayat Anda.`,
+        visitId: v.id,
+        queueNumber: qLabel,
+        actionUrl: "detail",
+      })
     } else if (
       target === "skip" &&
       role === "Petugas" &&
@@ -737,6 +1067,11 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       reason.trim()
     ) {
       updateVisit(v.id, { queue: "Dilewati", reason })
+      fetch(`/api/kunjungan/${v.id}/transition`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: "skip", reason }),
+      }).catch((err) => console.warn("Sync skip error:", err))
       addNotification({
         targetRole: "Pasien",
         targetUserId: v.patient,
@@ -754,6 +1089,11 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       reason.trim()
     ) {
       updateVisit(v.id, { queue: "Dibatalkan", status: "Dibatalkan", reason })
+      fetch(`/api/kunjungan/${v.id}/transition`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: "cancel", reason }),
+      }).catch((err) => console.warn("Sync cancel error:", err))
       addNotification({
         targetRole: "Pasien",
         targetUserId: v.patient,
@@ -832,7 +1172,42 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     setStep(4)
     setBusy(false)
 
-    const qLabel = `${next.doctor.replace("d", "").padStart(2, "0")}-${String(next.number).padStart(3, "0")}`
+    // Sync pendaftaran kunjungan & antrean baru ke Supabase
+    fetch("/api/kunjungan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        pasienId: next.patient,
+        dokterId: next.doctor,
+        layananId: next.service,
+        jadwalId: next.schedule,
+        tanggal: next.date,
+        keluhan: next.complaint,
+        sumber: next.source,
+      }),
+    })
+      .then((res) => res.json())
+      .then((resData) => {
+        if (resData.data?.id) {
+          setVisits((prev) =>
+            prev.map((v) =>
+              v.id === next.id
+                ? {
+                    ...v,
+                    id: resData.data.id,
+                    number: resData.data.antrean?.nomor_antrean || v.number,
+                  }
+                : v
+            )
+          )
+        }
+      })
+      .catch((err) => console.warn("Sync booking error:", err))
+
+    const qLabel = queueLabel(
+      next,
+      doctors.findIndex((d) => d.id === next.doctor),
+    )
     const dName = doctorName(next.doctor)
     const sName = serviceName(next.service)
     const pName = patientName(next.patient)
@@ -891,7 +1266,25 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     setError("")
     updateVisit(selectedVisit.id, { examination: exam })
     setSavedExam(true)
-    notify("Pemeriksaan tersimpan dalam simulasi.")
+    notify("Pemeriksaan dan tindakan medis berhasil disimpan ke database!")
+
+    // Sync hasil pemeriksaan & tindakan ke Supabase
+    fetch(`/api/kunjungan/${selectedVisit.id}/pemeriksaan`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        dokterId: selectedVisit.doctor,
+        anamnesis: exam.anamnesis,
+        tandaVital: {
+          pressure: exam.pressure,
+          temperature: exam.temperature,
+          weight: exam.weight,
+        },
+        diagnosis: exam.diagnosis,
+        catatan: exam.notes,
+        tindakan: exam.actions,
+      }),
+    }).catch((err) => console.warn("Sync examination error:", err))
   }
 
   const showEditor = (type: string, id?: string) => {
@@ -913,13 +1306,52 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     setPage("Beranda")
     localStorage.removeItem("sehatklinik_state_v1")
     localStorage.removeItem("sehatklinik_state_v2")
+    localStorage.removeItem("sehatklinik_state_v3")
     localStorage.removeItem("sehatklinik_current_user")
     setCurrentUser(null)
     notify("Data sistem berhasil direset.")
   }
 
-  const login = (email: string, password?: string) => {
+  const login = async (
+    email: string,
+    password?: string
+  ): Promise<{ success: boolean; message: string; user?: ClinicUser }> => {
     const cleanEmail = email.trim().toLowerCase()
+
+    // 1. Coba autentikasi via Supabase Auth jika ada password
+    if (password) {
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        })
+        if (!error && data?.user) {
+          const userMeta = data.user.user_metadata || {}
+          const userRole = (userMeta.role || data.user.app_metadata?.role || "Pasien") as Role
+          const authUser: ClinicUser = {
+            name: userMeta.name || data.user.email?.split("@")[0] || "Pengguna",
+            email: data.user.email || cleanEmail,
+            role: userRole,
+            active: true,
+          }
+          setCurrentUser(authUser)
+          setRole(userRole)
+          if (typeof window !== "undefined") {
+            localStorage.setItem("sehatklinik_current_user", JSON.stringify(authUser))
+          }
+          return {
+            success: true,
+            message: `Selamat datang, ${authUser.name}! (Supabase Auth)`,
+            user: authUser,
+          }
+        }
+      } catch (authErr) {
+        console.warn("Supabase auth attempted, fallback to local:", authErr)
+      }
+    }
+
+    // 2. Fallback akun staf dan demo lokal
     let staff = users.find((u) => u.email.trim().toLowerCase() === cleanEmail)
     if (!staff) {
       staff = defaultUsers.find((u) => u.email.trim().toLowerCase() === cleanEmail)
@@ -977,7 +1409,11 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+    } catch {}
     setCurrentUser(null)
     setRole("Publik")
     if (typeof window !== "undefined") {

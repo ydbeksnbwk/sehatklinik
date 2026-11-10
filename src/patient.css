@@ -61,7 +61,7 @@
   .patient-profile-fixed { max-width: 400px; margin-inline: auto; }
 }
 @media (max-width: 650px) {
-  .patient-panel-body { padding: 20px; }
+  .patient-panel-body { padding: 18px 16px; }
   .patient-appointment-date { gap: 9px; flex-wrap: wrap; }
   .patient-appointment-date b { font-size: 14px; }
   .patient-appointment-date > svg { width: 18px; }
@@ -69,9 +69,13 @@
   .patient-shortcut small,.patient-history-row small { font-size: 11px; }
   .patient-history-row { gap: 10px; flex-wrap: wrap; }
   .patient-history-row > .badge { margin-left: auto; }
-  .patient-queue-guide { padding: 25px; }
-  .patient-profile-details .panel-heading { flex-direction: column; align-items: flex-start; gap: 18px; }
-  .patient-profile-fields { gap: 22px 18px; }
+  .patient-queue-guide { padding: 20px 16px; }
+  .patient-profile-fixed { max-width: 100%; }
+  .patient-profile-details .panel-heading { flex-direction: column; align-items: flex-start; gap: 14px; }
+  .patient-profile-fields { grid-template-columns: 1fr; gap: 16px; }
   .patient-profile-fields dd { font-size: 13px; }
-  .patient-queue-progress li small { font-size: 9px; }
+  .patient-queue-progress { gap: 4px; }
+  .patient-queue-progress li > span { width: 24px; height: 24px; font-size: 10px; }
+  .patient-queue-progress li:not(:last-child)::after { top: 12px; width: calc(100% - 26px); left: calc(50% + 13px); }
+  .patient-queue-progress li small { font-size: 8.5px; text-align: center; }
 }

@@ -4,7 +4,7 @@ import Icon from "@/components/Icon"
 
 export const metadata: Metadata = {
   title: "Ruang Dokter - Sistem Informasi Klinik Kesehatan",
-  description: "Antrean dokter, rekam pemeriksaan, tanda vital, diagnosis, dan tindakan.",
+  description: "Antrean dokter, pemeriksaan klinis, tanda vital, diagnosis, dan tindakan.",
 }
 
 export default function DokterDashboardPage() {

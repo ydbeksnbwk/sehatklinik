@@ -82,7 +82,6 @@ body { font-family: var(--sk-font); color: var(--sk-ink); background: var(--sk-c
 .ws-app nav button { min-height: 44px; border-radius: var(--sk-pill); font-size: 13px; color: var(--sk-text); font-weight: 400; }
 .ws-app nav button:hover { background: var(--sk-canvas); }
 .ws-app nav button.active,.sky-site .web-navigation button.selected { color: var(--sk-surface); background: var(--sk-brand); font-weight: 500; }
-.ws-app .nav-active-dot { background: var(--sk-surface); opacity: .8; }
 .sky-site .web-navigation,
 .sky-site.is-home .web-navigation,
 .sky-site.is-inner .web-navigation { background: #ffffffc4; border: 1px solid #ffffffd9; border-radius: 30px; padding: 5px; box-shadow: 0 4px 20px #3553780a; backdrop-filter: blur(16px); }
@@ -131,7 +130,6 @@ body { font-family: var(--sk-font); color: var(--sk-ink); background: var(--sk-c
 .ws-app .page-heading h1 { font-size: 32px; font-weight: 500; line-height: 1.25; letter-spacing: -1px; color: var(--sk-ink); }
 .ws-app .page-heading p { font-size: 14px; color: var(--sk-muted); line-height: 1.8; margin-top: 10px; }
 .ws-app .page-overline,.ws-app .eyebrow,.sky-site .web-eyebrow { color: var(--sk-muted); font-size: 10px; font-weight: 500; letter-spacing: 1.6px; }
-.ws-app .page-overline span { background: var(--sk-brand); }
 .ws-app h3 { font-size: 16px; font-weight: 500; color: var(--sk-ink); letter-spacing: -.3px; }
 .ws-app .panel-heading h3 { font-size: 16px; }
 .ws-app .panel-heading p,.ws-app .muted { font-size: 12px; color: var(--sk-muted); line-height: 1.8; }

@@ -30,7 +30,6 @@
 .web-menu {display:none;background:none;border:0;color:var(--web-ink)}
 .web-hero {display:grid;grid-template-columns:1fr 1fr;gap:65px;align-items:center;padding-top:76px;padding-bottom:85px}
 .web-hero-label {display:inline-flex;align-items:center;gap:8px;background:#eff5ff;border:1px solid #e3ecfd;border-radius:30px;padding:8px 12px;font-size:8px;letter-spacing:1.45px;color:#4975b9;font-weight:600}
-.web-hero-label i {width:5px;height:5px;background:var(--web-blue);border-radius:50%;box-shadow:0 0 0 4px #dbeafe}
 .web-hero h1 {font-size:clamp(46px,4.65vw,67px);font-weight:600;line-height:1.11;letter-spacing:-3.5px;margin:24px 0}
 .web em {font-style:normal;color:var(--web-blue)}
 .web-hero-copy>p {max-width:440px;line-height:1.9;font-size:13px;color:var(--web-muted)}
@@ -43,7 +42,6 @@
 .web-hero-picture>img {height:100%;width:100%;object-fit:cover;object-position:53% center}
 .web-hero-picture:after {content:'';position:absolute;inset:60% 0 0;background:linear-gradient(transparent,#122c4b66)}
 .web-image-caption {position:absolute;bottom:29px;left:27px;color:white;font-size:11px;display:flex;align-items:center;gap:8px;z-index:1}
-.web-image-caption>span {height:5px;width:5px;border-radius:50%;background:#c3e8df}
 .web-hero-orbit {position:absolute;inset:-8px -18px 38px 43px;background:#edf4ff;border-radius:115px 24px 24px 24px;transform:rotate(4deg)}
 .web-hero-orbit:after {content:'+';position:absolute;right:21px;top:16px;font-size:50px;line-height:1;color:#cedff8;font-weight:400}
 .web-floating-card {position:absolute;left:-20px;bottom:-8px;padding:18px 21px;display:flex;align-items:center;gap:13px;background:white;border:1px solid var(--web-line);box-shadow:0 12px 35px #183b6710;border-radius:12px;z-index:2}
@@ -92,7 +90,6 @@
 .web-doctor-photo img {width:100%;height:100%;object-fit:cover;object-position:center 28%;transition:transform .4s}
 .web-doctor:hover img {transform:scale(1.035)}
 .web-doctor-photo>span {position:absolute;left:16px;bottom:15px;display:flex;align-items:center;gap:6px;background:#ffffffef;border-radius:5px;padding:6px 9px;font-size:8px;color:#497b6e}
-.web-doctor-photo i {height:4px;width:4px;border-radius:50%;background:#32a884}
 .web-doctor-info {padding:23px}
 .web-doctor-info>span {font-size:9px;font-weight:500;color:#6a8bbc}
 .web-doctor h3 {font-size:18px;letter-spacing:-.5px;font-weight:600;margin-top:5px}
@@ -124,7 +121,6 @@
 .web-footer-contact>a svg {flex-shrink:0;color:#8ba4c4}
 .web-footer-hours {margin-top:20px;border:1px solid #e3ebf5;padding:12px 13px;border-radius:8px;background:white}
 .web-footer-hours>span {display:flex;align-items:center;gap:5px;font-size:8px;color:#8399b4}
-.web-footer-hours i {width:4px;height:4px;background:#39a784;border-radius:50%}
 .web-footer-hours>b {font-weight:500;display:block;font-size:9px;color:#56708f;margin-top:6px;white-space:nowrap}
 .web-footer-bottom {border-top:1px solid #e5ecf5;padding:21px 0;display:flex;justify-content:space-between;gap:16px;align-items:center;font-size:8px;color:#91a0b5}
 .web-footer-made {display:flex;align-items:center;gap:6px}

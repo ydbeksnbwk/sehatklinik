@@ -87,16 +87,42 @@
 .ws-summary > div > span { color: var(--ws-muted); }
 .ws-summary b { font-weight: 500; overflow-wrap: anywhere; }
 .ws-summary b small { display: block; color: var(--ws-muted); font-size: 11px; font-weight: 400; margin-top: 4px; }
-.ws-report-range { display: flex; gap: 18px; align-items: center; padding: 0 22px; margin-top: 14px; background: #fbfcfe; border-block: 1px solid var(--ws-line); }
-.ws-report-range label { flex: 1; max-width: 240px; margin-block: 18px; }
-.ws-report-range > div { margin-left: auto; text-align: right; }
-.ws-report-range > div b { display: block; font-size: 28px; letter-spacing: -1px; }
-.ws-report-range > div small { font-size: 10px; color: var(--ws-muted); }
+.ws-report-range { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: flex-end; padding: 16px 22px; margin-top: 14px; background: #fbfcfe; border-block: 1px solid var(--ws-line); }
+.ws-report-range label { flex: 1; min-width: 155px; max-width: 215px; margin-block: 0; }
+.ws-report-mode { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ws-report-mode button { min-height: 39px; padding: 0 14px; font-size: 11px; white-space: nowrap; }
+.ws-report-count { margin-left: auto; text-align: right; }
+.ws-report-count b { display: block; font-size: 26px; letter-spacing: -1px; }
+.ws-report-count small { font-size: 10px; color: var(--ws-muted); }
+.ws-excel-btn { display: inline-flex; align-items: center; gap: 8px; background: #15803d; color: #fff; border: 0; border-radius: 8px; padding: 0 16px; min-height: 40px; font-size: 12px; font-weight: 500; cursor: pointer; transition: background .15s; white-space: nowrap; }
+.ws-excel-btn:hover { background: #166534; }
 .ws-spaced-table { margin-top: 24px; }
 .ws-sip { color: var(--ws-muted); font-size: 11px; }
 .ws-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 20px; min-height: 50px; align-content: start; }
 .ws-tags span { font-size: 10px; padding: 5px 8px; background: var(--ws-soft); color: #5e7da9; border-radius: 5px; }
+.ws-day-chips { display: flex; flex-wrap: wrap; gap: 6px; max-width: 380px; }
+.ws-day-chip { display: inline-flex; align-items: center; gap: 5px; border: 1px solid #dbe6f7; background: var(--ws-soft); color: var(--ws-ink); border-radius: 6px; padding: 4px 8px; font-size: 10.5px; cursor: pointer; transition: border-color .15s, background .15s; white-space: nowrap; }
+.ws-day-chip:hover { border-color: var(--ws-blue); background: #e8f0fe; color: var(--ws-blue); }
+.ws-day-chip b { font-weight: 600; font-size: 10.5px; }
+.ws-day-chip.inactive { background: #f8fafc; border-color: var(--ws-line); color: var(--ws-muted); opacity: .75; }
 .ws-inset { margin-inline: 22px; }
+.ws-app { overflow-x: clip; }
+.ws-app .main-wrapper, .ws-app .panel, .ws-app .content { min-width: 0; }
+.ws-app .page-heading { overflow: hidden; }
+.ws-app .table-scroll { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+.ws-clinic-profile-panel { padding: 26px 28px; display: flex; flex-direction: column; gap: 22px; }
+.ws-clinic-hero-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.ws-clinic-hero-head h2 { margin: 4px 0 6px; font-size: 22px; color: var(--ws-ink); }
+.ws-clinic-hero-head p { margin: 0; color: var(--ws-muted); font-size: 13px; max-width: 640px; line-height: 1.55; }
+.ws-clinic-stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.ws-clinic-stats-grid > div { background: var(--ws-soft); border: 1px solid #e3edf9; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+.ws-clinic-stats-grid span { font-size: 11px; color: var(--ws-muted); }
+.ws-clinic-stats-grid b, .ws-clinic-stats-grid strong { font-size: 17px; color: var(--ws-ink); font-weight: 700; }
+.ws-clinic-vm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.ws-clinic-vm-card { border: 1px solid var(--ws-line); border-radius: 10px; padding: 18px 20px; background: #fff; }
+.ws-clinic-vm-card h3 { margin: 0 0 8px; font-size: 14px; color: var(--ws-ink); }
+.ws-clinic-vm-card p, .ws-clinic-vm-card li { margin: 0; font-size: 13px; line-height: 1.6; color: var(--ws-muted); }
+.ws-clinic-vm-card ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
 .ws-detail { max-width: 760px; padding: 30px; }
 .ws-detail h2 { margin-top: 9px; }
 .ws-detail-status { display: flex; gap: 20px; align-items: center; padding: 16px; background: #fafcfe; border: 1px solid var(--ws-line); border-radius: 8px; flex-wrap: wrap; }
@@ -120,47 +146,86 @@
 .ws-mobile-shade { display: none; }
 @media (max-width: 1250px) {
   .ws-overview.ws-operational { grid-template-columns: 1fr; }
-  .ws-operational > .ws-sessions { display: none; }
+  .ws-operational > .ws-sessions { display: block; }
   .ws-app .sidebar { width: 216px; }
+  .ws-app .main-wrapper { margin-left: 216px; }
 }
-@media (max-width: 1000px) {
+@media (max-width: 1024px) {
   .ws-overview,.ws-booking-grid { grid-template-columns: 1fr; }
-  .ws-booking-grid > div { display: none; }
-  .ws-app .sidebar { width: 190px; }
-  .ws-workflow-steps { gap: 10px; padding-inline: 18px; }
-  .ws-workflow-steps small { font-size: 9px; }
+  .ws-booking-grid > div { display: block; }
+  .ws-app .sidebar { width: 204px; }
+  .ws-app .main-wrapper { margin-left: 204px; }
+  .ws-app .doctor-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ws-clinic-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ws-workflow-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding-inline: 18px; }
+  .ws-workflow-steps small { font-size: 9.5px; }
   .ws-workflow-steps > div > svg { right: 3px; }
   .ws-app .filters { flex-wrap: wrap; }
+  .ws-report-range { flex-wrap: wrap; gap: 12px; }
+  .ws-report-range label { flex: 1 1 calc(50% - 10px); max-width: none; margin: 0; }
+}
+@media (max-width: 960px) {
+  .ws-app .sidebar { width: 256px; position: fixed; left: 0; top: 0; bottom: 0; z-index: 30; transform: translateX(-100%); transition: transform .22s ease; box-shadow: none; }
+  .ws-app.nav-open .sidebar { transform: translateX(0); box-shadow: 0 20px 50px #162b4a2e; }
+  .ws-app.nav-open:after { display: none; }
+  .ws-app.nav-open .ws-mobile-shade { display: block; position: fixed; inset: 0; z-index: 25; border: 0; background: #162b4a50; cursor: pointer; }
+  .ws-app .mobile-menu { display: flex; align-items: center; justify-content: center; margin-right: 12px; }
+  .ws-app .main-wrapper { margin-left: 0; width: 100%; }
+  .ws-app .topbar { padding-inline: 18px; gap: 10px; }
+  .ws-app .content { padding: 18px; }
+  .ws-app .overview-grid, .ws-app .bottom-grid { grid-template-columns: 1fr; gap: 16px; }
+  .ws-app .schedule, .ws-app .activity { display: block; }
+  .ws-app .patient-grid, .ws-app .report-charts { grid-template-columns: 1fr; }
+  .ws-clinic-vm-grid { grid-template-columns: 1fr; }
+  .ws-app .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ws-form-grid.three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 650px) {
   .ws-app .sidebar { width: 242px; }
-  .ws-app.nav-open:after { display: none; }
-  .ws-mobile-shade { display: block; position: fixed; inset: 0; z-index: 25; border: 0; background: #162b4a50; }
-  .ws-demo-strip { font-size: 9px; align-items: start; }
+  .ws-demo-strip { font-size: 9.5px; align-items: flex-start; flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
   .ws-demo-date,.ws-preview-label { display: none; }
-  .ws-app .page-heading h1 { font-size: 25px; }
+  .ws-app .topbar { padding-inline: 14px; min-height: 60px; }
+  .ws-app .topbar-user > div { display: none; }
+  .ws-app .content { padding: 14px; }
+  .ws-app .page-heading { flex-direction: column; align-items: flex-start; gap: 14px; }
+  .ws-app .page-heading h1 { font-size: 24px; }
   .ws-app .page-heading p { font-size: 11px; }
-  .ws-app .heading-actions { flex-wrap: wrap; }
+  .ws-app .heading-actions { flex-wrap: wrap; width: 100%; }
+  .ws-app .heading-actions button { flex: 1 1 auto; }
   .ws-app .stat-top { font-size: 10px; }
   .ws-app .stat-bottom { font-size: 9px; }
-  .ws-app .stat-value { font-size: 29px; }
-  .ws-workflow-steps { display: flex; overflow-x: auto; gap: 20px; padding: 22px 18px; }
-  .ws-workflow-steps > div { min-width: 110px; }
+  .ws-app .stat-value { font-size: 28px; }
+  .ws-workflow-steps { display: flex; overflow-x: auto; gap: 16px; padding: 18px 16px; }
+  .ws-workflow-steps > div { min-width: 115px; flex: 0 0 auto; }
   .ws-workflow-steps > div > svg { right: 0; }
-  .ws-app .table-tools .search { max-width: none; }
-  .ws-app .filters select { min-width: 85px; max-width: 100%; font-size: 9px; }
-  .ws-app .pagination { font-size: 9px; }
-  .ws-app .form-panel { padding: 24px 20px; }
-  .ws-app .patient-welcome h2 { font-size: 24px; }
-  .ws-report-range { flex-wrap: wrap; padding: 15px; gap: 12px; }
-  .ws-report-range label { margin: 0; max-width: none; }
-  .ws-report-range > div { width: 100%; display: flex; gap: 12px; align-items: center; margin: 0; }
-  .ws-report-range > div b { font-size: 22px; }
-  .ws-detail { padding: 22px; }
-  .ws-detail-status { gap: 12px; }
-  .ws-summary > div:not(.notice) { grid-template-columns: 100px 1fr; gap: 12px; font-size: 11px; }
-  .ws-form-grid.three { grid-template-columns: 1fr; gap: 0; }
-  .ws-app .doctor-card { padding: 24px; }
-  .ws-app .modal-actions { justify-content: stretch; }
-  .ws-app .modal-actions button { flex: 1; }
+  .ws-app .table-tools { flex-direction: column; align-items: stretch; gap: 10px; }
+  .ws-app .table-tools .search { max-width: none; width: 100%; }
+  .ws-app .filters { width: 100%; gap: 8px; }
+  .ws-app .filters select { min-width: 120px; flex: 1 1 calc(50% - 8px); max-width: 100%; font-size: 11px; }
+  .ws-app .pagination { font-size: 10px; flex-wrap: wrap; gap: 8px; }
+  .ws-app .form-panel { padding: 20px 16px; }
+  .ws-clinic-profile-panel { padding: 20px 16px; gap: 16px; }
+  .ws-clinic-vm-card { padding: 16px; }
+  .ws-app .patient-welcome h2 { font-size: 23px; }
+  .ws-report-range { flex-wrap: wrap; padding: 14px; gap: 10px; }
+  .ws-report-range label { flex: 1 1 100%; margin: 0; max-width: none; }
+  .ws-report-mode { width: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
+  .ws-report-mode button { flex: 1 1 auto; text-align: center; }
+  .ws-report-count { width: 100%; display: flex; gap: 12px; align-items: center; margin: 0; text-align: left; }
+  .ws-report-count b { font-size: 22px; }
+  .ws-detail { padding: 18px 16px; }
+  .ws-detail-status { gap: 10px; flex-wrap: wrap; }
+  .ws-summary > div:not(.notice) { grid-template-columns: 100px 1fr; gap: 10px; font-size: 11px; }
+  .ws-form-grid,.ws-form-grid.three { grid-template-columns: 1fr; gap: 0; }
+  .ws-app .doctor-cards { grid-template-columns: 1fr; }
+  .ws-app .doctor-card { padding: 20px 16px; }
+  .ws-day-chips { max-width: none; }
+  .ws-app .modal { width: min(95vw, 560px); max-height: 90dvh; overflow-y: auto; padding: 22px 16px; }
+  .ws-app .modal-actions { flex-wrap: wrap; justify-content: stretch; }
+  .ws-app .modal-actions button { flex: 1 1 auto; }
+}
+@media (max-width: 440px) {
+  .ws-app .stats, .ws-clinic-stats-grid { grid-template-columns: 1fr; }
+  .ws-app .filters select { flex: 1 1 100%; }
+  .ws-summary > div:not(.notice) { grid-template-columns: 1fr; gap: 4px; }
 }

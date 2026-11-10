@@ -11,6 +11,7 @@ import { useClinic } from "../context/ClinicContext"
 import PublicSite from "./PublicSite"
 import BrandArtwork from "./BrandArtwork"
 import NotificationDrawer from "./NotificationDrawer"
+import { downloadRekapExcel } from "../utils/exportRekapExcel"
 import {
   DEMO_DATE,
   doctorsSeed,
@@ -26,6 +27,7 @@ import {
   type Patient,
   type Doctor,
   type Service,
+  type Schedule,
   type Examination,
 } from "../clinic-data"
 
@@ -85,7 +87,6 @@ function Badge({ text }: { text: string }) {
               : "blue"
       }`}
     >
-      <i />
       {text}
     </span>
   )
@@ -181,6 +182,9 @@ export default function ClinicWorkspace({
     notificationJobs,
     retryNotificationJob,
     sendDemoPushNotification,
+    transition,
+    submitBooking,
+    saveExamination,
   } = clinicContext
 
   const [mounted, setMounted] = useState(false)
@@ -188,6 +192,8 @@ export default function ClinicWorkspace({
   const [modalPassword, setModalPassword] = useState("")
   const [modalShowPassword, setModalShowPassword] = useState(false)
   const [modalError, setModalError] = useState("")
+  const [reportAllDates, setReportAllDates] = useState(true)
+  const [reportSortOrder, setReportSortOrder] = useState<"desc" | "asc">("desc")
 
   useEffect(() => {
     setMounted(true)
@@ -424,11 +430,25 @@ export default function ClinicWorkspace({
     }
     navigate(nextRole === "Publik" ? "Beranda" : "Dashboard")
   }
+  const activeDoctor =
+    (currentUser &&
+      doctors.find(
+        (d) => d.name.toLowerCase() === currentUser.name.toLowerCase(),
+      )) ||
+    doctors.find((d) => d.name.toLowerCase().includes("reyhan")) ||
+    doctors[0]
+  const activeDoctorId = activeDoctor?.id || "d1"
+  const formatQueue = (v: Visit) =>
+    queueLabel(
+      v,
+      doctors.findIndex((d) => d.id === v.doctor),
+    )
+
   const scoped = visits.filter((v) =>
     role === "Pasien"
       ? v.patient === patient.id
       : role === "Dokter"
-        ? v.doctor === "d1"
+        ? v.doctor === activeDoctorId
         : true,
   )
   const today = scoped.filter((v) => v.date === DEMO_DATE)
@@ -460,129 +480,6 @@ export default function ClinicWorkspace({
     setVisits((previous) =>
       previous.map((v) => (v.id === id ? { ...v, ...changes } : v)),
     )
-  const transition = (v: Visit, target: string) => {
-    if (
-      target === "checkin" &&
-      role === "Petugas" &&
-      v.status === "Terdaftar" &&
-      v.queue === "Menunggu"
-    )
-      updateVisit(v.id, { status: "Hadir" })
-    else if (
-      target === "call" &&
-      ["Petugas", "Dokter"].includes(role) &&
-      v.status === "Hadir" &&
-      v.queue === "Menunggu"
-    )
-      updateVisit(v.id, { queue: "Dipanggil" })
-    else if (target === "start" && role === "Dokter" && v.queue === "Dipanggil")
-      updateVisit(v.id, { queue: "Sedang Diperiksa" })
-    else if (
-      target === "skip" &&
-      role === "Petugas" &&
-      v.queue === "Dipanggil" &&
-      reason.trim()
-    )
-      updateVisit(v.id, { queue: "Dilewati", reason })
-    else if (
-      target === "cancel" &&
-      ((role === "Pasien" && v.queue === "Menunggu") ||
-        (role === "Petugas" && ["Menunggu", "Dipanggil"].includes(v.queue))) &&
-      reason.trim()
-    )
-      updateVisit(v.id, { queue: "Dibatalkan", status: "Dibatalkan", reason })
-    else {
-      setError(
-        "Tindakan tidak tersedia. Periksa status kunjungan dan isi alasan bila diperlukan.",
-      )
-      return
-    }
-    notify("Status kunjungan berhasil diperbarui dalam simulasi.")
-    setError("")
-  }
-  const submitBooking = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setError("")
-    if (step < 3) {
-      setStep(step + 1)
-      return
-    }
-    const schedule = session(booking.schedule)
-    if (
-      !schedule ||
-      !schedule.active ||
-      schedule.doctor !== booking.doctor ||
-      new Date(`${booking.date}T12:00:00`).getDay() !== schedule.day
-    ) {
-      setError("Pilih sesi aktif yang sesuai hari kunjungan.")
-      return
-    }
-    if (
-      visits.some(
-        (v) =>
-          v.patient === booking.patient &&
-          v.schedule === schedule.id &&
-          v.date === booking.date &&
-          v.status !== "Dibatalkan",
-      )
-    ) {
-      setError(
-        "Pasien sudah memiliki kunjungan aktif pada dokter, sesi, dan tanggal ini.",
-      )
-      return
-    }
-    if (!remaining(schedule, booking.date, visits)) {
-      setError("Kuota sesi sudah penuh. Silakan pilih sesi lain.")
-      return
-    }
-    const number =
-      Math.max(
-        0,
-        ...visits
-          .filter((v) => v.doctor === booking.doctor && v.date === booking.date)
-          .map((v) => v.number),
-      ) + 1
-    const next: Visit = {
-      id: `KJ-${booking.date.replace(/-/g, "")}-${String(visits.length + 1).padStart(3, "0")}`,
-      ...booking,
-      number,
-      source: role === "Petugas" ? "Walk-in" : "Online",
-      status: "Terdaftar",
-      queue: "Menunggu",
-    }
-    setBusy(true)
-    setVisits((previous) => [...previous, next])
-    setReceipt(next)
-    setStep(4)
-    setBusy(false)
-  }
-  const saveExamination = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (
-      !detail ||
-      role !== "Dokter" ||
-      detail.queue !== "Sedang Diperiksa" ||
-      !exam
-    )
-      return
-    const [systolic, diastolic] = exam.pressure.split("/").map(Number)
-    if (
-      systolic < 60 ||
-      systolic > 250 ||
-      diastolic < 30 ||
-      diastolic > 150 ||
-      systolic <= diastolic
-    ) {
-      setError(
-        "Tekanan darah di luar rentang simulasi: sistolik 60–250, diastolik 30–150, dan sistolik harus lebih tinggi.",
-      )
-      return
-    }
-    setError("")
-    updateVisit(detail.id, { examination: exam })
-    setSavedExam(true)
-    notify("Pemeriksaan tersimpan dalam simulasi.")
-  }
   const showError = error && (
     <div className="ws-error" role="alert">
       <Icon name="help" size={18} />
@@ -619,20 +516,56 @@ export default function ClinicWorkspace({
       ))}
     </div>
   )
+  const matchVisitFilter = (v: Visit, useReportRange: boolean) => {
+    const patientObj = patients.find((p) => p.id === v.patient)
+    const searchTarget =
+      role === "Pasien"
+        ? `${doctorName(v.doctor)} ${serviceName(v.service)} ${v.id}`
+        : `${patientName(v.patient)} ${patientObj?.nik || ""} ${doctorName(v.doctor)} ${serviceName(v.service)} ${v.id}`
+    return (
+      searchTarget.toLowerCase().includes(search.toLowerCase()) &&
+      (!filter || v.queue === filter) &&
+      (!doctorFilter || v.doctor === doctorFilter) &&
+      (!serviceFilter || v.service === serviceFilter) &&
+      (!useReportRange ||
+        reportAllDates ||
+        ((!range.from || v.date >= range.from) &&
+          (!range.to || v.date <= range.to)))
+    )
+  }
+  const exportRekapExcel = async (itemsToExport: Visit[]) => {
+    if (!itemsToExport.length) {
+      notify("Tidak ada data kunjungan untuk diunduh pada filter saat ini.")
+      return
+    }
+    const periodLabel = reportAllDates
+      ? "Semua Tanggal"
+      : `${range.from ? dateLabel(range.from) : "Awal"} s/d ${range.to ? dateLabel(range.to) : "Akhir"}`
+    const fileSuffix = reportAllDates
+      ? "Semua-Tanggal"
+      : `${range.from || "awal"}-sd-${range.to || "akhir"}`
+    try {
+      await downloadRekapExcel({
+        visits: itemsToExport,
+        patients,
+        doctors,
+        services,
+        clinic,
+        periodLabel,
+        sortOrder: reportSortOrder,
+        fileSuffix,
+      })
+      notify(
+        `File Excel rekap (${itemsToExport.length} kunjungan) berhasil diunduh.`,
+      )
+    } catch {
+      notify("Gagal membuat file Excel. Silakan coba kembali.")
+    }
+  }
   const statScope =
     role === "Admin"
       ? page === "Rekap Kunjungan"
-        ? scoped.filter(
-            (v) =>
-              v.date >= range.from &&
-              v.date <= range.to &&
-              (!filter || v.queue === filter) &&
-              (!doctorFilter || v.doctor === doctorFilter) &&
-              (!serviceFilter || v.service === serviceFilter) &&
-              `${patientName(v.patient)} ${v.patient} ${v.id}`
-                .toLowerCase()
-                .includes(search.toLowerCase()),
-          )
+        ? scoped.filter((v) => matchVisitFilter(v, true))
         : scoped
       : today
   const stats = statCards([
@@ -643,8 +576,10 @@ export default function ClinicWorkspace({
       sub:
         role === "Admin"
           ? page === "Rekap Kunjungan"
-            ? "Sesuai periode dan filter terpilih"
-            : "Seluruh periode data simulasi"
+            ? reportAllDates
+              ? "Seluruh tanggal dan filter terpilih"
+              : `Periode ${range.from || "awal"} s/d ${range.to || "akhir"}`
+            : "Seluruh periode kunjungan"
           : "Senin, 26 Oktober 2026",
       color: "blue",
     },
@@ -671,16 +606,13 @@ export default function ClinicWorkspace({
     },
   ])
   const visitTable = (items: Visit[], title: string, report = false) => {
-    const filtered = items.filter(
-      (v) =>
-        `${patientName(v.patient)} ${v.patient} ${v.id}`
-          .toLowerCase()
-          .includes(search.toLowerCase()) &&
-        (!filter || v.queue === filter) &&
-        (!doctorFilter || v.doctor === doctorFilter) &&
-        (!serviceFilter || v.service === serviceFilter) &&
-        (!report || (v.date >= range.from && v.date <= range.to)),
-    )
+    const baseFiltered = items.filter((v) => matchVisitFilter(v, report))
+    const filtered = report
+      ? [...baseFiltered].sort((a, b) => {
+          const cmp = a.date.localeCompare(b.date) || a.id.localeCompare(b.id)
+          return reportSortOrder === "asc" ? cmp : -cmp
+        })
+      : baseFiltered
     const maxPage = Math.max(1, Math.ceil(filtered.length / 6))
     const current = Math.min(pagination, maxPage)
     return (
@@ -697,16 +629,63 @@ export default function ClinicWorkspace({
                 : "Status kunjungan dan antrean ditampilkan secara terpisah."}
             </p>
           </div>
-          <Icon name="file" size={18} />
+          {report ? (
+            <button
+              type="button"
+              className="ws-excel-btn"
+              onClick={() => exportRekapExcel(filtered)}
+            >
+              <Icon name="download" size={16} />
+              Unduh Excel (.xlsx)
+            </button>
+          ) : (
+            <Icon name="file" size={18} />
+          )}
         </div>
         {report && (
           <div className="ws-report-range">
+            <div className="ws-report-mode">
+              <button
+                type="button"
+                className={reportAllDates ? "primary" : "secondary"}
+                onClick={() => {
+                  setReportAllDates(true)
+                  setPagination(1)
+                }}
+              >
+                Semua Tanggal
+              </button>
+              <button
+                type="button"
+                className={!reportAllDates ? "primary" : "secondary"}
+                onClick={() => {
+                  setReportAllDates(false)
+                  if (!range.from || !range.to) {
+                    const todayStr = new Date().toISOString().slice(0, 10)
+                    setRange({
+                      from: range.from || "2026-10-01",
+                      to: range.to || todayStr,
+                    })
+                  }
+                  setPagination(1)
+                }}
+              >
+                Pilih Rentang Tanggal
+              </button>
+            </div>
             <Field label="Dari tanggal">
               <input
                 type="date"
-                value={range.from}
+                value={reportAllDates ? "" : range.from}
                 onChange={(e) => {
-                  setRange({ ...range, from: e.target.value })
+                  const val = e.target.value
+                  if (!val && !range.to) {
+                    setReportAllDates(true)
+                    setRange({ ...range, from: "" })
+                  } else {
+                    setReportAllDates(false)
+                    setRange({ ...range, from: val })
+                  }
                   setPagination(1)
                 }}
               />
@@ -714,17 +693,41 @@ export default function ClinicWorkspace({
             <Field label="Sampai tanggal">
               <input
                 type="date"
-                min={range.from}
-                value={range.to}
+                min={(!reportAllDates && range.from) || undefined}
+                value={reportAllDates ? "" : range.to}
                 onChange={(e) => {
-                  setRange({ ...range, to: e.target.value })
+                  const val = e.target.value
+                  if (!val && !range.from) {
+                    setReportAllDates(true)
+                    setRange({ ...range, to: "" })
+                  } else {
+                    setReportAllDates(false)
+                    setRange({ ...range, to: val })
+                  }
                   setPagination(1)
                 }}
               />
             </Field>
-            <div>
+            <Field label="Urutkan tanggal">
+              <select
+                aria-label="Urutan tanggal"
+                value={reportSortOrder}
+                onChange={(e) => {
+                  setReportSortOrder(e.target.value as "desc" | "asc")
+                  setPagination(1)
+                }}
+              >
+                <option value="desc">Terbaru → Terlama</option>
+                <option value="asc">Terlama → Terbaru</option>
+              </select>
+            </Field>
+            <div className="ws-report-count">
               <b>{filtered.length}</b>
-              <small>kunjungan pada periode terpilih</small>
+              <small>
+                {reportAllDates
+                  ? "total seluruh kunjungan"
+                  : "kunjungan pada periode terpilih"}
+              </small>
             </div>
           </div>
         )}
@@ -733,7 +736,11 @@ export default function ClinicWorkspace({
             <Icon name="search" size={17} />
             <input
               aria-label="Cari kunjungan"
-              placeholder="Cari nama, no. RM, atau referensi…"
+              placeholder={
+                role === "Pasien"
+                  ? "Cari dokter, layanan, atau referensi…"
+                  : "Cari nama, NIK, atau referensi…"
+              }
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value)
@@ -794,12 +801,12 @@ export default function ClinicWorkspace({
             <thead>
               <tr>
                 {[
-                  "Antrean / Referensi",
-                  "Pasien",
+                  report ? "Referensi" : "Antrean / Referensi",
+                  ...(role !== "Pasien" ? ["Pasien"] : []),
                   "Dokter & layanan",
                   "Tanggal / Sumber",
                   "Kunjungan",
-                  "Antrean",
+                  report ? "Status Pelayanan" : "Antrean",
                   "Detail",
                 ].map((t) => (
                   <th key={t}>{t}</th>
@@ -807,52 +814,67 @@ export default function ClinicWorkspace({
               </tr>
             </thead>
             <tbody>
-              {filtered.slice((current - 1) * 6, current * 6).map((v) => (
-                <tr key={v.id}>
-                  <td>
-                    <span className="queue-number">{queueLabel(v)}</span>
-                    <small>{v.id}</small>
-                  </td>
-                  <td>
-                    <div className="person">
-                      <span className="avatar blue">
-                        {patientName(v.patient)
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")
-                          .slice(0, 2)}
-                      </span>
-                      <div>
-                        <b>{patientName(v.patient)}</b>
-                        <small>{v.patient}</small>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <b>{doctorName(v.doctor)}</b>
-                    <small>{serviceName(v.service)}</small>
-                  </td>
-                  <td>
-                    {dateLabel(v.date)}
-                    <small>{v.source}</small>
-                  </td>
-                  <td>
-                    <Badge text={v.status} />
-                  </td>
-                  <td>
-                    <Badge text={v.queue} />
-                  </td>
-                  <td>
-                    <button
-                      className="square"
-                      aria-label={`Detail ${v.id}`}
-                      onClick={() => openVisit(v)}
-                    >
-                      <Icon name="arrow" size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {filtered.slice((current - 1) * 6, current * 6).map((v) => {
+                const patientObj = patients.find((p) => p.id === v.patient)
+                return (
+                  <tr key={v.id}>
+                    <td>
+                      {report ? (
+                        <b>{v.id}</b>
+                      ) : (
+                        <>
+                          <span className="queue-number">{formatQueue(v)}</span>
+                          <small>{v.id}</small>
+                        </>
+                      )}
+                    </td>
+                    {role !== "Pasien" && (
+                      <td>
+                        <div className="person">
+                          <span className="avatar blue">
+                            {patientName(v.patient)
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .slice(0, 2)}
+                          </span>
+                          <div>
+                            <b>{patientName(v.patient)}</b>
+                            <small>
+                              {patientObj?.nik
+                                ? `NIK: ${patientObj.nik}`
+                                : patientObj?.gender || ""}
+                            </small>
+                          </div>
+                        </div>
+                      </td>
+                    )}
+                    <td>
+                      <b>{doctorName(v.doctor)}</b>
+                      <small>{serviceName(v.service)}</small>
+                    </td>
+                    <td>
+                      {dateLabel(v.date)}
+                      <small>{v.source}</small>
+                    </td>
+                    <td>
+                      <Badge text={v.status} />
+                    </td>
+                    <td>
+                      <Badge text={v.queue} />
+                    </td>
+                    <td>
+                      <button
+                        className="square"
+                        aria-label={`Detail ${v.id}`}
+                        onClick={() => openVisit(v)}
+                      >
+                        <Icon name="arrow" size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
           {!filtered.length && (
@@ -899,47 +921,86 @@ export default function ClinicWorkspace({
       </section>
     )
   }
-  const schedulePanel = (
-    <section className="panel ws-sessions">
-      <div className="panel-heading">
-        <div>
-          <h3>Jadwal & ketersediaan</h3>
-          <p>Senin, 26 Oktober 2026 · Kuota per sesi</p>
+  const schedulePanel = (() => {
+    const targetDate = booking?.date || DEMO_DATE
+    const targetDay = new Date(`${targetDate}T12:00:00`).getDay()
+
+    // Ambil jadwal aktif pada hari target
+    const daySchedules = schedules.filter((s) => {
+      if (s.active === false) return false
+      if (role === "Dokter" && s.doctor !== activeDoctorId) return false
+      if (s.day !== undefined && s.day !== null) {
+        return s.day === targetDay
+      }
+      return true
+    })
+
+    // Kelompokkan per dokter agar tidak muncul ganda
+    const groupedByDoctor = new Map<string, Schedule[]>()
+    for (const s of daySchedules) {
+      const list = groupedByDoctor.get(s.doctor) || []
+      list.push(s)
+      groupedByDoctor.set(s.doctor, list)
+    }
+
+    return (
+      <section className="panel ws-sessions">
+        <div className="panel-heading">
+          <div>
+            <h3>Jadwal & ketersediaan</h3>
+            <p>{dateLabel(targetDate)} · Kuota per sesi</p>
+          </div>
+          <Icon name="calendar" size={19} />
         </div>
-        <Icon name="calendar" size={19} />
-      </div>
-      {schedules
-        .filter((s) => role !== "Dokter" || s.doctor === "d1")
-        .map((s) => {
-          const left = remaining(s, DEMO_DATE, visits)
-          return (
-            <div className="ws-session" key={s.id}>
-              <span className="avatar blue">
-                {doctorName(s.doctor)
-                  .split(" ")
-                  .slice(1, 3)
-                  .map((n) => n[0])
-                  .join("")}
-              </span>
-              <div>
-                <b>{doctorName(s.doctor)}</b>
-                <small>
-                  {s.start} – {s.end}
-                </small>
-                <div className="ws-quota-track">
-                  <span
-                    style={{ width: `${((s.quota - left) / s.quota) * 100}%` }}
-                  />
+        {groupedByDoctor.size === 0 ? (
+          <div style={{ padding: "1.5rem", textAlign: "center", color: "#64748b" }}>
+            <p>Tidak ada jadwal praktik dokter pada hari ini.</p>
+          </div>
+        ) : (
+          Array.from(groupedByDoctor.entries()).map(([doctorId, docSessions]) => {
+            // Jika dokter memiliki lebih dari 1 sesi jam di hari itu, buat 1 baris isinya jamnya saja
+            const timeLabels = docSessions
+              .map((s) => `${s.start} – ${s.end}`)
+              .join(" · ")
+            const totalQuota = docSessions.reduce((sum, s) => sum + s.quota, 0)
+            const totalLeft = docSessions.reduce(
+              (sum, s) => sum + remaining(s, targetDate, visits),
+              0,
+            )
+
+            return (
+              <div className="ws-session" key={doctorId}>
+                <span className="avatar blue">
+                  {doctorName(doctorId)
+                    .split(" ")
+                    .slice(1, 3)
+                    .map((n) => n[0])
+                    .join("")}
+                </span>
+                <div>
+                  <b>{doctorName(doctorId)}</b>
+                  <small>{timeLabels}</small>
+                  <div className="ws-quota-track">
+                    <span
+                      style={{
+                        width:
+                          totalQuota > 0
+                            ? `${((totalQuota - totalLeft) / totalQuota) * 100}%`
+                            : "0%",
+                      }}
+                    />
+                  </div>
                 </div>
+                <span className={totalLeft ? "ws-quota" : "ws-quota full"}>
+                  {totalLeft ? `${totalLeft}/${totalQuota} tersisa` : "Penuh"}
+                </span>
               </div>
-              <span className={left ? "ws-quota" : "ws-quota full"}>
-                {left ? `${left}/${s.quota} tersisa` : "Penuh"}
-              </span>
-            </div>
-          )
-        })}
-    </section>
-  )
+            )
+          })
+        )}
+      </section>
+    )
+  })()
   const workflow = (
     <section className="panel ws-workflow">
       <div className="panel-heading">
@@ -977,7 +1038,7 @@ export default function ClinicWorkspace({
         </div>
         <Badge text={v.queue} />
       </div>
-      <div className="ticket">{queueLabel(v)}</div>
+      <div className="ticket">{formatQueue(v)}</div>
       <div className="confirmation">
         <h3>{doctorName(v.doctor)}</h3>
         <p>
@@ -1342,7 +1403,7 @@ export default function ClinicWorkspace({
             </span>
             <h2>Pendaftaran berhasil</h2>
             <p>{receipt.id}</p>
-            <div className="ticket">{queueLabel(receipt)}</div>
+            <div className="ticket">{formatQueue(receipt)}</div>
             <h3>{patientName(receipt.patient)}</h3>
             <p>
               {doctorName(receipt.doctor)} · {serviceName(receipt.service)}
@@ -1402,7 +1463,8 @@ export default function ClinicWorkspace({
                         ) : (
                           patients.map((p) => (
                             <option key={p.id} value={p.id}>
-                              {p.name} · {p.id}
+                              {p.name}
+                              {p.nik ? ` · NIK: ${p.nik}` : ""}
                               {!p.account ? " · Tanpa akun" : ""}
                             </option>
                           ))
@@ -1847,16 +1909,12 @@ export default function ClinicWorkspace({
               </h3>
               <p>Pasien berakun maupun walk-in. Tanpa akses isi pemeriksaan.</p>
             </div>
-            <button className="primary" onClick={() => showEditor("Pasien")}>
-              <Icon name="plus" size={16} />
-              Pasien Baru
-            </button>
           </div>
           <div className="table-tools">
             <div className="search">
               <Icon name="search" size={18} />
               <input
-                placeholder="Cari nama, nomor RM, atau telepon…"
+                placeholder="Cari nama, NIK, atau telepon…"
                 aria-label="Cari pasien"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -1868,7 +1926,7 @@ export default function ClinicWorkspace({
               <thead>
                 <tr>
                   <th>Pasien</th>
-                  <th>No. rekam medis</th>
+                  <th>NIK</th>
                   <th>Telepon</th>
                   <th>Tipe pasien</th>
                   <th>Aksi</th>
@@ -1881,7 +1939,7 @@ export default function ClinicWorkspace({
                       <b>{p.name}</b>
                       <small>{p.gender}</small>
                     </td>
-                    <td>{p.id}</td>
+                    <td>{p.nik || "-"}</td>
                     <td>{p.phone}</td>
                     <td>
                       <Badge
@@ -2034,13 +2092,68 @@ export default function ClinicWorkspace({
           </div>
         </>
       )
-    if (page === "Jadwal Praktik")
+    if (page === "Jadwal Praktik") {
+      const dayShort = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"]
+      const dayOrder = [1, 2, 3, 4, 5, 6, 0]
+      const groupedByDoc = new Map<string, Schedule[]>()
+      for (const s of schedules) {
+        const list = groupedByDoc.get(s.doctor) || []
+        const isDuplicateSlot = list.some(
+          (item) =>
+            item.day === s.day &&
+            item.start === s.start &&
+            item.end === s.end,
+        )
+        if (!isDuplicateSlot) {
+          list.push(s)
+          groupedByDoc.set(s.doctor, list)
+        }
+      }
+      const doctorRows = Array.from(groupedByDoc.entries()).map(
+        ([doctorId, docSchedules]) => {
+          const sorted = [...docSchedules].sort((a, b) => {
+            const dDiff = dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day)
+            return dDiff !== 0 ? dDiff : a.start.localeCompare(b.start)
+          })
+          const docObj = doctors.find((d) => d.id === doctorId)
+          const uniqueTimes = Array.from(
+            new Set(sorted.map((s) => `${s.start} – ${s.end}`)),
+          )
+          const quotas = sorted.map((s) => s.quota)
+          const minQuota = Math.min(...quotas)
+          const maxQuota = Math.max(...quotas)
+          const quotaText =
+            minQuota === maxQuota
+              ? `${minQuota} pasien`
+              : `${minQuota}–${maxQuota} pasien`
+          const mondaySessions = sorted.filter((s) => s.day === 1)
+          const activeCount = sorted.filter((s) => s.active).length
+          const primarySched =
+            mondaySessions[0] || sorted.find((s) => s.active) || sorted[0]
+          return {
+            doctorId,
+            docObj,
+            sorted,
+            uniqueTimes,
+            quotaText,
+            mondaySessions,
+            activeCount,
+            primarySched,
+          }
+        },
+      )
+
       return (
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <h3>Jadwal praktik & kuota</h3>
-              <p>Sesi dokter tidak boleh bentrok pada hari yang sama.</p>
+              <h3>
+                Jadwal praktik & kuota{" "}
+                <span className="count">{doctorRows.length} dokter</span>
+              </h3>
+              <p>
+                Satu baris per dokter menampilkan seluruh hari praktiknya. Klik hari untuk mengedit sesi tersebut.
+              </p>
             </div>
             <button className="primary" onClick={() => showEditor("Jadwal")}>
               <Icon name="plus" size={16} />
@@ -2053,7 +2166,7 @@ export default function ClinicWorkspace({
                 <tr>
                   {[
                     "Dokter",
-                    "Hari",
+                    "Hari praktik",
                     "Jam praktik",
                     "Kuota / sesi",
                     "Sisa hari demo",
@@ -2065,51 +2178,77 @@ export default function ClinicWorkspace({
                 </tr>
               </thead>
               <tbody>
-                {schedules.map((s) => (
-                  <tr key={s.id}>
-                    <td>
-                      <b>{doctorName(s.doctor)}</b>
-                    </td>
-                    <td>
-                      {
-                        [
-                          "Minggu",
-                          "Senin",
-                          "Selasa",
-                          "Rabu",
-                          "Kamis",
-                          "Jumat",
-                          "Sabtu",
-                        ][s.day]
-                      }
-                    </td>
-                    <td>
-                      {s.start} – {s.end}
-                    </td>
-                    <td>{s.quota} pasien</td>
-                    <td>
-                      {s.day === 1
-                        ? `${remaining(s, DEMO_DATE, visits)} tersisa`
-                        : "—"}
-                    </td>
-                    <td>
-                      <Badge text={s.active ? "Aktif" : "Nonaktif"} />
-                    </td>
-                    <td>
-                      <button
-                        className="text-button"
-                        onClick={() => showEditor("Jadwal", s.id)}
-                      >
-                        Edit Jadwal
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {doctorRows.map(
+                  ({
+                    doctorId,
+                    docObj,
+                    sorted,
+                    uniqueTimes,
+                    quotaText,
+                    mondaySessions,
+                    activeCount,
+                    primarySched,
+                  }) => (
+                    <tr key={doctorId}>
+                      <td>
+                        <b>{doctorName(doctorId)}</b>
+                        {docObj?.specialty && <small>{docObj.specialty}</small>}
+                      </td>
+                      <td>
+                        <div className="ws-day-chips">
+                          {sorted.map((s) => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              className={`ws-day-chip ${s.active ? "" : "inactive"}`}
+                              title={`Edit jadwal ${dayShort[s.day]} (${s.start} – ${s.end})`}
+                              onClick={() => showEditor("Jadwal", s.id)}
+                            >
+                              <b>{dayShort[s.day]}</b>
+                              <span>
+                                {s.start}–{s.end}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </td>
+                      <td>
+                        {uniqueTimes.map((t) => (
+                          <div key={t}>{t}</div>
+                        ))}
+                      </td>
+                      <td>{quotaText}</td>
+                      <td>
+                        {mondaySessions.length > 0
+                          ? `${mondaySessions.reduce(
+                              (sum, s) => sum + remaining(s, DEMO_DATE, visits),
+                              0,
+                            )} tersisa`
+                          : "—"}
+                      </td>
+                      <td>
+                        <Badge text={activeCount > 0 ? "Aktif" : "Nonaktif"} />
+                        <small>
+                          {activeCount}/{sorted.length} hari aktif
+                        </small>
+                      </td>
+                      <td>
+                        <button
+                          className="text-button"
+                          onClick={() => showEditor("Jadwal", primarySched.id)}
+                        >
+                          Edit Jadwal
+                        </button>
+                      </td>
+                    </tr>
+                  ),
+                )}
               </tbody>
             </table>
           </div>
         </section>
       )
+    }
     if (page === "Manajemen Pengguna")
       return (
         <section className="panel">
@@ -2194,12 +2333,12 @@ export default function ClinicWorkspace({
                 .slice(0, 2)}
             </span>
             <h2>{patient.name}</h2>
-            <p className="muted">{patient.id}</p>
+            {patient.nik && <p className="muted">NIK: {patient.nik}</p>}
             <Badge text="Pasien" />
             <div className="patient-profile-fixed">
               <Icon name="shield" size={19} />
               <p>
-                Nomor rekam medis dan peran dikelola klinik, tidak dapat diubah
+                Peran dan data identitas dikelola klinik, tidak dapat diubah
                 melalui profil.
               </p>
             </div>
@@ -2230,7 +2369,7 @@ export default function ClinicWorkspace({
               <dl className="patient-profile-fields">
                 {[
                   ["Nama lengkap", patient.name],
-                  ["Nomor rekam medis", patient.id],
+                  ["NIK (Nomor Induk Kependudukan)", patient.nik || "-"],
                   ["Tanggal lahir", dateLabel(patient.birth)],
                   ["Jenis kelamin", patient.gender],
                 ].map(([label, value]) => (
@@ -2363,7 +2502,6 @@ export default function ClinicWorkspace({
                             : "status-queued"
                         }`}
                       >
-                        <i />
                         {j.status === "berhasil"
                           ? "Berhasil"
                           : j.status === "gagal"
@@ -2411,8 +2549,8 @@ export default function ClinicWorkspace({
       return (
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           {role === "Admin" && (
-            <section className="panel" style={{ padding: "26px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", marginBottom: "18px" }}>
+            <section className="panel ws-clinic-profile-panel">
+              <div className="ws-clinic-hero-head">
                 <div>
                   <span className="eyebrow">IDENTITAS FASILITAS KESEHATAN TINGKAT PERTAMA (FKTP)</span>
                   <h2 style={{ fontSize: "22px", margin: "4px 0", color: "#0f172a" }}>
@@ -2432,7 +2570,7 @@ export default function ClinicWorkspace({
                 {clinic.history || clinic.description}
               </p>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", padding: "16px", background: "#f8fafc", borderRadius: "10px", border: "1px solid #edf2f7", marginBottom: "20px" }}>
+              <div className="ws-clinic-stats-grid">
                 {clinic.stats?.map((st) => (
                   <div key={st.label}>
                     <b style={{ color: "#2563eb", fontSize: "18px", display: "block" }}>{st.value}</b>
@@ -2442,14 +2580,14 @@ export default function ClinicWorkspace({
                 ))}
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px", fontSize: "12px" }}>
-                <div style={{ padding: "14px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "10px" }}>
+              <div className="ws-clinic-vm-grid">
+                <div className="ws-clinic-vm-card">
                   <b style={{ color: "#0f172a", display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
                     <Icon name="heart" size={15} /> Visi Rumah Sakit / Klinik
                   </b>
                   <p style={{ color: "#64748b", margin: 0, lineHeight: 1.6 }}>{clinic.vision}</p>
                 </div>
-                <div style={{ padding: "14px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "10px" }}>
+                <div className="ws-clinic-vm-card">
                   <b style={{ color: "#0f172a", display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
                     <Icon name="shield" size={15} /> 4 Nilai Utama Layanan
                   </b>
@@ -2475,7 +2613,7 @@ export default function ClinicWorkspace({
             <p className="muted">
               {role === "Admin"
                 ? "Perubahan data alamat, kontak darurat, koordinat GPS, dan jam operasional langsung tersinkronisasi ke halaman publik."
-                : `${patient.id} · Peran pasien tidak dapat diubah.`}
+                : "Peran akun pasien dikelola oleh sistem."}
             </p>
           <form
             onSubmit={(e) => {
@@ -2499,6 +2637,7 @@ export default function ClinicWorkspace({
                       ? {
                           ...item,
                           name: get("name"),
+                          nik: get("nik") || item.nik,
                           phone: get("phone"),
                           birth: get("birth"),
                           gender: get("gender"),
@@ -2545,6 +2684,17 @@ export default function ClinicWorkspace({
                   </select>
                 </Field>
               </div>
+            )}
+            {role === "Pasien" && (
+              <Field label="NIK (Nomor Induk Kependudukan)">
+                <input
+                  name="nik"
+                  pattern="[0-9]{16}"
+                  maxLength={16}
+                  placeholder="16 digit NIK sesuai KTP"
+                  defaultValue={patient.nik || ""}
+                />
+              </Field>
             )}
             <Field label="Alamat">
               <textarea
@@ -2719,7 +2869,7 @@ export default function ClinicWorkspace({
       ? "Ruang Dokter"
       : "Loket Petugas"
 
-  const handleModalLogin = (emailInput?: string, passwordInput?: string) => {
+  const handleModalLogin = async (emailInput?: string, passwordInput?: string) => {
     const e = emailInput !== undefined ? emailInput : modalEmail
     const p = passwordInput !== undefined ? passwordInput : modalPassword
 
@@ -2728,7 +2878,7 @@ export default function ClinicWorkspace({
       return
     }
 
-    const res = clinicContext.login(e, p)
+    const res = await clinicContext.login(e, p)
     if (!res.success) {
       setModalError(res.message || "Email atau password salah.")
       return
@@ -2803,7 +2953,6 @@ export default function ClinicWorkspace({
             >
               <Icon name={icon} size={19} />
               <span>{m}</span>
-              {m === page && <span className="nav-active-dot" />}
             </button>
           ))}
         </nav>
@@ -2826,7 +2975,7 @@ export default function ClinicWorkspace({
             Keluar / Kembali ke Website
           </button>
           <div className="sidebar-foot">
-            <span className="green-dot" /> Sistem Aktif
+            Sistem Aktif
             <small>Sistem Informasi Klinik Kesehatan</small>
           </div>
         </div>
@@ -2873,7 +3022,7 @@ export default function ClinicWorkspace({
                   : role === "Pasien"
                     ? patient.name.split(" ").map(part => part[0]).join("").slice(0, 2)
                     : role === "Dokter"
-                      ? "NP"
+                      ? "RA"
                       : role === "Petugas"
                         ? "DW"
                         : "RK"}
@@ -2884,7 +3033,7 @@ export default function ClinicWorkspace({
                     (role === "Pasien"
                       ? patient.name
                       : role === "Dokter"
-                        ? "dr. Nadia Putri"
+                        ? (activeDoctor?.name || "dr. Reyhan Adhitama")
                         : role === "Petugas"
                           ? "Dina Wulandari"
                           : "Rina Kusuma")}
@@ -2911,14 +3060,13 @@ export default function ClinicWorkspace({
             </div>
             <div>
               <div className="page-overline">
-                <span />
                 SEHATKLINIK / {role.toUpperCase()}
               </div>
               <h1>
                 {page === "Dashboard"
                   ? `Selamat pagi, ${
                       role === "Dokter"
-                        ? "dr. Nadia"
+                        ? (currentUser?.name || activeDoctor?.name || "dr. Reyhan")
                         : role === "Pasien"
                           ? patient.name.split(" ")[0]
                           : role === "Petugas"
@@ -2930,7 +3078,7 @@ export default function ClinicWorkspace({
               <p>
                 {page === "Dashboard"
                   ? role === "Admin"
-                    ? "Gambaran pelayanan klinik, tanpa membuka isi rekam medis."
+                    ? "Gambaran menyeluruh alur pelayanan dan operasional klinik."
                     : role === "Dokter"
                       ? "Fokus pada pasien Anda. Kami bantu merapikan alurnya."
                       : role === "Petugas"
@@ -3009,12 +3157,15 @@ export default function ClinicWorkspace({
               </button>
             </div>
             <div className="ws-detail-status">
-              <span className="queue-number">{queueLabel(detail)}</span>
+              {page !== "Rekap Kunjungan" && (
+                <span className="queue-number">{formatQueue(detail)}</span>
+              )}
               <span>
                 Kunjungan <Badge text={detail.status} />
               </span>
               <span>
-                Antrean <Badge text={detail.queue} />
+                {page === "Rekap Kunjungan" ? "Status" : "Antrean"}{" "}
+                <Badge text={detail.queue} />
               </span>
             </div>
             <div className="ws-summary">
@@ -3210,16 +3361,7 @@ export default function ClinicWorkspace({
                       className="primary"
                       type="button"
                       disabled={!savedExam}
-                      onClick={() => {
-                        updateVisit(detail.id, {
-                          status: "Selesai",
-                          queue: "Selesai",
-                        })
-                        setSelected(null)
-                        notify(
-                          "Kunjungan selesai. Ringkasan tersedia pada riwayat pasien.",
-                        )
-                      }}
+                      onClick={() => transition(detail, "finish")}
                     >
                       Selesaikan Kunjungan
                       <Icon name="check" size={16} />
@@ -3385,8 +3527,7 @@ export default function ClinicWorkspace({
                 <>
                   <div className="notice">
                     <Icon name="users" size={19} />
-                    Nomor rekam medis otomatis. Pasien walk-in tidak memerlukan
-                    akun.
+                    Pasien walk-in terdaftar langsung tanpa memerlukan akun.
                   </div>
                   <div className="ws-form-grid">
                     <Field label="Tanggal lahir">
