@@ -15,7 +15,7 @@ export async function PATCH(request, { params }) {
       "admin",
     ]);
 
-    const { id } = params;
+    const { id } = await params;
 
     if (!UUID.test(id)) {
       throw new HttpError(400, "id tidak valid");

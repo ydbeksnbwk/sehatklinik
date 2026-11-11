@@ -31,6 +31,22 @@ export async function jalankanTransisi({
   profileId,
 }) {
   return db.transaction(async (tx) => {
+    // Admin selalu ditolak (K12)
+    if (role === "admin") {
+      throw new HttpError(403, "Admin tidak berwenang melakukan transisi antrean");
+    }
+
+    // Role check di awal: cegah akses aksi di luar kewenangan peran
+    if (aksi === "checkin" && role !== "petugas") {
+      throw new HttpError(403, "Hanya petugas yang dapat melakukan check-in");
+    }
+    if ((aksi === "panggil" || aksi === "lewati") && role === "pasien") {
+      throw new HttpError(403, "Pasien tidak berwenang melakukan aksi ini");
+    }
+    if ((aksi === "periksa" || aksi === "selesai") && role !== "dokter") {
+      throw new HttpError(403, "Hanya dokter yang dapat melakukan aksi ini");
+    }
+
     // Ambil kunjungan + antrean sekaligus dengan kunci baris
     const [k] = await tx
       .select({
