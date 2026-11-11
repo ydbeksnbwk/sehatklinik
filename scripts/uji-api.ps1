@@ -7,13 +7,24 @@ $BaseUrl = "http://localhost:3000"
 
 function Login([string]$Email, [string]$Password) {
     $body = @{ email = $Email; password = $Password } | ConvertTo-Json
-    $res = Invoke-RestMethod -Uri "$BaseUrl/api/auth/login" -Method Post -Body $body -ContentType "application/json"
-    return $res.data.accessToken
+    $wr = Invoke-WebRequest -Uri "$BaseUrl/api/auth/login" -Method Post -Body $body -ContentType "application/json" -SessionVariable sess -UseBasicParsing
+    $c = $sess.Cookies.GetCookies("$BaseUrl")["sb-access-token"]
+    $token = if ($null -ne $c) { $c.Value } else { $null }
+    if (-not $token) {
+        $setCookie = $wr.Headers["Set-Cookie"]
+        if ($setCookie -match "sb-access-token=([^;]+)") {
+            $token = $matches[1]
+        }
+    }
+    return $token
 }
 
 function Kirim([string]$Method, [string]$Path, $Body, [string]$Token) {
     $headers = @{}
-    if ($Token) { $headers["Authorization"] = "Bearer $Token" }
+    if ($Token) {
+        $headers["Authorization"] = "Bearer $Token"
+        $headers["Cookie"] = "sb-access-token=$Token"
+    }
     $params = @{
         Uri = "$BaseUrl$Path"
         Method = $Method
