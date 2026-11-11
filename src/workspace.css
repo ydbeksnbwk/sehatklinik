@@ -237,3 +237,241 @@
   .ws-app .filters select { flex: 1 1 100%; }
   .ws-summary > div:not(.notice) { grid-template-columns: 1fr; gap: 4px; }
 }
+
+/* Loading Skeletons & Async Submit Feedback */
+.ws-app button:disabled,
+.ws-app button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@keyframes ws-shimmer {
+  0% { background-position: -240px 0; }
+  100% { background-position: 240px 0; }
+}
+
+.ws-skeleton {
+  background: linear-gradient(90deg, #eff3f8 25%, #e2e8f0 50%, #eff3f8 75%);
+  background-size: 480px 100%;
+  animation: ws-shimmer 1.4s infinite linear;
+  border-radius: 8px;
+}
+
+.ws-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.ws-skeleton-card {
+  background: #ffffff;
+  border: 1px solid #e7ebf2;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ws-skeleton-line {
+  height: 12px;
+  width: 100%;
+}
+
+.ws-skeleton-line.short { width: 48%; }
+.ws-skeleton-line.tall { height: 28px; width: 38%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ws-skeleton { animation: none; }
+}
+
+/* Explicit Web Push Notification Card */
+.ws-push-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  border: 1px solid #dbeafe;
+  background: #f8fbff;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.ws-push-banner.is-granted {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.ws-push-banner.is-denied {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.ws-push-banner.is-unsupported {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+
+.ws-push-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1 1 280px;
+}
+
+.ws-push-info h4 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.ws-push-info p {
+  margin: 0;
+  font-size: 11.5px;
+  color: #475569;
+  line-height: 1.55;
+}
+
+.ws-push-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ws-push-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+}
+
+.ws-push-badge.is-denied {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.ws-push-badge.is-unsupported {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+/* Doctor Photo Upload */
+.ws-photo-upload {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.ws-photo-preview {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.ws-photo-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.ws-photo-controls input[type="file"] {
+  font-size: 11px;
+  max-width: 100%;
+}
+
+.ws-doctor-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+/* Visit Trend Chart in Rekap Kunjungan */
+.ws-trend-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  height: 190px;
+  padding: 16px 22px 10px;
+  border-bottom: 1px solid #edf0f5;
+  overflow-x: auto;
+}
+
+.ws-trend-col {
+  flex: 1 0 46px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  height: 100%;
+}
+
+.ws-trend-count {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.ws-trend-track {
+  width: 100%;
+  max-width: 34px;
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  background: #f1f5f9;
+  border-radius: 8px 8px 4px 4px;
+  overflow: hidden;
+}
+
+.ws-trend-fill {
+  width: 100%;
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 8px 8px 0 0;
+  min-height: 4px;
+  transition: height 0.25s ease;
+}
+
+.ws-trend-label {
+  font-size: 10px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.ws-trend-legend {
+  display: flex;
+  gap: 18px;
+  padding: 14px 22px 18px;
+  font-size: 11px;
+  color: #475569;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .ws-skeleton-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 520px) {
+  .ws-skeleton-grid { grid-template-columns: 1fr; }
+}

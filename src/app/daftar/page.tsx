@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 }
 
 export default function DaftarPage() {
-  return <ClinicWorkspace Icon={Icon} initialPage="Daftar" initialRole="Publik" />
+  return <ClinicWorkspace Icon={Icon} initialPage="Registrasi" initialRole="Publik" />
 }

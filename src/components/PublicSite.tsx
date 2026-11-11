@@ -3,6 +3,7 @@
 import { useEffect, useState, type ComponentType } from "react"
 import BrandArtwork from "./BrandArtwork"
 import CinematicArtwork from "./CinematicArtwork"
+import ClinicMap from "./ClinicMap"
 import { useClinic } from "../context/ClinicContext"
 import {
   DEMO_DATE,
@@ -20,6 +21,7 @@ type Props = {
     size?: number
   }>
   page: string
+  initialDetailId?: string
   navigate: (page: string) => void
   onBook: () => void
   onLogin: () => void
@@ -59,6 +61,7 @@ const photo = (id: string, width = 700) =>
 export default function PublicSite({
   Icon,
   page,
+  initialDetailId,
   navigate,
   onBook,
   onLogin,
@@ -90,13 +93,13 @@ export default function PublicSite({
     if (!doctorDetail && !serviceDetail) return
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setDoctorDetail(null)
-        setServiceDetail(null)
+        closeDoctorDetail()
+        closeServiceDetail()
       }
     }
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
-  }, [doctorDetail, serviceDetail])
+  }, [doctorDetail, serviceDetail, page])
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -344,7 +347,86 @@ export default function PublicSite({
       }
     })
 
+  const slugMatch = (itemId: string, itemName: string, target: string) => {
+    const cleanTarget = target.trim().toLowerCase()
+    const slug = itemName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+    return itemId.toLowerCase() === cleanTarget || slug === cleanTarget
+  }
+
+  const openServiceDetail = (s: Service) => {
+    setDoctorDetail(null)
+    setServiceDetail(s)
+    if (typeof window !== "undefined") {
+      const nextPath = `/layanan/${encodeURIComponent(s.id)}`
+      if (window.location.pathname !== nextPath) {
+        window.history.pushState(null, "", nextPath)
+      }
+    }
+  }
+
+  const closeServiceDetail = () => {
+    setServiceDetail(null)
+    if (typeof window !== "undefined" && window.location.pathname.startsWith("/layanan/")) {
+      window.history.pushState(null, "", page === "Beranda" ? "/" : "/layanan")
+    }
+  }
+
+  const openDoctorDetail = (d: Doctor) => {
+    setServiceDetail(null)
+    setDoctorDetail(d)
+    if (typeof window !== "undefined") {
+      const nextPath = `/dokter/${encodeURIComponent(d.id)}`
+      if (window.location.pathname !== nextPath) {
+        window.history.pushState(null, "", nextPath)
+      }
+    }
+  }
+
+  const closeDoctorDetail = () => {
+    setDoctorDetail(null)
+    if (
+      typeof window !== "undefined" &&
+      window.location.pathname.startsWith("/dokter/") &&
+      !window.location.pathname.startsWith("/dokter/dashboard")
+    ) {
+      window.history.pushState(null, "", page === "Beranda" ? "/" : "/dokter")
+    }
+  }
+
+  useEffect(() => {
+    const syncDetailFromUrl = () => {
+      const path = typeof window !== "undefined" ? window.location.pathname : ""
+      if (path.startsWith("/layanan/") || (page === "Layanan" && initialDetailId)) {
+        const rawId = path.startsWith("/layanan/")
+          ? decodeURIComponent(path.slice("/layanan/".length))
+          : initialDetailId || ""
+        const matched = careServices.find((s) => slugMatch(s.id, s.name, rawId)) || null
+        setServiceDetail(matched)
+        setDoctorDetail(null)
+      } else if (
+        (path.startsWith("/dokter/") && !path.startsWith("/dokter/dashboard")) ||
+        (page === "Dokter" && initialDetailId)
+      ) {
+        const rawId = path.startsWith("/dokter/")
+          ? decodeURIComponent(path.slice("/dokter/".length))
+          : initialDetailId || ""
+        const matched = physicians.find((d) => slugMatch(d.id, d.name, rawId)) || null
+        setDoctorDetail(matched)
+        setServiceDetail(null)
+      } else {
+        setServiceDetail(null)
+        setDoctorDetail(null)
+      }
+    }
+
+    syncDetailFromUrl()
+    window.addEventListener("popstate", syncDetailFromUrl)
+    return () => window.removeEventListener("popstate", syncDetailFromUrl)
+  }, [page, initialDetailId, services, doctors, schedules])
+
   const go = (target: string) => {
+    setServiceDetail(null)
+    setDoctorDetail(null)
     navigate(target)
     setMenuOpen(false)
     window.scrollTo({ top: 0, behavior: "smooth" })
@@ -411,7 +493,7 @@ export default function PublicSite({
           <div style={{ display: "flex", gap: "8px", marginTop: "14px" }}>
             <button
               style={{ flex: 1, padding: "8px 10px", fontSize: "11px" }}
-              onClick={() => setServiceDetail(s)}
+              onClick={() => openServiceDetail(s)}
             >
               Rincian Layanan <Icon name="arrow" size={14} />
             </button>
@@ -473,7 +555,7 @@ export default function PublicSite({
             <p>
               <Icon name="calendar" size={15} /> {d.day} <span>·</span> {d.time}
             </p>
-            <button onClick={() => setDoctorDetail(d)}>
+            <button onClick={() => openDoctorDetail(d)}>
               Profil & Pendidikan Dokter <Icon name="arrow" size={17} />
             </button>
           </div>
@@ -683,7 +765,7 @@ export default function PublicSite({
                     <input
                       type={showPassword ? "text" : "password"}
                       required
-                      minLength={6}
+                      minLength={8}
                       value={loginPassword}
                       onChange={(e) => {
                         setLoginPassword(e.target.value)
@@ -692,7 +774,7 @@ export default function PublicSite({
                       autoComplete={
                         page === "Login" ? "current-password" : "new-password"
                       }
-                      placeholder="Minimal 6 karakter"
+                      placeholder="Minimal 8 karakter"
                     />
                     <button
                       type="button"
@@ -959,7 +1041,7 @@ export default function PublicSite({
                   <button
                     type="button"
                     className="service-card-action-link"
-                    onClick={() => setServiceDetail(s)}
+                    onClick={() => openServiceDetail(s)}
                   >
                     <span>Lihat detail layanan</span>
                     <span className="service-card-arrow">&rarr;</span>
@@ -1141,13 +1223,15 @@ export default function PublicSite({
                 </a>
               </div>
               <div className="web-map web-real-map">
-                <iframe
-                  title={`Peta lokasi ${clinic.name}`}
-                  loading="lazy"
-                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${Number(clinic.longitude) - 0.008},${Number(clinic.latitude) - 0.005},${Number(clinic.longitude) + 0.008},${Number(clinic.latitude) + 0.005}&layer=mapnik&marker=${clinic.latitude},${clinic.longitude}`}
+                <ClinicMap
+                  latitude={clinic.latitude}
+                  longitude={clinic.longitude}
+                  name={clinic.name}
+                  address={clinic.address}
                 />
                 <small>
-                  © OpenStreetMap contributors · Lokasi klinik simulasi
+                  © OpenStreetMap contributors · Koordinat: {clinic.latitude},{" "}
+                  {clinic.longitude}
                 </small>
               </div>
             </div>
@@ -1497,7 +1581,7 @@ export default function PublicSite({
          MODAL DETAIL DOKTER LENGKAP DENGAN RIWAYAT PENDIDIKAN
          ================================================================= */}
       {doctorDetail && (
-        <div className="web-dialog-backdrop" onClick={() => setDoctorDetail(null)}>
+        <div className="web-dialog-backdrop" onClick={closeDoctorDetail}>
           <section
             className="web-dialog"
             role="dialog"
@@ -1509,7 +1593,7 @@ export default function PublicSite({
             <button
               className="web-dialog-close"
               aria-label="Tutup detail dokter"
-              onClick={() => setDoctorDetail(null)}
+              onClick={closeDoctorDetail}
             >
               <Icon name="close" />
             </button>
@@ -1617,7 +1701,7 @@ export default function PublicSite({
         const serviceIcon =
           careServices.find((c) => c.id === serviceDetail.id)?.icon || "heart"
         return (
-          <div className="web-dialog-backdrop" onClick={() => setServiceDetail(null)}>
+          <div className="web-dialog-backdrop" onClick={closeServiceDetail}>
             <section
               className="web-dialog web-dialog-wide"
               role="dialog"
@@ -1628,7 +1712,7 @@ export default function PublicSite({
               <button
                 className="web-dialog-close"
                 aria-label="Tutup detail layanan"
-                onClick={() => setServiceDetail(null)}
+                onClick={closeServiceDetail}
               >
                 <Icon name="close" />
               </button>

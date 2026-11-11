@@ -86,7 +86,7 @@ type ClinicContextType = {
   visits: Visit[]
   setVisits: React.Dispatch<React.SetStateAction<Visit[]>>
   updateVisit: (id: string, changes: Partial<Visit>) => void
-  transition: (v: Visit, target: string) => void
+  transition: (v: Visit, target: string) => Promise<void>
 
   patients: Patient[]
   setPatients: React.Dispatch<React.SetStateAction<Patient[]>>
@@ -116,7 +116,8 @@ type ClinicContextType = {
   notificationJobs: NotificationJob[]
   notificationDrawerOpen: boolean
   setNotificationDrawerOpen: (val: boolean) => void
-  webPushPermission: "default" | "granted" | "denied"
+  webPushPermission: "default" | "granted" | "denied" | "unsupported"
+  loadingData: boolean
   unreadCount: number
   addNotification: (
     notif: Omit<NotificationItem, "id" | "timestamp" | "isRead">,
@@ -189,8 +190,8 @@ type ClinicContextType = {
 
   // Operations
   openVisit: (v: Visit) => void
-  submitBooking: (e: FormEvent<HTMLFormElement>) => void
-  saveExamination: (e: FormEvent<HTMLFormElement>) => void
+  submitBooking: (e: FormEvent<HTMLFormElement>) => Promise<void>
+  saveExamination: (e: FormEvent<HTMLFormElement>) => Promise<void>
   showEditor: (type: string, id?: string) => void
   resetToDefaults: () => void
 }
@@ -299,7 +300,9 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<NotificationItem[]>(notificationsSeed)
   const [notificationJobs, setNotificationJobs] = useState<NotificationJob[]>(notificationJobsSeed)
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false)
-  const [webPushPermission, setWebPushPermission] = useState<"default" | "granted" | "denied">("default")
+  const [webPushPermission, setWebPushPermission] = useState<
+    "default" | "granted" | "denied" | "unsupported"
+  >("default")
 
   const [mobile, setMobile] = useState(false)
   const [search, setSearch] = useState("")
@@ -326,14 +329,18 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   })
   const [receipt, setReceipt] = useState<Visit | null>(null)
   const [busy, setBusy] = useState(false)
+  const [loadingData, setLoadingData] = useState(true)
   const [editingProfile, setEditingProfile] = useState(false)
   const [initialized, setInitialized] = useState(false)
 
-  // Check browser Notification permission on mount
+  // Check browser Web Push & Service Worker support and Notification permission on mount
   useEffect(() => {
-    if (typeof window !== "undefined" && "Notification" in window) {
-      setWebPushPermission(Notification.permission)
-    }
+    const supported =
+      typeof window !== "undefined" &&
+      "Notification" in window &&
+      "serviceWorker" in navigator &&
+      "PushManager" in window
+    setWebPushPermission(supported ? Notification.permission : "unsupported")
   }, [])
 
   // Load state from localStorage on client mount
@@ -365,8 +372,14 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           else if (path === "/pasien") setRole("Pasien")
           else if (path === "/dashboard") {
             setRole(data.role && data.role !== "Publik" ? data.role : "Pasien")
+          } else if (path.startsWith("/riwayat/") || path.startsWith("/kunjungan/")) {
+            setRole(data.role && data.role !== "Publik" ? data.role : "Pasien")
           } else if (
-            ["/layanan", "/jadwal", "/lokasi", "/profil", "/login", "/daftar"].includes(path) || path === "/dokter"
+            path === "/" ||
+            ["/layanan", "/jadwal", "/lokasi", "/profil", "/login", "/daftar"].includes(path) ||
+            path === "/dokter" ||
+            path.startsWith("/layanan/") ||
+            (path.startsWith("/dokter/") && !path.startsWith("/dokter/dashboard"))
           ) {
             setRole("Publik")
           } else if (data.role) {
@@ -453,7 +466,11 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     }
 
     async function loadSupabaseData() {
-      if (!supabase) return
+      if (!supabase) {
+        setLoadingData(false)
+        return
+      }
+      setLoadingData(true)
       try {
         // Sync Supabase Auth session if already logged in
         const { data: authData } = await supabase.auth.getUser()
@@ -638,6 +655,8 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         }
       } catch (err) {
         console.warn("Gagal memuat data live dari Supabase, fallback ke data bawaan:", err)
+      } finally {
+        setLoadingData(false)
       }
     }
 
@@ -793,7 +812,13 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   }
 
   const requestWebPushPermission = async () => {
-    if (typeof window === "undefined" || !("Notification" in window)) {
+    const supported =
+      typeof window !== "undefined" &&
+      "Notification" in window &&
+      "serviceWorker" in navigator &&
+      "PushManager" in window
+    if (!supported) {
+      setWebPushPermission("unsupported")
       notify("Browser ini tidak mendukung Web Push Notification.")
       return
     }
@@ -954,12 +979,13 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     setSavedExam(Boolean(v.examination))
     setExam(
       v.examination
-        ? structuredClone(v.examination)
+        ? { ...structuredClone(v.examination), height: v.examination.height || "" }
         : {
           anamnesis: v.complaint,
           pressure: "",
           temperature: "",
           weight: "",
+          height: "",
           diagnosis: "",
           notes: "",
           actions: [],
@@ -972,8 +998,25 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       previous.map((v) => (v.id === id ? { ...v, ...changes } : v))
     )
 
+  const syncVisitTransition = async (
+    visitId: string,
+    payload: Record<string, unknown>,
+    label: string
+  ) => {
+    try {
+      await fetch(`/api/kunjungan/${visitId}/transition`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+    } catch (err) {
+      console.warn(`Sync ${label} error:`, err)
+    }
+  }
+
   // Transition queue and trigger business notifications according to SRS & API Contract
-  const transition = (v: Visit, target: string) => {
+  const transition = async (v: Visit, target: string) => {
+    if (busy) return
     const qLabel = queueLabel(
       v,
       doctors.findIndex((d) => d.id === v.doctor),
@@ -981,35 +1024,29 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     const pName = patientName(v.patient)
     const docName = doctorName(v.doctor)
 
-    if (
-      target === "checkin" &&
-      role === "Petugas" &&
-      v.status === "Terdaftar" &&
-      v.queue === "Menunggu"
-    ) {
-      updateVisit(v.id, { status: "Hadir" })
-      notify(`Pasien ${pName} (${qLabel}) berhasil Check-in. Siap dipanggil.`)
+    setBusy(true)
+    try {
+      if (
+        target === "checkin" &&
+        role === "Petugas" &&
+        v.status === "Terdaftar" &&
+        v.queue === "Menunggu"
+      ) {
+        updateVisit(v.id, { status: "Hadir" })
+        notify(`Pasien ${pName} (${qLabel}) berhasil Check-in. Siap dipanggil.`)
 
-      // Sync status check-in ke Supabase
-      fetch(`/api/kunjungan/${v.id}/transition`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target: "checkin" }),
-      }).catch((err) => console.warn("Sync check-in error:", err))
-    } else if (
-      target === "call" &&
-      ["Petugas", "Dokter"].includes(role) &&
-      v.status === "Hadir" &&
-      v.queue === "Menunggu"
-    ) {
-      updateVisit(v.id, { queue: "Dipanggil" })
+        // Sync status check-in ke Supabase
+        await syncVisitTransition(v.id, { target: "checkin" }, "check-in")
+      } else if (
+        target === "call" &&
+        ["Petugas", "Dokter"].includes(role) &&
+        v.status === "Hadir" &&
+        v.queue === "Menunggu"
+      ) {
+        updateVisit(v.id, { queue: "Dipanggil" })
 
-      // Sync status call ke Supabase
-      fetch(`/api/kunjungan/${v.id}/transition`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target: "call" }),
-      }).catch((err) => console.warn("Sync call error:", err))
+        // Sync status call ke Supabase
+        await syncVisitTransition(v.id, { target: "call" }, "call")
 
       // Trigger ANTREAN_DIPANGGIL notification for the patient
       addNotification({
@@ -1050,89 +1087,77 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           false
         )
       }
-    } else if (target === "start" && role === "Dokter" && v.queue === "Dipanggil") {
-      updateVisit(v.id, { queue: "Sedang Diperiksa" })
-      notify(`Pemeriksaan untuk antrean ${qLabel} dimulai.`)
-      fetch(`/api/kunjungan/${v.id}/transition`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target: "start" }),
-      }).catch((err) => console.warn("Sync start error:", err))
-    } else if (target === "finish" && role === "Dokter" && v.queue === "Sedang Diperiksa") {
-      updateVisit(v.id, { status: "Selesai", queue: "Selesai" })
-      setSelected(null)
-      notify("Kunjungan selesai. Ringkasan tersedia pada riwayat pasien.")
-      fetch(`/api/kunjungan/${v.id}/transition`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target: "finish" }),
-      }).catch((err) => console.warn("Sync finish error:", err))
-      addNotification({
-        targetRole: "Pasien",
-        targetUserId: v.patient,
-        type: "KUNJUNGAN_SELESAI",
-        title: "Pemeriksaan Selesai",
-        message: `Kunjungan ${v.id} bersama ${docName} telah selesai. Ringkasan pemeriksaan tersedia di riwayat Anda.`,
-        visitId: v.id,
-        queueNumber: qLabel,
-        actionUrl: "detail",
-      })
-    } else if (
-      target === "skip" &&
-      role === "Petugas" &&
-      v.queue === "Dipanggil" &&
-      reason.trim()
-    ) {
-      updateVisit(v.id, { queue: "Dilewati", reason })
-      fetch(`/api/kunjungan/${v.id}/transition`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target: "skip", reason }),
-      }).catch((err) => console.warn("Sync skip error:", err))
-      addNotification({
-        targetRole: "Pasien",
-        targetUserId: v.patient,
-        type: "KUNJUNGAN_DIBATALKAN",
-        title: "Antrean Dilewati",
-        message: `Nomor antrean ${qLabel} dilewati karena: ${reason}. Silakan hubungi loket petugas untuk jadwal ulang.`,
-        visitId: v.id,
-        queueNumber: qLabel,
-        actionUrl: "detail",
-      })
-    } else if (
-      target === "cancel" &&
-      ((role === "Pasien" && v.queue === "Menunggu") ||
-        (role === "Petugas" && ["Menunggu", "Dipanggil"].includes(v.queue))) &&
-      reason.trim()
-    ) {
-      updateVisit(v.id, { queue: "Dibatalkan", status: "Dibatalkan", reason })
-      fetch(`/api/kunjungan/${v.id}/transition`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target: "cancel", reason }),
-      }).catch((err) => console.warn("Sync cancel error:", err))
-      addNotification({
-        targetRole: "Pasien",
-        targetUserId: v.patient,
-        type: "KUNJUNGAN_DIBATALKAN",
-        title: "Kunjungan Dibatalkan",
-        message: `Kunjungan ${v.id} (${qLabel}) dibatalkan. Alasan: ${reason}. Kuota jadwal telah dikembalikan.`,
-        visitId: v.id,
-        queueNumber: qLabel,
-        actionUrl: "detail",
-      })
-    } else {
-      setError(
-        "Tindakan tidak tersedia. Periksa status kunjungan dan isi alasan bila diperlukan."
-      )
-      return
+      } else if (target === "start" && role === "Dokter" && v.queue === "Dipanggil") {
+        updateVisit(v.id, { queue: "Sedang Diperiksa" })
+        notify(`Pemeriksaan untuk antrean ${qLabel} dimulai.`)
+        await syncVisitTransition(v.id, { target: "start" }, "start")
+      } else if (target === "finish" && role === "Dokter" && v.queue === "Sedang Diperiksa") {
+        updateVisit(v.id, { status: "Selesai", queue: "Selesai" })
+        notify("Kunjungan selesai. Ringkasan tersedia pada riwayat pasien.")
+        await syncVisitTransition(v.id, { target: "finish" }, "finish")
+        setSelected(null)
+        addNotification({
+          targetRole: "Pasien",
+          targetUserId: v.patient,
+          type: "KUNJUNGAN_SELESAI",
+          title: "Pemeriksaan Selesai",
+          message: `Kunjungan ${v.id} bersama ${docName} telah selesai. Ringkasan pemeriksaan tersedia di riwayat Anda.`,
+          visitId: v.id,
+          queueNumber: qLabel,
+          actionUrl: "detail",
+        })
+      } else if (
+        target === "skip" &&
+        role === "Petugas" &&
+        v.queue === "Dipanggil" &&
+        reason.trim()
+      ) {
+        updateVisit(v.id, { queue: "Dilewati", reason })
+        await syncVisitTransition(v.id, { target: "skip", reason }, "skip")
+        addNotification({
+          targetRole: "Pasien",
+          targetUserId: v.patient,
+          type: "KUNJUNGAN_DIBATALKAN",
+          title: "Antrean Dilewati",
+          message: `Nomor antrean ${qLabel} dilewati karena: ${reason}. Silakan hubungi loket petugas untuk jadwal ulang.`,
+          visitId: v.id,
+          queueNumber: qLabel,
+          actionUrl: "detail",
+        })
+      } else if (
+        target === "cancel" &&
+        ((role === "Pasien" && v.queue === "Menunggu") ||
+          (role === "Petugas" && ["Menunggu", "Dipanggil"].includes(v.queue))) &&
+        reason.trim()
+      ) {
+        updateVisit(v.id, { queue: "Dibatalkan", status: "Dibatalkan", reason })
+        await syncVisitTransition(v.id, { target: "cancel", reason }, "cancel")
+        addNotification({
+          targetRole: "Pasien",
+          targetUserId: v.patient,
+          type: "KUNJUNGAN_DIBATALKAN",
+          title: "Kunjungan Dibatalkan",
+          message: `Kunjungan ${v.id} (${qLabel}) dibatalkan. Alasan: ${reason}. Kuota jadwal telah dikembalikan.`,
+          visitId: v.id,
+          queueNumber: qLabel,
+          actionUrl: "detail",
+        })
+      } else {
+        setError(
+          "Tindakan tidak tersedia. Periksa status kunjungan dan isi alasan bila diperlukan."
+        )
+        return
+      }
+      setError("")
+    } finally {
+      setBusy(false)
     }
-    setError("")
   }
 
   // Submit Booking with Automatic Patient & Officer Notifications (SRS 11 & Kontrak API 10)
-  const submitBooking = (e: FormEvent<HTMLFormElement>) => {
+  const submitBooking = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (busy) return
     setError("")
     if (step < 3) {
       setStep(step + 1)
@@ -1184,124 +1209,185 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       queue: "Menunggu",
     }
     setBusy(true)
-    setVisits((previous) => [...previous, next])
-    setReceipt(next)
-    setStep(4)
-    setBusy(false)
+    try {
+      let savedVisit: Visit = next
 
-    // Sync pendaftaran kunjungan & antrean baru ke Supabase
-    fetch("/api/kunjungan", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        pasienId: next.patient,
-        dokterId: next.doctor,
-        layananId: next.service,
-        jadwalId: next.schedule,
-        tanggal: next.date,
-        keluhan: next.complaint,
-        sumber: next.source,
-      }),
-    })
-      .then((res) => res.json())
-      .then((resData) => {
-        if (resData.data?.id) {
-          setVisits((prev) =>
-            prev.map((v) =>
-              v.id === next.id
-                ? {
-                    ...v,
-                    id: resData.data.id,
-                    number: resData.data.antrean?.nomor_antrean || v.number,
-                  }
-                : v
-            )
-          )
+      // Sync pendaftaran kunjungan & antrean baru ke Supabase
+      try {
+        const res = await fetch("/api/kunjungan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pasienId: next.patient,
+            dokterId: next.doctor,
+            layananId: next.service,
+            jadwalId: next.schedule,
+            tanggal: next.date,
+            keluhan: next.complaint,
+            sumber: next.source,
+          }),
+        })
+        if (res.ok) {
+          const resData = await res.json()
+          if (resData.data?.id) {
+            savedVisit = {
+              ...next,
+              id: resData.data.id,
+              number: resData.data.antrean?.nomor_antrean || next.number,
+            }
+          }
         }
-      })
-      .catch((err) => console.warn("Sync booking error:", err))
+      } catch (err) {
+        console.warn("Sync booking error:", err)
+      }
 
-    const qLabel = queueLabel(
-      next,
-      doctors.findIndex((d) => d.id === next.doctor),
-    )
-    const dName = doctorName(next.doctor)
-    const sName = serviceName(next.service)
-    const pName = patientName(next.patient)
+      setVisits((previous) => [...previous, savedVisit])
+      setReceipt(savedVisit)
+      setStep(4)
 
-    // Notifikasi ke Pasien (SRS 11: Pendaftaran berhasil)
-    addNotification({
-      targetRole: "Pasien",
-      targetUserId: next.patient,
-      type: "KUNJUNGAN_TERDAFTAR",
-      title: "Pendaftaran Kunjungan Berhasil!",
-      message: `Kunjungan di ${sName} bersama ${dName} pada ${next.date} telah terdaftar. Nomor antrean Anda: ${qLabel}.`,
-      visitId: next.id,
-      queueNumber: qLabel,
-      actionUrl: "detail",
-    })
-
-    // Notifikasi ke Petugas (SRS 11: Pendaftaran online baru)
-    if (next.source === "Online") {
-      addNotification(
-        {
-          targetRole: "Petugas",
-          type: "PENDAFTARAN_BARU",
-          title: "Pendaftaran Online Baru",
-          message: `Pasien ${pName} mendaftar online ke ${sName} (${dName}) untuk tanggal ${next.date}. Nomor antrean: ${qLabel}.`,
-          visitId: next.id,
-          queueNumber: qLabel,
-          actionUrl: "antrean",
-        },
-        false
+      const qLabel = queueLabel(
+        savedVisit,
+        doctors.findIndex((d) => d.id === savedVisit.doctor),
       )
+      const dName = doctorName(savedVisit.doctor)
+      const sName = serviceName(savedVisit.service)
+      const pName = patientName(savedVisit.patient)
+
+      // Notifikasi ke Pasien (SRS 11: Pendaftaran berhasil)
+      addNotification({
+        targetRole: "Pasien",
+        targetUserId: savedVisit.patient,
+        type: "KUNJUNGAN_TERDAFTAR",
+        title: "Pendaftaran Kunjungan Berhasil!",
+        message: `Kunjungan di ${sName} bersama ${dName} pada ${savedVisit.date} telah terdaftar. Nomor antrean Anda: ${qLabel}.`,
+        visitId: savedVisit.id,
+        queueNumber: qLabel,
+        actionUrl: "detail",
+      })
+
+      // Notifikasi ke Petugas (SRS 11: Pendaftaran online baru)
+      if (savedVisit.source === "Online") {
+        addNotification(
+          {
+            targetRole: "Petugas",
+            type: "PENDAFTARAN_BARU",
+            title: "Pendaftaran Online Baru",
+            message: `Pasien ${pName} mendaftar online ke ${sName} (${dName}) untuk tanggal ${savedVisit.date}. Nomor antrean: ${qLabel}.`,
+            visitId: savedVisit.id,
+            queueNumber: qLabel,
+            actionUrl: "antrean",
+          },
+          false
+        )
+      }
+    } finally {
+      setBusy(false)
     }
   }
 
-  const saveExamination = (e: FormEvent<HTMLFormElement>) => {
+  const saveExamination = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (
+      busy ||
       !selectedVisit ||
       role !== "Dokter" ||
       selectedVisit.queue !== "Sedang Diperiksa" ||
       !exam
     )
       return
-    const [systolic, diastolic] = exam.pressure.split("/").map(Number)
+    const pressureParts = exam.pressure.trim().split("/")
+    const systolicRaw = pressureParts[0]?.trim() || ""
+    const diastolicRaw = pressureParts[1]?.trim() || ""
+    const sistolik = Number(systolicRaw)
+    const diastolik = Number(diastolicRaw)
     if (
-      systolic < 60 ||
-      systolic > 250 ||
-      diastolic < 30 ||
-      diastolic > 150 ||
-      systolic <= diastolic
+      pressureParts.length !== 2 ||
+      !/^\d+$/.test(systolicRaw) ||
+      !/^\d+$/.test(diastolicRaw) ||
+      !Number.isFinite(sistolik) ||
+      !Number.isFinite(diastolik) ||
+      sistolik < 50 ||
+      sistolik > 300 ||
+      diastolik < 30 ||
+      diastolik > 200 ||
+      sistolik <= diastolik
     ) {
       setError(
-        "Tekanan darah di luar rentang simulasi: sistolik 60–250, diastolik 30–150, dan sistolik harus lebih tinggi."
+        "Tekanan darah tidak valid: sistolik 50–300 mmHg, diastolik 30–200 mmHg, dan sistolik harus lebih tinggi dari diastolik."
       )
       return
     }
-    setError("")
-    updateVisit(selectedVisit.id, { examination: exam })
-    setSavedExam(true)
-    notify("Pemeriksaan dan tindakan medis berhasil disimpan ke database!")
 
-    // Sync hasil pemeriksaan & tindakan ke Supabase
-    fetch(`/api/kunjungan/${selectedVisit.id}/pemeriksaan`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        dokterId: selectedVisit.doctor,
-        anamnesis: exam.anamnesis,
-        tandaVital: {
-          pressure: exam.pressure,
-          temperature: exam.temperature,
-          weight: exam.weight,
-        },
-        diagnosis: exam.diagnosis,
-        catatan: exam.notes,
-        tindakan: exam.actions,
-      }),
-    }).catch((err) => console.warn("Sync examination error:", err))
+    const suhu = Number(exam.temperature)
+    if (
+      !exam.temperature.trim() ||
+      !Number.isFinite(suhu) ||
+      suhu < 30 ||
+      suhu > 45
+    ) {
+      setError("Suhu tubuh harus berada pada rentang 30–45 °C.")
+      return
+    }
+
+    const berat_badan = Number(exam.weight)
+    if (
+      !exam.weight.trim() ||
+      !Number.isFinite(berat_badan) ||
+      berat_badan < 1 ||
+      berat_badan > 500
+    ) {
+      setError("Berat badan harus berada pada rentang 1–500 kg.")
+      return
+    }
+
+    const tinggi_badan = Number(exam.height)
+    if (
+      !exam.height.trim() ||
+      !Number.isFinite(tinggi_badan) ||
+      tinggi_badan < 20 ||
+      tinggi_badan > 250
+    ) {
+      setError("Tinggi badan harus berada pada rentang 20–250 cm.")
+      return
+    }
+
+    if (!exam.anamnesis.trim() || !exam.diagnosis.trim()) {
+      setError("Anamnesis dan diagnosis wajib diisi.")
+      return
+    }
+
+    setError("")
+    setBusy(true)
+    try {
+      // Sync hasil pemeriksaan & tindakan ke Supabase sesuai format fn_valid_tanda_vital
+      try {
+        await fetch(`/api/kunjungan/${selectedVisit.id}/pemeriksaan`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            dokterId: selectedVisit.doctor,
+            anamnesis: exam.anamnesis.trim(),
+            tandaVital: {
+              sistolik,
+              diastolik,
+              suhu,
+              berat_badan,
+              tinggi_badan,
+            },
+            diagnosis: exam.diagnosis.trim(),
+            catatan: exam.notes.trim(),
+            tindakan: exam.actions,
+          }),
+        })
+      } catch (err) {
+        console.warn("Sync examination error:", err)
+      }
+      updateVisit(selectedVisit.id, { examination: exam })
+      setSavedExam(true)
+      notify("Pemeriksaan dan tindakan medis berhasil disimpan ke database!")
+    } finally {
+      setBusy(false)
+    }
   }
 
   const showEditor = (type: string, id?: string) => {
@@ -1535,6 +1621,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         setReceipt,
         busy,
         setBusy,
+        loadingData,
         editingProfile,
         setEditingProfile,
 

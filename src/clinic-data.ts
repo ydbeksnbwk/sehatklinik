@@ -72,6 +72,7 @@ export type Examination = {
   pressure: string
   temperature: string
   weight: string
+  height: string
   diagnosis: string
   notes: string
   actions: {
@@ -812,6 +813,7 @@ export const visitsSeed: Visit[] = [
       pressure: "118/78",
       temperature: "36.6",
       weight: "54",
+      height: "162",
       diagnosis: "Benign Paroxysmal Positional Vertigo (BPPV) ringan",
       notes: "Kondisi stabil, edukasi manuver perubahan posisi perlahan dan hidrasi cukup.",
       actions: [
@@ -841,6 +843,7 @@ export const visitsSeed: Visit[] = [
       pressure: "120/80",
       temperature: "37.2",
       weight: "68",
+      height: "172",
       diagnosis: "Infeksi Saluran Pernapasan Akut (ISPA) ringan / Nasofaringitis akut",
       notes: "Disarankan istirahat cukup dan perbanyak konsumsi air hangat.",
       actions: [
