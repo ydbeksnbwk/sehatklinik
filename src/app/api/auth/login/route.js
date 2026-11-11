@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { supabaseServer } from "@/lib/supabase";
-import { handleError } from "@/lib/auth";
+import { handleError, pasangCookieSesi } from "@/lib/auth";
 
 export async function POST(request) {
   try {
@@ -12,8 +12,13 @@ export async function POST(request) {
     const password = typeof body.password === "string" ? body.password : "";
     if (!email || !password) {
       return NextResponse.json(
-        { error: "Email dan password wajib diisi" },
-        { status: 400 },
+        {
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Email dan password wajib diisi",
+          },
+        },
+        { status: 400 }
       );
     }
 
@@ -23,8 +28,13 @@ export async function POST(request) {
     });
     if (error || !data?.session) {
       return NextResponse.json(
-        { error: "Email atau password salah" },
-        { status: 401 },
+        {
+          error: {
+            code: "UNAUTHENTICATED",
+            message: "Email atau password salah",
+          },
+        },
+        { status: 401 }
       );
     }
 
@@ -35,22 +45,29 @@ export async function POST(request) {
       .limit(1);
     if (!profile) {
       return NextResponse.json(
-        { error: "Profil pengguna tidak ditemukan" },
-        { status: 403 },
+        {
+          error: {
+            code: "FORBIDDEN",
+            message: "Profil pengguna tidak ditemukan",
+          },
+        },
+        { status: 403 }
       );
     }
     if (!profile.statusAktif) {
       return NextResponse.json(
-        { error: "Akun dinonaktifkan" },
-        { status: 403 },
+        {
+          error: {
+            code: "FORBIDDEN",
+            message: "Akun dinonaktifkan",
+          },
+        },
+        { status: 403 }
       );
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       data: {
-        accessToken: data.session.access_token,
-        refreshToken: data.session.refresh_token,
-        expiresAt: data.session.expires_at,
         user: {
           id: profile.id,
           email: data.user.email,
@@ -60,6 +77,15 @@ export async function POST(request) {
         },
       },
     });
+
+    // Pasang cookie httpOnly (tanpa mengekspos token mentah di body respons)
+    pasangCookieSesi(response, {
+      accessToken: data.session.access_token,
+      refreshToken: data.session.refresh_token,
+      expiresIn: data.session.expires_in || 3600,
+    });
+
+    return response;
   } catch (err) {
     return handleError(err, "POST /api/auth/login");
   }
