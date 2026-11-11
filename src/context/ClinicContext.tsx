@@ -1421,36 +1421,42 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   ): Promise<{ success: boolean; message: string; user?: ClinicUser }> => {
     const cleanEmail = email.trim().toLowerCase()
 
-    // 1. Coba autentikasi via Supabase Auth jika ada password
+    // 1. Coba autentikasi via backend /api/auth/login (cookie httpOnly)
     if (password) {
       try {
-        const supabase = createClient()
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password,
-        })
-        if (!error && data?.user) {
-          const userMeta = data.user.user_metadata || {}
-          const userRole = (userMeta.role || data.user.app_metadata?.role || "Pasien") as Role
+        const resp = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: cleanEmail, password }),
+        });
+        const resJson = await resp.json().catch(() => ({}));
+        if (resp.ok && resJson?.data?.user) {
+          const u = resJson.data.user;
+          const userRole = (u.role.charAt(0).toUpperCase() + u.role.slice(1)) as Role;
           const authUser: ClinicUser = {
-            name: userMeta.name || data.user.email?.split("@")[0] || "Pengguna",
-            email: data.user.email || cleanEmail,
+            name: u.nama || u.email?.split("@")[0] || "Pengguna",
+            email: u.email || cleanEmail,
             role: userRole,
             active: true,
-          }
-          setCurrentUser(authUser)
-          setRole(userRole)
+          };
+          setCurrentUser(authUser);
+          setRole(userRole);
           if (typeof window !== "undefined") {
-            localStorage.setItem("sehatklinik_current_user", JSON.stringify(authUser))
+            localStorage.setItem("sehatklinik_current_user", JSON.stringify(authUser));
           }
           return {
             success: true,
-            message: `Selamat datang, ${authUser.name}! (Supabase Auth)`,
+            message: `Selamat datang, ${authUser.name}!`,
             user: authUser,
-          }
+          };
+        } else if (!resp.ok && resJson?.error) {
+          return {
+            success: false,
+            message: resJson.error.message || "Gagal masuk akun",
+          };
         }
       } catch (authErr) {
-        console.warn("Supabase auth attempted, fallback to local:", authErr)
+        console.warn("Backend login attempted, fallback to local:", authErr);
       }
     }
 
