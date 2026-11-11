@@ -34,12 +34,83 @@ function kodeDefault(status) {
   }
 }
 
+export const COOKIE_ACCESS_NAME = "sb-access-token";
+export const COOKIE_REFRESH_NAME = "sb-refresh-token";
+
+export function getCookieOptions(maxAge) {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    ...(typeof maxAge === "number" ? { maxAge } : {}),
+  };
+}
+
+export function pasangCookieSesi(response, { accessToken, refreshToken, expiresIn = 3600 }) {
+  response.cookies.set(COOKIE_ACCESS_NAME, accessToken, getCookieOptions(expiresIn));
+  if (refreshToken) {
+    response.cookies.set(COOKIE_REFRESH_NAME, refreshToken, getCookieOptions(60 * 60 * 24 * 30));
+  }
+  return response;
+}
+
+export function hapusCookieSesi(response) {
+  response.cookies.set(COOKIE_ACCESS_NAME, "", getCookieOptions(0));
+  response.cookies.set(COOKIE_REFRESH_NAME, "", getCookieOptions(0));
+  return response;
+}
+
+function ambilTokenDariRequest(request) {
+  // 1. Prioritas utama: cookie httpOnly
+  if (request.cookies?.get) {
+    const cookieToken = request.cookies.get(COOKIE_ACCESS_NAME)?.value;
+    if (cookieToken) return cookieToken;
+  } else if (typeof request.headers?.get === "function") {
+    const cookieHeader = request.headers.get("cookie") || "";
+    const match = cookieHeader.match(new RegExp(`(?:^|; )${COOKIE_ACCESS_NAME}=([^;]*)`));
+    if (match) return decodeURIComponent(match[1]);
+  }
+
+  // 2. Fallback sekunder: header Authorization Bearer (untuk skrip uji)
+  const header = request.headers?.get ? request.headers.get("authorization") || "" : "";
+  if (header.startsWith("Bearer ")) {
+    return header.slice(7).trim();
+  }
+
+  return "";
+}
+
+function ambilRefreshTokenDariRequest(request) {
+  if (request.cookies?.get) {
+    return request.cookies.get(COOKIE_REFRESH_NAME)?.value || "";
+  } else if (typeof request.headers?.get === "function") {
+    const cookieHeader = request.headers.get("cookie") || "";
+    const match = cookieHeader.match(new RegExp(`(?:^|; )${COOKIE_REFRESH_NAME}=([^;]*)`));
+    if (match) return decodeURIComponent(match[1]);
+  }
+  return "";
+}
+
 export async function getCurrentUser(request) {
-  const header = request.headers.get("authorization") || "";
-  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  const token = ambilTokenDariRequest(request);
   if (!token) throw new HttpError(401, "Belum login", "UNAUTHENTICATED");
 
-  const { data, error } = await supabaseServer().auth.getUser(token);
+  const supabase = supabaseServer();
+  let { data, error } = await supabase.auth.getUser(token);
+
+  // Jika access token kedaluwarsa, coba refresh via sb-refresh-token
+  if ((error || !data?.user) && ambilRefreshTokenDariRequest(request)) {
+    const refreshToken = ambilRefreshTokenDariRequest(request);
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession({
+      refresh_token: refreshToken,
+    });
+    if (!refreshError && refreshData?.user) {
+      data = refreshData;
+      error = null;
+    }
+  }
+
   if (error || !data?.user) {
     throw new HttpError(401, "Token tidak valid atau kedaluwarsa", "UNAUTHENTICATED");
   }
