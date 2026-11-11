@@ -89,8 +89,8 @@ export async function tambahPasien({
   }
 
   // Nomor rekam medis dari sequence database
-  const [result] = await db.execute(sql`SELECT nextval('seq_no_rekam_medis') AS seq`);
-  const seq = result.seq;
+  const res = await db.execute(sql`SELECT nextval('seq_no_rekam_medis') AS seq`);
+  const seq = res.rows ? res.rows[0].seq : res[0].seq;
   const noRekamMedis = `RM-${String(seq).padStart(6, "0")}`;
 
   const [baru] = await db
