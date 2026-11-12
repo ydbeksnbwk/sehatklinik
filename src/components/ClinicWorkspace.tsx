@@ -1281,6 +1281,10 @@ export default function ClinicWorkspace({
                         </td>
                         <td>
                           <Badge text={v.queue} />
+                          {v.reason &&
+                            ["Dibatalkan", "Dilewati"].includes(v.queue) && (
+                              <small>{v.reason}</small>
+                            )}
                         </td>
                         <td>
                           <button
