@@ -99,6 +99,41 @@ export type BookingState = {
   complaint: string
 }
 
+// Pemetaan status API (huruf kecil) ke label UI (huruf besar di awal)
+const petaStatusAntrean: Record<string, QueueStatus> = {
+  menunggu: "Menunggu",
+  dipanggil: "Dipanggil",
+  diperiksa: "Sedang Diperiksa",
+  selesai: "Selesai",
+  dilewati: "Dilewati",
+  batal: "Dibatalkan",
+}
+const petaStatusKunjungan: Record<string, VisitStatus> = {
+  terdaftar: "Terdaftar",
+  hadir: "Hadir",
+  selesai: "Selesai",
+  batal: "Dibatalkan",
+}
+
+// GET /api/kunjungan mengembalikan baris datar dari v_antrean_detail:
+// field kuncinya kunjunganId, statusKunjungan, statusAntrean, nomorAntrean, alasan.
+function konversiKunjungan(k: any): Visit {
+  return {
+    id: k.kunjunganId || k.id,
+    patient: k.pasienId || k.pasien_id || "RM-00128",
+    doctor: k.dokterId || k.dokter_id,
+    service: k.layananId || k.layanan_id,
+    schedule: k.jadwalId || k.jadwal_id || "j1",
+    date: k.tanggal,
+    complaint: k.keluhan || "",
+    source: (k.sumber === "walk_in" || k.sumberDaftar === "walk_in") ? "Walk-in" : "Online",
+    status: petaStatusKunjungan[k.statusKunjungan || k.status] || "Terdaftar",
+    queue: petaStatusAntrean[k.statusAntrean || k.antrean?.statusAntrean] || "Menunggu",
+    number: k.nomorAntrean || k.antrean?.nomorAntrean || 1,
+    reason: k.alasan || k.antrean?.alasan || undefined,
+  }
+}
+
 type ClinicContextType = {
   role: Role
   setRole: (role: Role) => void
@@ -475,37 +510,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       try {
         const res = await apiGetKunjungan()
         if (res.data && res.data.length > 0) {
-          const queueStatusMap: Record<string, QueueStatus> = {
-            menunggu: "Menunggu",
-            dipanggil: "Dipanggil",
-            diperiksa: "Sedang Diperiksa",
-            selesai: "Selesai",
-            dilewati: "Dilewati",
-            batal: "Dibatalkan",
-          }
-          const visitStatusMap: Record<string, VisitStatus> = {
-            terdaftar: "Terdaftar",
-            hadir: "Hadir",
-            selesai: "Selesai",
-            batal: "Dibatalkan",
-          }
-          const dbVisits: Visit[] = res.data.map((k: any) => {
-            const q = Array.isArray(k.antrean) ? k.antrean[0] : k.antrean
-            return {
-              id: k.id,
-              patient: k.pasienId || k.pasien_id || "RM-00128",
-              doctor: k.dokterId || k.dokter_id,
-              service: k.layananId || k.layanan_id,
-              schedule: k.jadwalId || k.jadwal_id || "j1",
-              date: k.tanggal,
-              complaint: k.keluhan || "",
-              source: (k.sumber === "walk_in" || k.sumberDaftar === "walk_in") ? "Walk-in" : "Online",
-              status: visitStatusMap[k.statusKunjungan || k.status] || "Terdaftar",
-              queue: q ? queueStatusMap[q.statusAntrean || q.status] || "Menunggu" : "Menunggu",
-              number: q?.nomorAntrean || q?.nomor_antrean || 1,
-              reason: q?.alasan || undefined,
-            }
-          })
+          const dbVisits: Visit[] = res.data.map(konversiKunjungan)
           setVisits(dbVisits)
           return true
         }
@@ -1165,18 +1170,30 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       cancel: "batal",
     }
     const aksi = aksiMap[payload.target] || payload.target
+    const res = await apiTransisiKunjungan(visitId, {
+      aksi,
+      alasan: payload.reason,
+    })
+    if (res.error) {
+      console.warn(`Sync ${label} error from API:`, res.error)
+      throw new Error(res.error.message || `Gagal melakukan aksi ${label}`)
+    }
+    return res.data
+  }
+
+  // Muat ulang daftar kunjungan dari API agar daftar/kartu antrean
+  // selalu mengikuti database, bukan state lokal saja.
+  const refreshKunjungan = async () => {
     try {
-      const res = await apiTransisiKunjungan(visitId, {
-        aksi,
-        alasan: payload.reason,
-      })
-      if (res.error) {
-        console.warn(`Sync ${label} error from API:`, res.error)
-        setError(res.error.message || `Gagal melakukan aksi ${label}`)
+      const res = await apiGetKunjungan()
+      if (res.data) {
+        setVisits(res.data.map(konversiKunjungan))
+        return true
       }
     } catch (err) {
-      console.warn(`Sync ${label} error:`, err)
+      console.warn("Gagal memuat ulang kunjungan dari backend:", err)
     }
+    return false
   }
 
   // Transition queue and trigger business notifications according to SRS & API Contract
@@ -1197,21 +1214,20 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         v.status === "Terdaftar" &&
         v.queue === "Menunggu"
       ) {
+        // Sinkron ke API dulu; state lokal hanya diubah setelah API sukses
+        await syncVisitTransition(v.id, { target: "checkin" }, "check-in")
+        await refreshKunjungan()
         updateVisit(v.id, { status: "Hadir" })
         notify(`Pasien ${pName} (${qLabel}) berhasil Check-in. Siap dipanggil.`)
-
-        // Sync status check-in ke Supabase
-        await syncVisitTransition(v.id, { target: "checkin" }, "check-in")
       } else if (
         target === "call" &&
         ["Petugas", "Dokter"].includes(role) &&
         v.status === "Hadir" &&
         v.queue === "Menunggu"
       ) {
-        updateVisit(v.id, { queue: "Dipanggil" })
-
-        // Sync status call ke Supabase
         await syncVisitTransition(v.id, { target: "call" }, "call")
+        await refreshKunjungan()
+        updateVisit(v.id, { queue: "Dipanggil" })
 
       // Trigger ANTREAN_DIPANGGIL notification for the patient
       addNotification({
@@ -1253,9 +1269,10 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         )
       }
       } else if (target === "start" && role === "Dokter" && v.queue === "Dipanggil") {
+        await syncVisitTransition(v.id, { target: "start" }, "start")
+        await refreshKunjungan()
         updateVisit(v.id, { queue: "Sedang Diperiksa" })
         notify(`Pemeriksaan untuk antrean ${qLabel} dimulai.`)
-        await syncVisitTransition(v.id, { target: "start" }, "start")
         addNotification({
           targetRole: "Pasien",
           targetUserId: v.patient,
@@ -1267,9 +1284,10 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           actionUrl: "detail",
         })
       } else if (target === "finish" && role === "Dokter" && v.queue === "Sedang Diperiksa") {
+        await syncVisitTransition(v.id, { target: "finish" }, "finish")
+        await refreshKunjungan()
         updateVisit(v.id, { status: "Selesai", queue: "Selesai" })
         notify("Kunjungan selesai. Ringkasan tersedia pada riwayat pasien.")
-        await syncVisitTransition(v.id, { target: "finish" }, "finish")
         setSelected(null)
         addNotification({
           targetRole: "Pasien",
@@ -1287,8 +1305,9 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         v.queue === "Dipanggil" &&
         reason.trim()
       ) {
-        updateVisit(v.id, { queue: "Dilewati", reason })
         await syncVisitTransition(v.id, { target: "skip", reason }, "skip")
+        await refreshKunjungan()
+        updateVisit(v.id, { queue: "Dilewati", reason })
         addNotification({
           targetRole: "Pasien",
           targetUserId: v.patient,
@@ -1305,8 +1324,11 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           (role === "Petugas" && ["Menunggu", "Dipanggil"].includes(v.queue))) &&
         reason.trim()
       ) {
-        updateVisit(v.id, { queue: "Dibatalkan", status: "Dibatalkan", reason })
         await syncVisitTransition(v.id, { target: "cancel", reason }, "cancel")
+        await refreshKunjungan()
+        updateVisit(v.id, { queue: "Dibatalkan", status: "Dibatalkan", reason })
+        setSelected(null)
+        notify("Kunjungan berhasil dibatalkan.")
         addNotification({
           targetRole: "Pasien",
           targetUserId: v.patient,
@@ -1324,6 +1346,9 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         return
       }
       setError("")
+    } catch (err: any) {
+      // Galat API: modal tetap terbuka, pesan jelas, tombol aktif kembali
+      setError(err?.message || "Aksi gagal. Silakan coba lagi.")
     } finally {
       setBusy(false)
     }
