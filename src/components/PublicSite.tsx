@@ -106,6 +106,8 @@ export default function PublicSite({
   const [regBirth, setRegBirth] = useState("2000-01-01")
   const [regGender, setRegGender] = useState("L")
   const [regPhone, setRegPhone] = useState("")
+  const [regAddress, setRegAddress] = useState("")
+  const [regEmergency, setRegEmergency] = useState("")
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false)
   const [doctorDetail, setDoctorDetail] = useState<Doctor | null>(null)
   const [serviceDetail, setServiceDetail] = useState<Service | null>(null)
@@ -143,6 +145,7 @@ export default function PublicSite({
     try {
       if (page === "Registrasi") {
         const cleanPhone = regPhone.replace(/[^0-9+]/g, "")
+        const cleanEmergency = regEmergency ? regEmergency.replace(/[^0-9+]/g, "") : undefined
         const genderCode = regGender === "Perempuan" || regGender === "P" ? "P" : "L"
         const res = await fetch("/api/auth/register", {
           method: "POST",
@@ -155,6 +158,8 @@ export default function PublicSite({
             telepon: cleanPhone,
             tanggalLahir: regBirth,
             jenisKelamin: genderCode,
+            alamat: regAddress.trim() || undefined,
+            kontakDarurat: cleanEmergency || undefined,
           }),
         })
         const json = await res.json().catch(() => ({}))
@@ -839,6 +844,25 @@ export default function PublicSite({
                         value={regPhone}
                         onChange={(e) => setRegPhone(e.target.value.replace(/[^0-9+]/g, ""))}
                         placeholder="08xxxxxxxxxx"
+                      />
+                    </label>
+                    <label>
+                      Alamat domisili
+                      <textarea
+                        rows={2}
+                        value={regAddress}
+                        onChange={(e) => setRegAddress(e.target.value)}
+                        placeholder="Alamat lengkap tempat tinggal"
+                      />
+                    </label>
+                    <label>
+                      Kontak darurat (opsional)
+                      <input
+                        type="tel"
+                        pattern="[0-9+]{8,16}"
+                        value={regEmergency}
+                        onChange={(e) => setRegEmergency(e.target.value.replace(/[^0-9+]/g, ""))}
+                        placeholder="08xxxxxxxxxx (nomor keluarga/kerabat)"
                       />
                     </label>
                   </>
