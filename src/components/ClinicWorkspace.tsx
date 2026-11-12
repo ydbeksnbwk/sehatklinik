@@ -214,6 +214,9 @@ export default function ClinicWorkspace({
   const [modalShowPassword, setModalShowPassword] = useState(false);
   const [modalError, setModalError] = useState("");
   const [modalBusy, setModalBusy] = useState(false);
+  const [profilFieldErrors, setProfilFieldErrors] = useState<
+    Record<string, string>
+  >({});
   const [subFilter, setSubFilter] = useState("");
   const [doctorPhoto, setDoctorPhoto] = useState("");
   const [doctorPhotoError, setDoctorPhotoError] = useState("");
@@ -3287,7 +3290,10 @@ export default function ClinicWorkspace({
               </div>
               <button
                 className="primary"
-                onClick={() => setEditingProfile(true)}
+                onClick={() => {
+                  setProfilFieldErrors({});
+                  setEditingProfile(true);
+                }}
               >
                 <Icon name="users" size={17} />
                 Edit Profil
@@ -3739,6 +3745,7 @@ export default function ClinicWorkspace({
                   const updatedAddress = get("address");
                   const updatedPhone = get("phone");
                   const updatedEmergency = get("emergency");
+                  setProfilFieldErrors({});
 
                   setBusy(true);
                   try {
@@ -3748,6 +3755,7 @@ export default function ClinicWorkspace({
                       kontakDarurat: updatedEmergency,
                     });
                     if (res.error) {
+                      setProfilFieldErrors(res.error.fields || {});
                       throw new Error(
                         res.error.message ||
                           "Gagal memperbarui profil di database."
@@ -3836,12 +3844,18 @@ export default function ClinicWorkspace({
                 }
               }}
             >
-              <Field label="Nama">
+              <Field
+                label={
+                  role === "Admin"
+                    ? "Nama"
+                    : "Nama (hanya-baca — hubungi petugas untuk koreksi)"
+                }
+              >
                 <input
                   name="name"
                   required
                   disabled={role !== "Admin"}
-                  title="Nama hanya dapat diubah oleh petugas/admin"
+                  title="Hanya-baca — hubungi petugas untuk koreksi"
                   defaultValue={
                     role === "Admin"
                       ? clinic.name
@@ -3859,22 +3873,26 @@ export default function ClinicWorkspace({
                 </Field>
               ) : (
                 <div className="ws-form-grid">
-                  <Field label="Tanggal lahir">
+                  <Field
+                    label="Tanggal lahir (hanya-baca — hubungi petugas untuk koreksi)"
+                  >
                     <input
                       name="birth"
                       disabled
-                      title="Tanggal lahir hanya-baca"
+                      title="Hanya-baca — hubungi petugas untuk koreksi"
                       type="date"
                       defaultValue={
                         currentUser?.tanggalLahir || patient.birth
                       }
                     />
                   </Field>
-                  <Field label="Jenis kelamin">
+                  <Field
+                    label="Jenis kelamin (hanya-baca — hubungi petugas untuk koreksi)"
+                  >
                     <select
                       name="gender"
                       disabled
-                      title="Jenis kelamin hanya-baca"
+                      title="Hanya-baca — hubungi petugas untuk koreksi"
                       defaultValue={
                         currentUser?.jenisKelamin || patient.gender
                       }
@@ -3886,11 +3904,11 @@ export default function ClinicWorkspace({
                 </div>
               )}
               {role === "Pasien" && (
-                <Field label="NIK (Nomor Induk Kependudukan)">
+                <Field label="NIK (hanya-baca — hubungi petugas untuk koreksi)">
                   <input
                     name="nik"
                     disabled
-                    title="NIK hanya-baca"
+                    title="Hanya-baca — hubungi petugas untuk koreksi"
                     maxLength={16}
                     defaultValue={currentUser?.nik || patient.nik || ""}
                   />
@@ -5116,7 +5134,15 @@ export default function ClinicWorkspace({
                   </Field>
                 )}
                 {showError}
-                <div className="form-actions">
+              {Object.keys(profilFieldErrors).length > 0 && (
+                <div className="ws-error" role="alert">
+                  <Icon name="help" size={18} />
+                  {Object.entries(profilFieldErrors)
+                    .map(([k, v]) => `${k}: ${v}`)
+                    .join(" — ")}
+                </div>
+              )}
+              <div className="form-actions">
                   <button
                     className="secondary"
                     type="button"

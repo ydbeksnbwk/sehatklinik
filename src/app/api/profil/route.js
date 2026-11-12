@@ -69,10 +69,23 @@ export async function PATCH(request) {
       const b = await request.json().catch(() => ({}));
       const parsed = skemaProfilPasien.safeParse(b);
       if (!parsed.success) {
+        // Galat per field: path [] berarti field asing (nama, nik, role, dll.)
+        const fields = {};
+        for (const e of parsed.error.issues) {
+          const key = String(e.path[0] ?? "profil");
+          fields[key] = fields[key] ? `${fields[key]}; ${e.message}` : e.message;
+        }
+        const asing = Object.keys(
+          b && typeof b === "object" ? b : {}
+        ).filter((k) => !["alamat", "telepon", "kontakDarurat"].includes(k));
+        if (asing.length > 0) {
+          fields.hanyaBaca = `Field hanya-baca tidak dapat diubah: ${asing.join(", ")} (hubungi petugas untuk koreksi)`;
+        }
         throw new HttpError(
           400,
           "Pasien hanya dapat mengubah alamat, telepon, dan kontak darurat",
-          "VALIDATION"
+          "VALIDATION",
+          fields
         );
       }
 
