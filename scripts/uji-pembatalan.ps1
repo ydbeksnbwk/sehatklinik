@@ -36,8 +36,7 @@ function Kirim([string]$Method, [string]$Path, $Body, [string]$Token) {
         return @{ Status = $status; Body = $text }
     }
 }
-
-$token = Login "ani.wulandari@gmail.com" "Password123!"
+$token = Login $env:UJI_EMAIL $env:UJI_PASSWORD
 if (-not $token) { Write-Output "LOGIN GAGAL"; if (-not $server.HasExited) { Stop-Process -Id $server.Id -Force }; exit 1 }
 Write-Output "[1] LOGIN PASIEN OK"
 
