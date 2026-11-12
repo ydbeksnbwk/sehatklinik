@@ -6,6 +6,30 @@ import { z } from "zod";
 const REGEX_NIK = /^[0-9]{16}$/;
 const REGEX_TELEPON = /^\+?[0-9]{8,15}$/;
 
+// Profil pasien: hanya alamat, telepon, kontak darurat yang boleh diubah.
+// .strict() menolak field lain (nama, NIK, tanggal lahir, jenis kelamin = hanya-baca).
+export const skemaProfilPasien = z
+  .object({
+    alamat: z
+      .string()
+      .trim()
+      .max(500, "Alamat maksimal 500 karakter")
+      .optional()
+      .or(z.literal("")),
+    telepon: z
+      .string()
+      .regex(REGEX_TELEPON, "Telepon 8–15 digit, boleh diawali +")
+      .optional()
+      .or(z.literal("")),
+    kontakDarurat: z
+      .string()
+      .regex(REGEX_TELEPON, "Kontak darurat 8–15 digit, boleh diawali +")
+      .max(100, "Kontak darurat maksimal 100 karakter")
+      .optional()
+      .or(z.literal("")),
+  })
+  .strict();
+
 export const skemaTambahPasien = z.object({
   nama: z
     .string({ required_error: "Nama wajib diisi" })
