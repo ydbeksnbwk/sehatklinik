@@ -2,6 +2,7 @@
 // Skema Zod untuk endpoint autentikasi — pesan bahasa Indonesia
 
 import { z } from "zod";
+import { hariIni, tanggalValid } from "@/lib/tanggal";
 
 const REGEX_NIK = /^[0-9]{16}$/;
 const REGEX_TELEPON = /^\+?[0-9]{8,15}$/;
@@ -35,7 +36,12 @@ export const skemaRegistrasi = z.object({
     .regex(REGEX_NIK, "NIK harus tepat 16 digit angka"),
   tanggalLahir: z
     .string({ required_error: "Tanggal lahir wajib diisi" })
-    .regex(REGEX_TANGGAL, "Format tanggal lahir harus YYYY-MM-DD"),
+    .regex(REGEX_TANGGAL, "Format tanggal lahir harus YYYY-MM-DD")
+    .refine(tanggalValid, "Tanggal lahir bukan tanggal kalender yang valid")
+    .refine(
+      (t) => t <= hariIni(),
+      "Tanggal lahir tidak boleh di masa depan"
+    ),
   jenisKelamin: z.enum(["L", "P"], {
     errorMap: () => ({ message: "Jenis kelamin harus L atau P" }),
   }),

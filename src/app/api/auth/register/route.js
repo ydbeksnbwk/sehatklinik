@@ -7,7 +7,6 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { notifikasi, pasien, profiles } from "@/db/schema";
 import { handleError, HttpError } from "@/lib/auth";
-import { hariIni } from "@/lib/tanggal";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { skemaRegistrasi } from "@/lib/validasi/auth";
 
@@ -52,15 +51,7 @@ export async function POST(request) {
       kontakDarurat,
     } = parsed.data;
 
-    // 2. Validasi tanggal lahir logis
-    if (tanggalLahir < "1900-01-01" || tanggalLahir > hariIni()) {
-      return galat(
-        "VALIDATION_ERROR",
-        "Tanggal lahir tidak valid",
-        { tanggalLahir: "Tanggal lahir tidak valid" },
-        400
-      );
-    }
+    // 2. Validasi tanggal lahir (kalender valid, bukan masa depan) sudah di skema Zod
 
     // 3. Cek apakah NIK sudah terdaftar di database
     const [dupNik] = await db
@@ -164,6 +155,18 @@ export async function POST(request) {
         .returning({ id: pasien.id, noRekamMedis: pasien.noRekamMedis });
 
       p = baru;
+    } else {
+      await db
+        .update(pasien)
+        .set({
+          alamat: alamat || null,
+          kontakDarurat: kontakDarurat || null,
+          telepon: telepon || null,
+          nik: nik || null,
+          tanggalLahir: tanggalLahir || null,
+          jenisKelamin: jenisKelamin || null,
+        })
+        .where(eq(pasien.id, p.id));
     }
 
     // 6. Simpan notifikasi selamat datang ke tabel notifikasi

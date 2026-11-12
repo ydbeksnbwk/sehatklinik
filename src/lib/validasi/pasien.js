@@ -2,6 +2,7 @@
 // Skema Zod untuk endpoint pasien — pesan bahasa Indonesia
 
 import { z } from "zod";
+import { tanggalValid } from "@/lib/tanggal";
 
 const REGEX_NIK = /^[0-9]{16}$/;
 const REGEX_TELEPON = /^\+?[0-9]{8,15}$/;
@@ -38,7 +39,8 @@ export const skemaTambahPasien = z.object({
     .max(150, "Nama maksimal 150 karakter"),
   tanggalLahir: z
     .string({ required_error: "Tanggal lahir wajib diisi" })
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal lahir harus YYYY-MM-DD"),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal lahir harus YYYY-MM-DD")
+    .refine(tanggalValid, "Tanggal lahir bukan tanggal kalender yang valid"),
   jenisKelamin: z.enum(["L", "P"], {
     errorMap: () => ({ message: "Jenis kelamin harus L atau P" }),
   }),
