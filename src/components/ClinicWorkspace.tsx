@@ -33,11 +33,28 @@ import {
   type Schedule,
   type Examination,
 } from "../clinic-data"
+import {
+  getTodayFormatted,
+  getTodayDateOnly,
+  getTodayISODate,
+  formatDateIndonesian,
+} from "@/lib/date"
 
 type IconType = ComponentType<{
   name: string
   size?: number
 }>
+
+const getErrorMessage = (err: any): string => {
+  if (!err) return ""
+  if (typeof err === "string") return err
+  if (err.fields && typeof err.fields === "object") {
+    const list = Object.values(err.fields).flat().filter(Boolean)
+    if (list.length > 0) return list.join(", ")
+  }
+  if (typeof err.message === "string") return err.message
+  return "Terjadi kesalahan saat pendaftaran. Silakan coba lagi."
+}
 const menus: Record<Exclude<Role, "Publik">, [string, string][]> = {
   Admin: [
     ["Dashboard", "grid"],
@@ -205,10 +222,12 @@ export default function ClinicWorkspace({
   const [doctorPhotoError, setDoctorPhotoError] = useState("")
   const [reportAllDates, setReportAllDates] = useState(true)
   const [reportSortOrder, setReportSortOrder] = useState<"desc" | "asc">("desc")
+  const [todayFormatted, setTodayFormatted] = useState("")
   const lastAutoOpenedVisitId = useRef<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
+    setTodayFormatted(getTodayFormatted())
   }, [])
 
   useEffect(() => {
@@ -224,14 +243,22 @@ export default function ClinicWorkspace({
     mounted && isStaffRole && (!currentUser || currentUser.role !== initialRole)
 
   useEffect(() => {
-    const storedRole =
+    const userRole =
       currentUser?.role &&
       ["Pasien", "Petugas", "Dokter", "Admin"].includes(currentUser.role)
         ? (currentUser.role as Role)
         : null
-    const resolvedRole: Role =
-      initialRole ||
-      (role !== "Publik" ? role : storedRole || "Pasien")
+
+    let resolvedRole: Role = role
+    if (initialRole && initialRole !== "Publik") {
+      resolvedRole = initialRole
+    } else if (userRole) {
+      resolvedRole = userRole
+    } else if (initialRole) {
+      resolvedRole = initialRole
+    } else {
+      resolvedRole = role !== "Publik" ? role : "Publik"
+    }
 
     if (role !== resolvedRole) {
       setRole(resolvedRole)
@@ -397,11 +424,22 @@ export default function ClinicWorkspace({
     account: true,
   }
   const patient =
+    (currentUser?.role === "Pasien" && currentUser.name
+      ? patients.find((p) => p.name.toLowerCase() === currentUser.name.toLowerCase()) || {
+          ...defaultPatientFallback,
+          name: currentUser.name,
+        }
+      : null) ||
     patients.find((p) => p.id === "RM-00128") ||
     patients[0] ||
     defaultPatientFallback
-  const doctorName = (id: string) =>
-    doctors.find((d) => d.id === id)?.name || "Dokter"
+  const doctorName = (id: string) => {
+    if (!id) return role === "Dokter" ? (activeDoctor?.name || currentUser?.name || "dr. Reyhan Adhitama") : "Dokter"
+    const found = doctors.find((d) => d.id === id || (id === "d1" && d.name.toLowerCase().includes("reyhan")))
+    if (found) return found.name
+    if (role === "Dokter") return activeDoctor?.name || currentUser?.name || "dr. Reyhan Adhitama"
+    return "Dokter"
+  }
   const serviceName = (id: string) =>
     services.find((s) => s.id === id)?.name || "Layanan"
   const patientName = (id: string) =>
@@ -489,7 +527,7 @@ export default function ClinicWorkspace({
       )) ||
     doctors.find((d) => d.name.toLowerCase().includes("reyhan")) ||
     doctors[0]
-  const activeDoctorId = activeDoctor?.id || "d1"
+  const activeDoctorId = activeDoctor?.id || "b9cd5971-4e73-4f8b-b0dd-0bc2ba064092"
   const formatQueue = (v: Visit) =>
     queueLabel(
       v,
@@ -581,10 +619,22 @@ export default function ClinicWorkspace({
     setVisits((previous) =>
       previous.map((v) => (v.id === id ? { ...v, ...changes } : v)),
     )
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const flash = sessionStorage.getItem("sehatklinik_flash")
+      if (flash) {
+        sessionStorage.removeItem("sehatklinik_flash")
+        setToast(flash)
+        const t = setTimeout(() => setToast(""), 4500)
+        return () => clearTimeout(t)
+      }
+    }
+  }, [setToast])
+
   const showError = error && (
     <div className="ws-error" role="alert">
       <Icon name="help" size={18} />
-      {error}
+      {getErrorMessage(error)}
     </div>
   )
   const showEditor = (type: string, id?: string) => {
@@ -859,7 +909,7 @@ export default function ClinicWorkspace({
               ? "Seluruh tanggal dan filter terpilih"
               : `Periode ${range.from || "awal"} s/d ${range.to || "akhir"}`
             : "Seluruh periode kunjungan"
-          : "Senin, 26 Oktober 2026",
+          : (todayFormatted || getTodayFormatted()),
       color: "blue",
     },
     {
@@ -940,9 +990,10 @@ export default function ClinicWorkspace({
                 onClick={() => {
                   setReportAllDates(false)
                   if (!range.from || !range.to) {
-                    const todayStr = new Date().toISOString().slice(0, 10)
+                    const todayStr = getTodayISODate()
+                    const firstDayOfMonth = `${todayStr.slice(0, 7)}-01`
                     setRange({
-                      from: range.from || "2026-10-01",
+                      from: range.from || firstDayOfMonth,
                       to: range.to || todayStr,
                     })
                   }
@@ -1134,7 +1185,7 @@ export default function ClinicWorkspace({
                       </td>
                     )}
                     <td>
-                      <b>{doctorName(v.doctor)}</b>
+                      <b>{role === "Dokter" ? (activeDoctor?.name || doctorName(v.doctor)) : doctorName(v.doctor)}</b>
                       <small>{serviceName(v.service)}</small>
                     </td>
                     <td>
@@ -1232,7 +1283,7 @@ export default function ClinicWorkspace({
         <div className="panel-heading">
           <div>
             <h3>Jadwal & ketersediaan</h3>
-            <p>{dateLabel(targetDate)} · Kuota per sesi</p>
+            <p suppressHydrationWarning>{formatDateIndonesian(targetDate, true)} · Kuota per sesi</p>
           </div>
           <Icon name="calendar" size={19} />
         </div>
@@ -1961,10 +2012,9 @@ export default function ClinicWorkspace({
       </section>
       <div>
         {schedulePanel}
-        <div className="notice">
+        <div className="notice" suppressHydrationWarning>
           <Icon name="help" size={20} />
-          Simulasi menggunakan tanggal 26 Oktober 2026. Data akan kembali ke
-          awal setelah halaman dimuat ulang.
+          Jadwal praktik dan ketersediaan kuota diperbarui secara real-time untuk hari ini ({todayFormatted || getTodayFormatted()}).
         </div>
       </div>
     </div>
@@ -2478,6 +2528,12 @@ export default function ClinicWorkspace({
                         src={d.photoUrl}
                         alt={d.name}
                         className="ws-doctor-photo"
+                        onError={(e) => {
+                          const target = e.currentTarget
+                          target.onerror = null
+                          const isFemale = /nadira|annisa|alea|siti|putri|sarah|maya/i.test(d.name)
+                          target.src = isFemale ? "/images/avatar-female.jpg" : "/images/avatar-male.jpg"
+                        }}
                       />
                     </div>
                   ) : (
@@ -3231,7 +3287,7 @@ export default function ClinicWorkspace({
                     <td>
                       {j.error ? (
                         <span style={{ color: "#dc2626", fontSize: "10.5px" }}>
-                          {j.error}
+                          {getErrorMessage(j.error)}
                         </span>
                       ) : (
                         <span style={{ color: "#16a34a", fontSize: "10.5px" }}>
@@ -3791,12 +3847,12 @@ export default function ClinicWorkspace({
                 {page === "Dashboard"
                   ? `Selamat pagi, ${
                       role === "Dokter"
-                        ? (currentUser?.name || activeDoctor?.name || "dr. Reyhan")
+                        ? (currentUser?.name || activeDoctor?.name || "dr. Reyhan Adhitama")
                         : role === "Pasien"
-                          ? patient.name.split(" ")[0]
+                          ? (currentUser?.name || patient.name).split(" ")[0]
                           : role === "Petugas"
-                            ? "Dina"
-                            : "Rina"
+                            ? (currentUser?.name || "Dina")
+                            : (currentUser?.name || "Rina")
                     }.`
                   : page}
               </h1>
@@ -3813,9 +3869,9 @@ export default function ClinicWorkspace({
               </p>
             </div>
             <div className="heading-actions">
-              <span className="secondary date-button">
+              <span className="secondary date-button" suppressHydrationWarning>
                 <Icon name="calendar" size={16} />
-                Senin, 26 Oktober 2026
+                {todayFormatted || getTodayFormatted()}
               </span>
               {page === "Dashboard" &&
                 (role === "Petugas" || role === "Pasien") && (
@@ -3897,7 +3953,7 @@ export default function ClinicWorkspace({
               <div>
                 <span>Dokter & layanan</span>
                 <b>
-                  {doctorName(detail.doctor)}
+                  {role === "Dokter" ? (activeDoctor?.name || doctorName(detail.doctor)) : doctorName(detail.doctor)}
                   <small>{serviceName(detail.service)}</small>
                 </b>
               </div>

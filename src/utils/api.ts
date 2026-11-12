@@ -211,3 +211,27 @@ export async function apiTambahPasien(payload: {
     body: JSON.stringify(payload),
   });
 }
+
+export async function apiGetPushKunci() {
+  return fetchApi<{ vapidPublicKey: string }>("/api/push/kunci");
+}
+
+export async function apiSimpanPushSubscription(payload: {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  userAgent?: string;
+}) {
+  return fetchApi<{ id: string; aktif: boolean; createdAt: string }>("/api/push/langganan", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiHapusPushSubscription(payload: { endpoint: string }) {
+  return fetchApi<{ success: boolean }>("/api/push/langganan", {
+    method: "DELETE",
+    body: JSON.stringify(payload),
+  });
+}
+

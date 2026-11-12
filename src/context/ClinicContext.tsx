@@ -20,6 +20,9 @@ import {
   apiTransisiKunjungan,
   apiSimpanPemeriksaan,
   apiLogout,
+  apiGetPushKunci,
+  apiSimpanPushSubscription,
+  apiHapusPushSubscription,
 } from "@/utils/api"
 import {
   DEMO_DATE,
@@ -260,11 +263,32 @@ const defaultUsers: ClinicUser[] = [
     password: "password123",
   },
   {
-    name: "dr. Nadia Putri",
-    email: "nadia@sehatklinik.id",
+    name: "drg. Nadira Kirana",
+    email: "nadira.kirana@gmail.com",
     role: "Dokter",
     active: true,
-    password: "password123",
+    password: "Password123!",
+  },
+  {
+    name: "dr. Raka Mahendra, Sp.A",
+    email: "raka.mahendra@gmail.com",
+    role: "Dokter",
+    active: true,
+    password: "Password123!",
+  },
+  {
+    name: "dr. Annisa Fadhilla, Sp.OG",
+    email: "annisa.fadhilla@gmail.com",
+    role: "Dokter",
+    active: true,
+    password: "Password123!",
+  },
+  {
+    name: "dr. Alea Prameswari, Sp.GK",
+    email: "alea.prameswari@gmail.com",
+    role: "Dokter",
+    active: true,
+    password: "Password123!",
   },
 ]
 
@@ -321,7 +345,10 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   const [filter, setFilter] = useState("")
   const [doctorFilter, setDoctorFilter] = useState("")
   const [serviceFilter, setServiceFilter] = useState("")
-  const [range, setRange] = useState({ from: "2026-10-01", to: DEMO_DATE })
+  const [range, setRange] = useState({
+    from: `${DEMO_DATE.slice(0, 7)}-01`,
+    to: DEMO_DATE,
+  })
   const [pagination, setPagination] = useState(1)
   const [selected, setSelected] = useState<string | null>(null)
   const [editor, setEditor] = useState<{ type: string; id?: string } | null>(null)
@@ -345,13 +372,9 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   const [editingProfile, setEditingProfile] = useState(false)
   const [initialized, setInitialized] = useState(false)
 
-  // Check browser Web Push & Service Worker support and Notification permission on mount
+  // Check browser Notification permission on mount
   useEffect(() => {
-    const supported =
-      typeof window !== "undefined" &&
-      "Notification" in window &&
-      "serviceWorker" in navigator &&
-      "PushManager" in window
+    const supported = typeof window !== "undefined" && "Notification" in window
     setWebPushPermission(supported ? Notification.permission : "unsupported")
   }, [])
 
@@ -476,6 +499,20 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
             }
             setCurrentUser(authUser)
             setRole(roleCap)
+            if (typeof window !== "undefined" && !sessionStorage.getItem("sehatklinik_welcome_sent")) {
+              sessionStorage.setItem("sehatklinik_welcome_sent", "1")
+              const welcomeTitle = "Selamat Datang di SehatKlinik"
+              const welcomeMessage = `Halo ${authUser.name}, akun Anda siap digunakan untuk pendaftaran antrean dan pemantauan kunjungan.`
+              addNotification(
+                {
+                  targetRole: roleCap,
+                  type: "INFO",
+                  title: welcomeTitle,
+                  message: welcomeMessage,
+                },
+                false
+              )
+            }
           }
         } catch {}
 
@@ -681,6 +718,53 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     return () => document.removeEventListener("keydown", handleKey)
   }, [selected, editor, notificationDrawerOpen])
 
+  // Pengingat Kunjungan Otomatis: jika ada kunjungan aktif pada tanggal hari ini
+  useEffect(() => {
+    if (!initialized || visits.length === 0) return
+    const todayStr = DEMO_DATE
+    const todayVisitsList = visits.filter(
+      (v) =>
+        v.date === todayStr &&
+        v.status !== "Dibatalkan" &&
+        v.status !== "Selesai"
+    )
+
+    if (todayVisitsList.length > 0) {
+      setNotifications((prev) => {
+        let updated = [...prev]
+        let hasNew = false
+        todayVisitsList.forEach((v) => {
+          const reminderId = `reminder-${v.id}-${todayStr}`
+          const exists = updated.some(
+            (n) =>
+              n.id === reminderId ||
+              (n.visitId === v.id && n.type === "PENGINGAT_KUNJUNGAN")
+          )
+          if (!exists) {
+            const dName = doctorName(v.doctor)
+            const qLabel = queueLabel(v, doctors.findIndex((d) => d.id === v.doctor))
+            const newReminder: NotificationItem = {
+              id: reminderId,
+              targetRole: "Pasien",
+              targetUserId: v.patient,
+              type: "PENGINGAT_KUNJUNGAN",
+              title: "Pengingat Kunjungan",
+              message: `Pengingat: Anda memiliki jadwal kunjungan hari ini bersama ${dName} (Antrean: ${qLabel}).`,
+              timestamp: new Date().toISOString(),
+              isRead: false,
+              visitId: v.id,
+              queueNumber: qLabel,
+              actionUrl: "detail",
+            }
+            updated = [newReminder, ...updated]
+            hasNew = true
+          }
+        })
+        return hasNew ? updated : prev
+      })
+    }
+  }, [initialized, visits, doctors])
+
   const notify = (message: string) => {
     setToast(message)
     window.setTimeout(() => setToast(""), 4500)
@@ -711,7 +795,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           : notif.targetRole === "Petugas"
             ? "Petugas Loket"
             : notif.targetRole === "Dokter"
-              ? "dr. Nadia Putri"
+              ? "dr. Reyhan Adhitama"
               : "Admin / Sistem",
       recipientRole: notif.targetRole === "Semua" ? "Pasien" : notif.targetRole,
       eventType: notif.type,
@@ -768,30 +852,75 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     notify("Seluruh riwayat notifikasi telah dibersihkan.")
   }
 
+  function urlBase64ToUint8Array(base64String: string) {
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4)
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/")
+    const rawData = window.atob(base64)
+    const outputArray = new Uint8Array(rawData.length)
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i)
+    }
+    return outputArray
+  }
+
   const requestWebPushPermission = async () => {
-    const supported =
-      typeof window !== "undefined" &&
-      "Notification" in window &&
-      "serviceWorker" in navigator &&
-      "PushManager" in window
-    if (!supported) {
+    if (typeof window === "undefined" || !("Notification" in window)) {
       setWebPushPermission("unsupported")
-      notify("Browser ini tidak mendukung Web Push Notification.")
+      notify("Browser ini tidak mendukung Web Notification.")
       return
     }
     try {
       const permission = await Notification.requestPermission()
       setWebPushPermission(permission)
       if (permission === "granted") {
-        notify("Izin Web Push berhasil diaktifkan! Notifikasi akan dikirim secara real-time.")
-        addNotification({
-          targetRole: "Semua",
-          type: "INFO",
-          title: "Web Push Berhasil Diaktifkan",
-          message: "Anda akan menerima pemberitahuan langsung saat giliran antrean dipanggil atau pendaftaran diverifikasi.",
-        })
+        if ("serviceWorker" in navigator && "PushManager" in window) {
+          try {
+            const reg = await navigator.serviceWorker.register("/sw.js")
+            await navigator.serviceWorker.ready
+
+            const keyRes = await apiGetPushKunci().catch(() => null)
+            const vapidKey =
+              keyRes?.data?.vapidPublicKey || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+
+            if (vapidKey) {
+              let sub = await reg.pushManager.getSubscription()
+              if (!sub) {
+                sub = await reg.pushManager.subscribe({
+                  userVisibleOnly: true,
+                  applicationServerKey: urlBase64ToUint8Array(vapidKey),
+                })
+              }
+
+              const subJSON = sub.toJSON()
+              if (sub.endpoint && subJSON.keys?.p256dh && subJSON.keys?.auth) {
+                await apiSimpanPushSubscription({
+                  endpoint: sub.endpoint,
+                  p256dh: subJSON.keys.p256dh,
+                  auth: subJSON.keys.auth,
+                  userAgent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+                })
+              }
+            }
+          } catch (subErr) {
+            console.warn("Gagal meregistrasi Web Push Subscription ke server:", subErr)
+          }
+        }
+
+        notify("Notifikasi Web Push browser berhasil diaktifkan!")
+        const welcomeTitle = "Selamat Datang di SehatKlinik"
+        const userName = currentUser?.name || "Pengguna"
+        const welcomeMessage = `Halo ${userName}, akun Anda siap digunakan untuk pendaftaran antrean dan pemantauan kunjungan.`
+        addNotification(
+          {
+            targetRole: "Semua",
+            type: "INFO",
+            title: welcomeTitle,
+            message: welcomeMessage,
+          },
+          true
+        )
       } else if (permission === "denied") {
-        notify("Izin notifikasi ditolak oleh browser. Anda tetap dapat melihat notifikasi di dalam aplikasi.")
+        notify("Izin notifikasi ditolak. Anda dapat mengaktifkannya di pengaturan izin situs browser.")
       }
     } catch {
       notify("Gagal meminta izin notifikasi browser.")
@@ -806,7 +935,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         targetUserId: patient.id,
         type: "ANTREAN_DIPANGGIL",
         title: "Giliran Anda Telah Tiba!",
-        message: `Nomor antrean 01-001 (dr. Nadia Putri - Poli Umum) sekarang dipanggil. Silakan menuju Ruang Periksa 1.`,
+        message: `Nomor antrean 01-001 (dr. Reyhan Adhitama - Poli Umum) sekarang dipanggil. Silakan menuju Ruang Periksa 1.`,
         visitId: "KJ-20261026-001",
         queueNumber: "01-001",
         actionUrl: "detail",
@@ -1022,8 +1151,8 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         targetRole: "Pasien",
         targetUserId: v.patient,
         type: "ANTREAN_DIPANGGIL",
-        title: "Giliran Anda Telah Dipanggil!",
-        message: `Nomor antrean ${qLabel} (${docName}) dipanggil ke ruang periksa. Silakan segera masuk.`,
+        title: "Pasien Dipanggil!",
+        message: `Nomor antrean Anda (${qLabel}) telah dipanggil ke Ruang Periksa bersama ${docName}. Silakan segera masuk.`,
         visitId: v.id,
         queueNumber: qLabel,
         actionUrl: "detail",
@@ -1060,6 +1189,16 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         updateVisit(v.id, { queue: "Sedang Diperiksa" })
         notify(`Pemeriksaan untuk antrean ${qLabel} dimulai.`)
         await syncVisitTransition(v.id, { target: "start" }, "start")
+        addNotification({
+          targetRole: "Pasien",
+          targetUserId: v.patient,
+          type: "ANTREAN_DIPANGGIL",
+          title: "Sedang Diperiksa",
+          message: `Nomor antrean ${qLabel} sedang diperiksa oleh ${docName} di Ruang Periksa.`,
+          visitId: v.id,
+          queueNumber: qLabel,
+          actionUrl: "detail",
+        })
       } else if (target === "finish" && role === "Dokter" && v.queue === "Sedang Diperiksa") {
         updateVisit(v.id, { status: "Selesai", queue: "Selesai" })
         notify("Kunjungan selesai. Ringkasan tersedia pada riwayat pasien.")
@@ -1070,7 +1209,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           targetUserId: v.patient,
           type: "KUNJUNGAN_SELESAI",
           title: "Pemeriksaan Selesai",
-          message: `Kunjungan ${v.id} bersama ${docName} telah selesai. Ringkasan pemeriksaan tersedia di riwayat Anda.`,
+          message: `Pemeriksaan selesai. Rekam medis dan resep obat dapat dilihat pada riwayat kunjungan.`,
           visitId: v.id,
           queueNumber: qLabel,
           actionUrl: "detail",
@@ -1218,13 +1357,13 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       const sName = serviceName(savedVisit.service)
       const pName = patientName(savedVisit.patient)
 
-      // Notifikasi ke Pasien (SRS 11: Pendaftaran berhasil)
+      // Notifikasi ke Pasien (Pendaftaran Berhasil)
       addNotification({
         targetRole: "Pasien",
         targetUserId: savedVisit.patient,
         type: "KUNJUNGAN_TERDAFTAR",
-        title: "Pendaftaran Kunjungan Berhasil!",
-        message: `Kunjungan di ${sName} bersama ${dName} pada ${savedVisit.date} telah terdaftar. Nomor antrean Anda: ${qLabel}.`,
+        title: "Pendaftaran Berhasil",
+        message: `Pendaftaran kunjungan ke ${dName} berhasil dikonfirmasi. Nomor antrean Anda: ${qLabel}.`,
         visitId: savedVisit.id,
         queueNumber: qLabel,
         actionUrl: "detail",
@@ -1411,7 +1550,19 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           setRole(userRole);
           if (typeof window !== "undefined") {
             localStorage.setItem("sehatklinik_current_user", JSON.stringify(authUser));
+            sessionStorage.setItem("sehatklinik_welcome_sent", "1");
           }
+          const welcomeTitle = "Selamat Datang di SehatKlinik";
+          const welcomeMessage = `Halo ${authUser.name}, akun Anda siap digunakan untuk pendaftaran antrean dan pemantauan kunjungan.`;
+          addNotification(
+            {
+              targetRole: userRole,
+              type: "INFO",
+              title: welcomeTitle,
+              message: welcomeMessage,
+            },
+            false
+          );
           return {
             success: true,
             message: `Selamat datang, ${authUser.name}!`,
@@ -1439,7 +1590,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       } else if (cleanEmail.includes("petugas")) {
         staff = { name: "Petugas Loket", email: cleanEmail, role: "Petugas", active: true }
       } else if (cleanEmail.includes("dokter")) {
-        staff = { name: "dr. Dokter Jaga", email: cleanEmail, role: "Dokter", active: true }
+        staff = { name: "dr. Reyhan Adhitama", email: cleanEmail, role: "Dokter", active: true }
       }
     }
     if (staff) {
@@ -1468,8 +1619,20 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     }
 
     // Default for patients (no admin registration required)
+    const matchedPatient = patients.find(
+      (p) => p.phone === cleanEmail || p.name.toLowerCase() === cleanEmail.toLowerCase()
+    )
+    const dynamicPatientName =
+      matchedPatient?.name ||
+      (cleanEmail.includes("@")
+        ? cleanEmail
+            .split("@")[0]
+            .replace(/[._-]/g, " ")
+            .replace(/\b\w/g, (c) => c.toUpperCase())
+        : "Pasien")
+
     const patientUser: ClinicUser = {
-      name: "Andi Pratama",
+      name: dynamicPatientName,
       email: cleanEmail,
       role: "Pasien",
       active: true,
@@ -1488,6 +1651,14 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
+      if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration("/sw.js").catch(() => null)
+        const sub = await reg?.pushManager?.getSubscription().catch(() => null)
+        if (sub?.endpoint) {
+          await apiHapusPushSubscription({ endpoint: sub.endpoint }).catch(() => null)
+          await sub.unsubscribe().catch(() => null)
+        }
+      }
       await apiLogout()
     } catch {}
     setCurrentUser(null)

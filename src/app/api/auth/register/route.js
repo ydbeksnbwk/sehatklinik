@@ -94,6 +94,10 @@ export async function POST(request) {
         jenis_kelamin: jenisKelamin,
         alamat: alamat || "",
         kontak_darurat: kontakDarurat || "",
+        role: "pasien",
+      },
+      app_metadata: {
+        role: "pasien",
       },
     });
 
@@ -126,6 +130,8 @@ export async function POST(request) {
         set: {
           nama,
           telepon: telepon || null,
+          role: "pasien",
+          statusAktif: true,
         },
       });
 

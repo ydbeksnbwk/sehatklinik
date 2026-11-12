@@ -5,6 +5,7 @@ import BrandArtwork from "./BrandArtwork"
 import CinematicArtwork from "./CinematicArtwork"
 import ClinicMap from "./ClinicMap"
 import { useClinic } from "../context/ClinicContext"
+import { formatDateIndonesian } from "@/lib/date"
 import {
   DEMO_DATE,
   dateLabel,
@@ -53,10 +54,29 @@ type Props = {
   }
 }
 
-const photo = (id: string, width = 700) =>
-  id.startsWith("/")
-    ? id
-    : `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${width}&q=85`
+export const getDoctorFallback = (name?: string) => {
+  const isFemale = /nadira|annisa|alea|siti|putri|sarah|maya/i.test(name || "")
+  return isFemale ? "/images/avatar-female.jpg" : "/images/avatar-male.jpg"
+}
+
+export const getErrorMessage = (err: any): string => {
+  if (!err) return ""
+  if (typeof err === "string") return err
+  if (err.fields && typeof err.fields === "object") {
+    const list = Object.values(err.fields).flat().filter(Boolean)
+    if (list.length > 0) return list.join(", ")
+  }
+  if (typeof err.message === "string") return err.message
+  return "Terjadi kesalahan saat pendaftaran. Silakan coba lagi."
+}
+
+const photo = (id?: string | null, width = 700) => {
+  if (!id) return ""
+  if (id.startsWith("http://") || id.startsWith("https://") || id.startsWith("/")) {
+    return id
+  }
+  return `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${width}&q=85`
+}
 
 export default function PublicSite({
   Icon,
@@ -78,16 +98,27 @@ export default function PublicSite({
   const [loginEmail, setLoginEmail] = useState("")
   const [loginPassword, setLoginPassword] = useState("")
   const [loginError, setLoginError] = useState("")
+  const [authSuccess, setAuthSuccess] = useState("")
   const [regName, setRegName] = useState("")
   const [regNik, setRegNik] = useState("")
   const [regBirth, setRegBirth] = useState("2000-01-01")
-  const [regGender, setRegGender] = useState("Laki-laki")
+  const [regGender, setRegGender] = useState("L")
   const [regPhone, setRegPhone] = useState("")
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false)
   const [doctorDetail, setDoctorDetail] = useState<Doctor | null>(null)
   const [serviceDetail, setServiceDetail] = useState<Service | null>(null)
   const [scheduleDate, setScheduleDate] = useState(DEMO_DATE)
   const [scheduleDoctor, setScheduleDoctor] = useState("")
+
+  useEffect(() => {
+    setLoginError("")
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search)
+      if (sp.get("registered") === "1") {
+        setAuthSuccess("Pendaftaran akun pasien berhasil. Silakan masuk menggunakan akun baru Anda.")
+      }
+    }
+  }, [page])
 
   useEffect(() => {
     if (!doctorDetail && !serviceDetail) return
@@ -104,10 +135,13 @@ export default function PublicSite({
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoginError("")
+    setAuthSuccess("")
     setIsSubmittingAuth(true)
 
     try {
       if (page === "Registrasi") {
+        const cleanPhone = regPhone.replace(/[^0-9+]/g, "")
+        const genderCode = regGender === "Perempuan" || regGender === "P" ? "P" : "L"
         const res = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -116,22 +150,29 @@ export default function PublicSite({
             password: loginPassword,
             nama: regName,
             nik: regNik,
-            telepon: regPhone,
+            telepon: cleanPhone,
             tanggalLahir: regBirth,
-            jenisKelamin: regGender,
+            jenisKelamin: genderCode,
           }),
         })
-        const json = await res.json()
+        const json = await res.json().catch(() => ({}))
         if (!res.ok || json.error) {
-          setLoginError(json.error || "Gagal melakukan registrasi.")
+          setLoginError(getErrorMessage(json.error || "Gagal melakukan registrasi."))
           setIsSubmittingAuth(false)
           return
+        }
+
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem(
+            "sehatklinik_flash",
+            "Pendaftaran akun pasien berhasil! Selamat datang di Klinik Sehat Sentosa."
+          )
         }
       }
 
       await executeLogin(loginEmail, loginPassword)
     } catch (err: any) {
-      setLoginError(err.message || "Terjadi kesalahan saat memproses akun.")
+      setLoginError(getErrorMessage(err))
     } finally {
       setIsSubmittingAuth(false)
     }
@@ -143,7 +184,15 @@ export default function PublicSite({
     setLoginError("")
     const res = await login(targetEmail, targetPass)
     if (!res.success) {
-      setLoginError(res.message)
+      if (page === "Registrasi") {
+        setAuthSuccess(
+          "Pendaftaran akun pasien berhasil! Silakan masuk menggunakan email dan password Anda."
+        )
+        setLoginPassword("")
+        go("Login")
+      } else {
+        setLoginError(getErrorMessage(res.message))
+      }
       return
     }
     const roleRoutes: Record<string, string> = {
@@ -152,8 +201,17 @@ export default function PublicSite({
       Dokter: "/dokter-dashboard",
       Pasien: "/pasien",
     }
-    const dest = roleRoutes[res.user?.role || "Pasien"] || "/pasien"
-    window.location.href = dest
+    const targetRole = res.user?.role || "Pasien"
+    let dest = roleRoutes[targetRole] || "/pasien"
+
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search)
+      const redirectParam = sp.get("redirect")
+      if (redirectParam && redirectParam.startsWith("/") && !redirectParam.startsWith("//")) {
+        dest = redirectParam
+      }
+      window.location.replace(dest)
+    }
   }
 
   const getServiceExtendedMeta = (srv: Service) => {
@@ -518,49 +576,51 @@ export default function PublicSite({
 
   const DoctorCards = () => (
     <div className="web-doctors">
-      {physicians.map((d) => (
-        <article className="web-doctor" key={d.id}>
-          <div className="web-doctor-photo">
-            {d.image ? (
+      {physicians.map((d) => {
+        const fallbackSrc = getDoctorFallback(d.name)
+        const imgSrc = d.image ? photo(d.image) : fallbackSrc
+        return (
+          <article className="web-doctor" key={d.id}>
+            <div className="web-doctor-photo">
               <img
-                src={photo(d.image)}
+                src={imgSrc}
                 alt={`${d.name}, ${d.specialty}`}
                 loading="lazy"
+                onError={(e) => {
+                  const target = e.currentTarget
+                  target.onerror = null
+                  target.src = fallbackSrc
+                }}
               />
-            ) : (
-              <div className="web-doctor-placeholder">
-                <Icon name="users" size={48} />
-                <b>{d.name}</b>
-              </div>
-            )}
-            <span>
-              {d.day ? "Jadwal tersedia" : "Hubungi klinik"}
-            </span>
-          </div>
-          <div className="web-doctor-info">
-            <span>{d.specialty}</span>
-            <h3>{d.name}</h3>
-
-            {/* Riwayat Pendidikan & Almamater */}
-            <div className="doctor-edu-preview">
-              <span className="doctor-almamater-pill">
-                <Icon name="education" size={14} />
-                {d.almamater}
-              </span>
-              <span className="doctor-exp-tag">
-                {d.experienceYears}+ Tahun Pengalaman Klinis · {d.sip}
+              <span>
+                {d.day ? "Jadwal tersedia" : "Hubungi klinik"}
               </span>
             </div>
+            <div className="web-doctor-info">
+              <span>{d.specialty}</span>
+              <h3>{d.name}</h3>
 
-            <p>
-              <Icon name="calendar" size={15} /> {d.day} <span>·</span> {d.time}
-            </p>
-            <button onClick={() => openDoctorDetail(d)}>
-              Profil & Pendidikan Dokter <Icon name="arrow" size={17} />
-            </button>
-          </div>
-        </article>
-      ))}
+              {/* Riwayat Pendidikan & Almamater */}
+              <div className="doctor-edu-preview">
+                <span className="doctor-almamater-pill">
+                  <Icon name="education" size={14} />
+                  {d.almamater}
+                </span>
+                <span className="doctor-exp-tag">
+                  {d.experienceYears}+ Tahun Pengalaman Klinis · {d.sip}
+                </span>
+              </div>
+
+              <p>
+                <Icon name="calendar" size={15} /> {d.day} <span>·</span> {d.time}
+              </p>
+              <button onClick={() => openDoctorDetail(d)}>
+                Profil & Pendidikan Dokter <Icon name="arrow" size={17} />
+              </button>
+            </div>
+          </article>
+        )
+      })}
     </div>
   )
 
@@ -679,10 +739,42 @@ export default function PublicSite({
                   : "Daftar sebagai pasien baru untuk kemudahan reservasi antrean dan riwayat medis."}
               </div>
               <form onSubmit={handleAuthSubmit}>
+                {authSuccess && (
+                  <div
+                    style={{
+                      background: "#ecfdf5",
+                      border: "1px solid #a7f3d0",
+                      borderRadius: "8px",
+                      padding: "10px 14px",
+                      color: "#065f46",
+                      fontSize: "12px",
+                      marginBottom: "16px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <Icon name="check" size={16} />
+                    <span>{getErrorMessage(authSuccess)}</span>
+                  </div>
+                )}
                 {loginError && (
-                  <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", padding: "10px 14px", color: "#b91c1c", fontSize: "12px", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div
+                    style={{
+                      background: "#fef2f2",
+                      border: "1px solid #fecaca",
+                      borderRadius: "8px",
+                      padding: "10px 14px",
+                      color: "#b91c1c",
+                      fontSize: "12px",
+                      marginBottom: "16px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
                     <Icon name="help" size={16} />
-                    <span>{loginError}</span>
+                    <span>{getErrorMessage(loginError)}</span>
                   </div>
                 )}
                 {page === "Registrasi" && (
@@ -726,8 +818,8 @@ export default function PublicSite({
                           value={regGender}
                           onChange={(e) => setRegGender(e.target.value)}
                         >
-                          <option value="Laki-laki">Laki-laki</option>
-                          <option value="Perempuan">Perempuan</option>
+                          <option value="L">Laki-laki</option>
+                          <option value="P">Perempuan</option>
                         </select>
                       </label>
                     </div>
@@ -736,10 +828,10 @@ export default function PublicSite({
                       <input
                         required
                         type="tel"
-                        pattern="[0-9+() -]{8,16}"
+                        pattern="[0-9+]{8,16}"
                         autoComplete="tel"
                         value={regPhone}
-                        onChange={(e) => setRegPhone(e.target.value)}
+                        onChange={(e) => setRegPhone(e.target.value.replace(/[^0-9+]/g, ""))}
                         placeholder="08xxxxxxxxxx"
                       />
                     </label>
@@ -796,7 +888,12 @@ export default function PublicSite({
               <p className="web-auth-switch">
                 {page === "Login" ? "Belum punya akun?" : "Sudah punya akun?"}{" "}
                 <button
-                  onClick={() => go(page === "Login" ? "Registrasi" : "Login")}
+                  type="button"
+                  onClick={() => {
+                    setLoginError("")
+                    setAuthSuccess("")
+                    go(page === "Login" ? "Registrasi" : "Login")
+                  }}
                 >
                   {page === "Login" ? "Daftar sekarang" : "Masuk di sini"}
                 </button>
@@ -1097,9 +1194,8 @@ export default function PublicSite({
                 </select>
               </label>
             </div>
-            <p className="web-schedule-caption">
-              {dateLabel(scheduleDate)} · Data simulasi, jadwal demo tersedia
-              setiap Senin
+            <p className="web-schedule-caption" suppressHydrationWarning>
+              {formatDateIndonesian(scheduleDate, true)} · Jadwal praktik dokter aktif
             </p>
             <div className="web-schedule-list">
               {schedules
