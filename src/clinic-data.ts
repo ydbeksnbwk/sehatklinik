@@ -96,6 +96,7 @@ export type Visit = {
   status: VisitStatus
   queue: QueueStatus
   number: number
+  ref?: string
   reason?: string
   examination?: Examination
 }

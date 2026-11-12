@@ -130,6 +130,7 @@ function konversiKunjungan(k: any): Visit {
     status: petaStatusKunjungan[k.statusKunjungan || k.status] || "Terdaftar",
     queue: petaStatusAntrean[k.statusAntrean || k.antrean?.statusAntrean] || "Menunggu",
     number: k.nomorAntrean || k.antrean?.nomorAntrean || 1,
+    ref: k.noReferensi || k.antrean?.noReferensi || undefined,
     reason: k.alasan || k.antrean?.alasan || undefined,
   }
 }

@@ -4411,7 +4411,9 @@ export default function ClinicWorkspace({
                   <span className="eyebrow">DETAIL KUNJUNGAN</span>
                   <h2 id="visit-title">{patientName(detail.patient)}</h2>
                   <p>
-                    {detail.patient} · {detail.id}
+                    {detail.ref
+                      ? `Ref. ${detail.ref}`
+                      : `${dateLabel(detail.date)} · ${session(detail.schedule)?.start ?? ""}`}
                   </p>
                 </div>
                 <button
