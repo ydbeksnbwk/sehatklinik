@@ -4205,13 +4205,13 @@ export default function ClinicWorkspace({
                 <Icon name="shield" size={22} />
               </span>
               <b>Akses sesuai peran</b>
-              <p>
-                {role === "Admin" || role === "Petugas"
-                  ? "Isi pemeriksaan dan tindakan medis tidak ditampilkan di ruang ini."
-                  : role === "Dokter"
+              {role !== "Pasien" && (
+                <p>
+                  {role === "Dokter"
                     ? "Hanya kunjungan yang Anda tangani ditampilkan di sini."
-                    : "Hanya data kunjungan dan riwayat milik Anda."}
-              </p>
+                    : "Isi pemeriksaan dan tindakan medis tidak ditampilkan di ruang ini."}
+                </p>
+              )}
             </div>
             <button className="sidebar-link" onClick={logout}>
               <Icon name="logout" size={18} />
