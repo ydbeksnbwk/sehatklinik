@@ -58,6 +58,14 @@ export type ClinicUser = {
   role: string
   active: boolean
   password?: string
+  pasienId?: string | null
+  noRekamMedis?: string | null
+  nik?: string
+  tanggalLahir?: string
+  jenisKelamin?: string
+  alamat?: string
+  kontakDarurat?: string
+  telepon?: string
 }
 
 export type ClinicProfile = {
@@ -134,6 +142,8 @@ type ClinicContextType = {
   setNotificationDrawerOpen: (val: boolean) => void
   webPushPermission: "default" | "granted" | "denied" | "unsupported"
   loadingData: boolean
+  /** True setelah GET /api/auth/me selesai dicek; dipakai agar UI tidak berkedip antara login dan dasbor. */
+  authChecked: boolean
   unreadCount: number
   addNotification: (
     notif: Omit<NotificationItem, "id" | "timestamp" | "isRead">,
@@ -385,6 +395,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   const [receipt, setReceipt] = useState<Visit | null>(null)
   const [busy, setBusy] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
+  const [authChecked, setAuthChecked] = useState(false)
   const [editingProfile, setEditingProfile] = useState(false)
   const [initialized, setInitialized] = useState(false)
 
@@ -519,9 +530,45 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
               email: u.email,
               role: roleCap,
               active: true,
+              pasienId: u.pasienId ?? null,
+              noRekamMedis: u.noRekamMedis ?? null,
+              nik: u.nik || "",
+              tanggalLahir: u.tanggalLahir || "2000-01-01",
+              jenisKelamin:
+                u.jenisKelamin === "P" || u.jenisKelamin === "Perempuan"
+                  ? "Perempuan"
+                  : "Laki-laki",
+              alamat: u.alamat || "-",
+              kontakDarurat: u.kontakDarurat || "-",
+              telepon: u.telepon || "-",
             }
             setCurrentUser(authUser)
             setRole(roleCap)
+
+            if (roleCap === "Pasien" || authUser.pasienId) {
+              const currentPatient: Patient = {
+                id: authUser.pasienId || authUser.noRekamMedis || authUser.id || "P-ME",
+                name: authUser.name,
+                phone: authUser.telepon || "-",
+                birth: authUser.tanggalLahir || "2000-01-01",
+                gender: authUser.jenisKelamin || "Laki-laki",
+                address: authUser.alamat || "-",
+                emergency: authUser.kontakDarurat || "-",
+                account: true,
+                nik: authUser.nik || "-",
+              }
+              setPatients((prev) => {
+                const rest = prev.filter(
+                  (p) =>
+                    p.id !== currentPatient.id &&
+                    p.id !== authUser.id &&
+                    (!authUser.pasienId || p.id !== authUser.pasienId) &&
+                    (!authUser.noRekamMedis || p.id !== authUser.noRekamMedis) &&
+                    p.name.trim().toLowerCase() !== authUser.name.trim().toLowerCase()
+                )
+                return [currentPatient, ...rest]
+              })
+            }
 
             // Muat notifikasi backend khusus untuk akun pengguna yang sedang login
             await refreshNotifications(roleCap, u.id)
@@ -543,6 +590,9 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
             }
           }
         } catch {}
+
+        // Cek sesi selesai (berhasil maupun gagal): tandai authChecked agar UI tidak berkedip
+        setAuthChecked(true)
 
         // 2. Muat data katalog publik (Dokter, Layanan, Jadwal, Profil Klinik)
         const [docsRes, svcsRes, schedsRes, clinicRes] = await Promise.all([
@@ -669,7 +719,13 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
               account: Boolean(p.profileId || p.profile_id),
               nik: p.nik || "-",
             }))
-            setPatients(dbPatients)
+            setPatients((prev) => {
+              const currentP = prev.find((item) => item.account && item.id.length > 10)
+              if (currentP && !dbPatients.some((p) => p.id === currentP.id)) {
+                return [currentP, ...dbPatients]
+              }
+              return dbPatients
+            })
           }
         } catch {}
 
@@ -1561,13 +1617,48 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
             email: u.email || cleanEmail,
             role: userRole,
             active: true,
+            pasienId: u.pasienId ?? null,
+            noRekamMedis: u.noRekamMedis ?? null,
+            nik: u.nik || "",
+            tanggalLahir: u.tanggalLahir || "2000-01-01",
+            jenisKelamin:
+              u.jenisKelamin === "P" || u.jenisKelamin === "Perempuan"
+                ? "Perempuan"
+                : "Laki-laki",
+            alamat: u.alamat || "-",
+            kontakDarurat: u.kontakDarurat || "-",
+            telepon: u.telepon || "-",
           };
           setCurrentUser(authUser);
           setRole(userRole);
           setPage("Dashboard");
           if (typeof window !== "undefined") {
-            localStorage.setItem("sehatklinik_current_user", JSON.stringify(authUser));
             sessionStorage.setItem("sehatklinik_welcome_sent", "1");
+          }
+
+          if (userRole === "Pasien" || authUser.pasienId) {
+            const currentPatient: Patient = {
+              id: authUser.pasienId || authUser.noRekamMedis || authUser.id || "P-ME",
+              name: authUser.name,
+              phone: authUser.telepon || "-",
+              birth: authUser.tanggalLahir || "2000-01-01",
+              gender: authUser.jenisKelamin || "Laki-laki",
+              address: authUser.alamat || "-",
+              emergency: authUser.kontakDarurat || "-",
+              account: true,
+              nik: authUser.nik || "-",
+            };
+            setPatients((prev) => {
+              const rest = prev.filter(
+                (p) =>
+                  p.id !== currentPatient.id &&
+                  p.id !== authUser.id &&
+                  (!authUser.pasienId || p.id !== authUser.pasienId) &&
+                  (!authUser.noRekamMedis || p.id !== authUser.noRekamMedis) &&
+                  p.name.trim().toLowerCase() !== authUser.name.trim().toLowerCase()
+              );
+              return [currentPatient, ...rest];
+            });
           }
 
           // Segera muat notifikasi backend terisolasi untuk profileId pengguna yang baru login
@@ -1815,6 +1906,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         busy,
         setBusy,
         loadingData,
+        authChecked,
         editingProfile,
         setEditingProfile,
 

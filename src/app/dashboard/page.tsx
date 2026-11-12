@@ -8,9 +8,11 @@ import Icon from "@/components/Icon"
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { role } = useClinic()
+  const { role, authChecked } = useClinic()
 
   useEffect(() => {
+    // Tunggu cek sesi (GET /api/auth/me) selesai agar redirect tidak memakai role lama
+    if (!authChecked) return
     if (typeof window !== "undefined") {
       const search = window.location.search
       if (role === "Admin") {
@@ -20,10 +22,11 @@ export default function DashboardPage() {
       } else if (role === "Dokter") {
         router.replace(`/dokter-dashboard${search}`)
       } else {
+        // Belum tahu peran (tanpa sesi): middleware akan mengarahkan ke /login
         router.replace(`/pasien${search}`)
       }
     }
-  }, [role, router])
+  }, [role, authChecked, router])
 
   return <ClinicWorkspace Icon={Icon} initialPage="Dashboard" initialRole="Pasien" />
 }

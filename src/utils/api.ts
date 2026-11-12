@@ -134,6 +134,21 @@ export async function apiLogout() {
   });
 }
 
+export async function apiUpdateProfil(payload: {
+  nama?: string;
+  telepon?: string;
+  nik?: string;
+  tanggalLahir?: string;
+  jenisKelamin?: string;
+  alamat?: string;
+  kontakDarurat?: string;
+}) {
+  return fetchApi<any>("/api/profil", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function apiRegister(payload: {
   email: string;
   password: string;

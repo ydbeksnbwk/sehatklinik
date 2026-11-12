@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { notifikasi, profiles } from "@/db/schema";
+import { notifikasi, pasien, profiles } from "@/db/schema";
 import { supabaseServer } from "@/lib/supabase";
 import { handleError, pasangCookieSesi } from "@/lib/auth";
 
@@ -66,14 +66,37 @@ export async function POST(request) {
       );
     }
 
+    let detailPasien = null;
+    if (profile.role === "pasien") {
+      const [p] = await db
+        .select()
+        .from(pasien)
+        .where(eq(pasien.profileId, profile.id))
+        .limit(1);
+      detailPasien = p || null;
+    }
+
+    const meta = data.user.user_metadata || {};
+
     const response = NextResponse.json({
       data: {
         user: {
           id: profile.id,
           email: data.user.email,
           nama: profile.nama,
-          telepon: profile.telepon,
+          telepon:
+            detailPasien?.telepon || profile.telepon || meta.telepon || "-",
           role: profile.role,
+          pasienId: detailPasien?.id ?? null,
+          noRekamMedis: detailPasien?.noRekamMedis ?? null,
+          nik: detailPasien?.nik || meta.nik || "",
+          tanggalLahir:
+            detailPasien?.tanggalLahir || meta.tanggal_lahir || "2000-01-01",
+          jenisKelamin:
+            detailPasien?.jenisKelamin || meta.jenis_kelamin || "Laki-laki",
+          alamat: detailPasien?.alamat || meta.alamat || "-",
+          kontakDarurat:
+            detailPasien?.kontakDarurat || meta.kontak_darurat || "-",
         },
       },
     });

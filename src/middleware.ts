@@ -11,6 +11,7 @@ const PRIVATE_PATH_PREFIXES = [
   "/profil",
   "/kunjungan",
   "/riwayat",
+  "/pasien",
 ];
 
 const COOKIE_ACCESS_NAME = "sb-access-token";
