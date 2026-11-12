@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   useEffect,
@@ -7,14 +7,14 @@ import {
   type ComponentType,
   type FormEvent,
   type ReactNode,
-} from "react"
-import { useClinic } from "../context/ClinicContext"
-import PublicSite from "./PublicSite"
-import BrandArtwork from "./BrandArtwork"
-import GenderAvatar from "./GenderAvatar"
-import NotificationDrawer from "./NotificationDrawer"
-import { downloadRekapExcel } from "../utils/exportRekapExcel"
-import { printVisitSummary } from "../utils/printVisitSummary"
+} from "react";
+import { useClinic } from "../context/ClinicContext";
+import PublicSite from "./PublicSite";
+import BrandArtwork from "./BrandArtwork";
+import GenderAvatar from "./GenderAvatar";
+import NotificationDrawer from "./NotificationDrawer";
+import { downloadRekapExcel } from "../utils/exportRekapExcel";
+import { printVisitSummary } from "../utils/printVisitSummary";
 import {
   DEMO_DATE,
   doctorsSeed,
@@ -32,29 +32,29 @@ import {
   type Service,
   type Schedule,
   type Examination,
-} from "../clinic-data"
+} from "../clinic-data";
 import {
   getTodayFormatted,
   getTodayDateOnly,
   getTodayISODate,
   formatDateIndonesian,
-} from "@/lib/date"
+} from "@/lib/date";
 
 type IconType = ComponentType<{
-  name: string
-  size?: number
-}>
+  name: string;
+  size?: number;
+}>;
 
 const getErrorMessage = (err: any): string => {
-  if (!err) return ""
-  if (typeof err === "string") return err
+  if (!err) return "";
+  if (typeof err === "string") return err;
   if (err.fields && typeof err.fields === "object") {
-    const list = Object.values(err.fields).flat().filter(Boolean)
-    if (list.length > 0) return list.join(", ")
+    const list = Object.values(err.fields).flat().filter(Boolean);
+    if (list.length > 0) return list.join(", ");
   }
-  if (typeof err.message === "string") return err.message
-  return "Terjadi kesalahan saat pendaftaran. Silakan coba lagi."
-}
+  if (typeof err.message === "string") return err.message;
+  return "Terjadi kesalahan saat pendaftaran. Silakan coba lagi.";
+};
 const menus: Record<Exclude<Role, "Publik">, [string, string][]> = {
   Admin: [
     ["Dashboard", "grid"],
@@ -85,7 +85,7 @@ const menus: Record<Exclude<Role, "Publik">, [string, string][]> = {
     ["Riwayat Kunjungan", "file"],
     ["Profil Saya", "users"],
   ],
-}
+};
 const queueStates = [
   "Menunggu",
   "Dipanggil",
@@ -93,7 +93,7 @@ const queueStates = [
   "Selesai",
   "Dilewati",
   "Dibatalkan",
-]
+];
 function Badge({ text }: { text: string }) {
   return (
     <span
@@ -109,27 +109,27 @@ function Badge({ text }: { text: string }) {
     >
       {text}
     </span>
-  )
+  );
 }
 type FieldProps = {
-  label: string
-  children: ReactNode
-}
+  label: string;
+  children: ReactNode;
+};
 function Field({ label, children }: FieldProps) {
   return (
     <label>
       {label}
       {children}
     </label>
-  )
+  );
 }
 
 type Props = {
-  Icon: IconType
-  initialPage?: string
-  initialRole?: Role
-  initialDetailId?: string
-}
+  Icon: IconType;
+  initialPage?: string;
+  initialRole?: Role;
+  initialDetailId?: string;
+};
 
 export default function ClinicWorkspace({
   Icon,
@@ -137,7 +137,7 @@ export default function ClinicWorkspace({
   initialRole,
   initialDetailId,
 }: Props) {
-  const clinicContext = useClinic()
+  const clinicContext = useClinic();
   const {
     role,
     setRole,
@@ -209,258 +209,296 @@ export default function ClinicWorkspace({
     transition,
     submitBooking,
     saveExamination,
-  } = clinicContext
+  } = clinicContext;
 
-  const [mounted, setMounted] = useState(false)
-  const [modalEmail, setModalEmail] = useState("")
-  const [modalPassword, setModalPassword] = useState("")
-  const [modalShowPassword, setModalShowPassword] = useState(false)
-  const [modalError, setModalError] = useState("")
-  const [modalBusy, setModalBusy] = useState(false)
-  const [subFilter, setSubFilter] = useState("")
-  const [doctorPhoto, setDoctorPhoto] = useState("")
-  const [doctorPhotoError, setDoctorPhotoError] = useState("")
-  const [reportAllDates, setReportAllDates] = useState(true)
-  const [reportSortOrder, setReportSortOrder] = useState<"desc" | "asc">("desc")
-  const [todayFormatted, setTodayFormatted] = useState("")
-  const lastAutoOpenedVisitId = useRef<string | null>(null)
-
-  useEffect(() => {
-    setMounted(true)
-    setTodayFormatted(getTodayFormatted())
-  }, [])
+  const [mounted, setMounted] = useState(false);
+  const [modalEmail, setModalEmail] = useState("");
+  const [modalPassword, setModalPassword] = useState("");
+  const [modalShowPassword, setModalShowPassword] = useState(false);
+  const [modalError, setModalError] = useState("");
+  const [modalBusy, setModalBusy] = useState(false);
+  const [subFilter, setSubFilter] = useState("");
+  const [doctorPhoto, setDoctorPhoto] = useState("");
+  const [doctorPhotoError, setDoctorPhotoError] = useState("");
+  const [reportAllDates, setReportAllDates] = useState(true);
+  const [reportSortOrder, setReportSortOrder] = useState<"desc" | "asc">(
+    "desc",
+  );
+  const [todayFormatted, setTodayFormatted] = useState("");
+  const lastAutoOpenedVisitId = useRef<string | null>(null);
 
   useEffect(() => {
-    setSubFilter("")
-  }, [page])
+    setMounted(true);
+    setTodayFormatted(getTodayFormatted());
+  }, []);
+
+  useEffect(() => {
+    setSubFilter("");
+  }, [page]);
 
   const isStaffRole =
     initialRole === "Admin" ||
     initialRole === "Petugas" ||
-    initialRole === "Dokter"
+    initialRole === "Dokter";
 
   const showAuthModal =
-    mounted && isStaffRole && (!currentUser || currentUser.role !== initialRole)
+    mounted &&
+    isStaffRole &&
+    (!currentUser || currentUser.role !== initialRole);
 
   useEffect(() => {
     const userRole =
       currentUser?.role &&
       ["Pasien", "Petugas", "Dokter", "Admin"].includes(currentUser.role)
         ? (currentUser.role as Role)
-        : null
+        : null;
 
-    let resolvedRole: Role = role
+    let resolvedRole: Role = role;
     if (initialRole && initialRole !== "Publik") {
-      resolvedRole = initialRole
+      resolvedRole = initialRole;
     } else if (userRole) {
-      resolvedRole = userRole
+      resolvedRole = userRole;
     } else if (initialRole) {
-      resolvedRole = initialRole
+      resolvedRole = initialRole;
     } else {
-      resolvedRole = role !== "Publik" ? role : "Publik"
+      resolvedRole = role !== "Publik" ? role : "Publik";
     }
 
     if (role !== resolvedRole) {
-      setRole(resolvedRole)
+      setRole(resolvedRole);
     }
 
     const resolveInitialPage = (rawPage?: string) => {
-      if (!rawPage) return rawPage
+      if (!rawPage) return rawPage;
       if (rawPage === "Riwayat Kunjungan" && resolvedRole !== "Pasien") {
-        return resolvedRole === "Admin" ? "Rekap Kunjungan" : "Semua Kunjungan"
+        return resolvedRole === "Admin" ? "Rekap Kunjungan" : "Semua Kunjungan";
       }
       if (rawPage === "Antrean Saya" && resolvedRole !== "Pasien") {
-        return resolvedRole === "Admin" ? "Semua Kunjungan" : "Antrean Hari Ini"
+        return resolvedRole === "Admin"
+          ? "Semua Kunjungan"
+          : "Antrean Hari Ini";
       }
-      return rawPage
-    }
+      return rawPage;
+    };
 
     if (typeof window !== "undefined") {
-      const tab = new URLSearchParams(window.location.search).get("tab")
+      const tab = new URLSearchParams(window.location.search).get("tab");
       if (tab) {
-        setPage(tab)
+        setPage(tab);
       } else {
-        const nextPage = resolveInitialPage(initialPage)
+        const nextPage = resolveInitialPage(initialPage);
         if (nextPage && page !== nextPage) {
-          setPage(nextPage)
+          setPage(nextPage);
         }
       }
     } else {
-      const nextPage = resolveInitialPage(initialPage)
+      const nextPage = resolveInitialPage(initialPage);
       if (nextPage && page !== nextPage) {
-        setPage(nextPage)
+        setPage(nextPage);
       }
     }
-  }, [initialRole, initialPage])
+  }, [initialRole, initialPage]);
 
   useEffect(() => {
-    if (initialRole || role === "Publik" || role === "Pasien") return
-    if (
-      initialPage === "Riwayat Kunjungan" &&
-      page === "Riwayat Kunjungan"
-    ) {
-      setPage(role === "Admin" ? "Rekap Kunjungan" : "Semua Kunjungan")
+    if (initialRole || role === "Publik" || role === "Pasien") return;
+    if (initialPage === "Riwayat Kunjungan" && page === "Riwayat Kunjungan") {
+      setPage(role === "Admin" ? "Rekap Kunjungan" : "Semua Kunjungan");
     } else if (initialPage === "Antrean Saya" && page === "Antrean Saya") {
-      setPage(role === "Admin" ? "Semua Kunjungan" : "Antrean Hari Ini")
+      setPage(role === "Admin" ? "Semua Kunjungan" : "Antrean Hari Ini");
     }
-  }, [initialRole, initialPage, role, page])
+  }, [initialRole, initialPage, role, page]);
 
   useEffect(() => {
     const handlePopState = () => {
-      const path = window.location.pathname
-      const tab = new URLSearchParams(window.location.search).get("tab")
+      const path = window.location.pathname;
+      const tab = new URLSearchParams(window.location.search).get("tab");
       if (path === "/") {
-        setRole("Publik")
-        setPage("Beranda")
-        setSelected(null)
+        setRole("Publik");
+        setPage("Beranda");
+        setSelected(null);
       } else if (path === "/profil") {
-        setRole("Publik")
-        setPage("Profil")
-        setSelected(null)
+        setRole("Publik");
+        setPage("Profil");
+        setSelected(null);
       } else if (path === "/layanan" || path.startsWith("/layanan/")) {
-        setRole("Publik")
-        setPage("Layanan")
-        setSelected(null)
+        setRole("Publik");
+        setPage("Layanan");
+        setSelected(null);
       } else if (
         path === "/dokter" ||
         (path.startsWith("/dokter/") && !path.startsWith("/dokter/dashboard"))
       ) {
-        setRole("Publik")
-        setPage("Dokter")
-        setSelected(null)
+        setRole("Publik");
+        setPage("Dokter");
+        setSelected(null);
       } else if (path === "/jadwal") {
-        setRole("Publik")
-        setPage("Jadwal")
-        setSelected(null)
+        setRole("Publik");
+        setPage("Jadwal");
+        setSelected(null);
       } else if (path === "/lokasi") {
-        setRole("Publik")
-        setPage("Lokasi")
-        setSelected(null)
+        setRole("Publik");
+        setPage("Lokasi");
+        setSelected(null);
       } else if (path === "/login") {
-        setRole("Publik")
-        setPage("Login")
-        setSelected(null)
+        setRole("Publik");
+        setPage("Login");
+        setSelected(null);
       } else if (path === "/daftar") {
-        setRole("Publik")
-        setPage("Registrasi")
-        setSelected(null)
+        setRole("Publik");
+        setPage("Registrasi");
+        setSelected(null);
       } else if (path === "/admin") {
-        setRole("Admin")
-        setPage(tab || "Dashboard")
-        setSelected(null)
+        setRole("Admin");
+        setPage(tab || "Dashboard");
+        setSelected(null);
       } else if (path === "/petugas") {
-        setRole("Petugas")
-        setPage(tab || "Dashboard")
-        setSelected(null)
+        setRole("Petugas");
+        setPage(tab || "Dashboard");
+        setSelected(null);
       } else if (path === "/dokter-dashboard" || path === "/dokter/dashboard") {
-        setRole("Dokter")
-        setPage(tab || "Dashboard")
-        setSelected(null)
+        setRole("Dokter");
+        setPage(tab || "Dashboard");
+        setSelected(null);
       } else if (path === "/pasien") {
-        setRole("Pasien")
-        setPage(tab || "Dashboard")
-        setSelected(null)
-      } else if (path.startsWith("/riwayat/") || path.startsWith("/kunjungan/")) {
+        setRole("Pasien");
+        setPage(tab || "Dashboard");
+        setSelected(null);
+      } else if (
+        path.startsWith("/riwayat/") ||
+        path.startsWith("/kunjungan/")
+      ) {
         const rawId = decodeURIComponent(
           path.startsWith("/riwayat/")
             ? path.slice("/riwayat/".length)
-            : path.slice("/kunjungan/".length)
-        )
-        const target = visits.find((v) => v.id === rawId)
+            : path.slice("/kunjungan/".length),
+        );
+        const target = visits.find((v) => v.id === rawId);
         if (target) {
-          setSelected(target.id)
+          setSelected(target.id);
         }
       } else if (path.startsWith("/dashboard")) {
-        setPage(tab || "Dashboard")
-        setSelected(null)
+        setPage(tab || "Dashboard");
+        setSelected(null);
       }
-    }
-    handlePopState()
-    window.addEventListener("popstate", handlePopState)
-    return () => window.removeEventListener("popstate", handlePopState)
-  }, [setRole, setPage, visits])
+    };
+    handlePopState();
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [setRole, setPage, visits]);
   useEffect(() => {
-    if (!selected && !editor) return
-    const previousFocus = document.activeElement as HTMLElement | null
-    const dialog = document.querySelector<HTMLElement>('[role="dialog"]')
+    if (!selected && !editor) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
     const focusable = () =>
       Array.from(
         dialog?.querySelectorAll<HTMLElement>(
           "button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href]",
         ) || [],
-      )
-    focusable()[0]?.focus()
+      );
+    focusable()[0]?.focus();
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        closeVisit()
-        setEditor(null)
+        closeVisit();
+        setEditor(null);
       }
-      if (event.key !== "Tab") return
-      const elements = focusable()
-      const first = elements[0]
-      const last = elements[elements.length - 1]
+      if (event.key !== "Tab") return;
+      const elements = focusable();
+      const first = elements[0];
+      const last = elements[elements.length - 1];
       if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault()
-        last?.focus()
+        event.preventDefault();
+        last?.focus();
       } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault()
-        first?.focus()
+        event.preventDefault();
+        first?.focus();
       }
-    }
-    document.addEventListener("keydown", handleKey)
+    };
+    document.addEventListener("keydown", handleKey);
     return () => {
-      document.removeEventListener("keydown", handleKey)
-      previousFocus?.focus()
-    }
-  }, [selected, editor])
+      document.removeEventListener("keydown", handleKey);
+      previousFocus?.focus();
+    };
+  }, [selected, editor]);
+
+  const userGender =
+    (currentUser as any)?.jenisKelamin ||
+    (currentUser as any)?.gender ||
+    "Laki-laki";
+  const userPatientId =
+    (currentUser as any)?.pasienId ||
+    (currentUser as any)?.patientId ||
+    currentUser?.id ||
+    "RM-00000";
+
   const defaultPatientFallback: Patient = {
-    id: "RM-00000",
+    id: userPatientId,
     name: currentUser?.name || "Pasien",
     phone: "-",
     birth: "2000-01-01",
-    gender: "Laki-laki",
+    gender: userGender,
     address: "-",
     emergency: "-",
     account: true,
-  }
-  const patient =
-    (currentUser?.role === "Pasien" && currentUser.name
-      ? patients.find((p) => p.name.toLowerCase() === currentUser.name.toLowerCase()) || {
-          ...defaultPatientFallback,
-          name: currentUser.name,
-        }
-      : null) ||
-    patients.find((p) => p.id === "RM-00128") ||
-    patients[0] ||
-    defaultPatientFallback
+  };
+  const matchedPatient =
+    currentUser?.role === "Pasien"
+      ? patients.find(
+          (p) =>
+            p.id === userPatientId ||
+            (currentUser.name &&
+              p.name.trim().toLowerCase() ===
+                currentUser.name.trim().toLowerCase()),
+        )
+      : null;
+
+  const patient: Patient =
+    currentUser?.role === "Pasien"
+      ? matchedPatient
+        ? {
+            ...matchedPatient,
+            gender:
+              matchedPatient.gender && matchedPatient.gender !== "-"
+                ? matchedPatient.gender
+                : userGender,
+          }
+        : defaultPatientFallback
+      : patients[0] || defaultPatientFallback;
+
   const doctorName = (id: string) => {
-    if (!id) return role === "Dokter" ? (activeDoctor?.name || currentUser?.name || "dr. Reyhan Adhitama") : "Dokter"
-    const found = doctors.find((d) => d.id === id || (id === "d1" && d.name.toLowerCase().includes("reyhan")))
-    if (found) return found.name
-    if (role === "Dokter") return activeDoctor?.name || currentUser?.name || "dr. Reyhan Adhitama"
-    return "Dokter"
-  }
+    if (!id)
+      return role === "Dokter"
+        ? activeDoctor?.name || currentUser?.name || "dr. Reyhan Adhitama"
+        : "Dokter";
+    const found = doctors.find(
+      (d) =>
+        d.id === id || (id === "d1" && d.name.toLowerCase().includes("reyhan")),
+    );
+    if (found) return found.name;
+    if (role === "Dokter")
+      return activeDoctor?.name || currentUser?.name || "dr. Reyhan Adhitama";
+    return "Dokter";
+  };
   const serviceName = (id: string) =>
-    services.find((s) => s.id === id)?.name || "Layanan"
+    services.find((s) => s.id === id)?.name || "Layanan";
   const patientName = (id: string) =>
-    patients.find((p) => p.id === id)?.name || "Pasien"
-  const session = (id: string) => schedules.find((s) => s.id === id)
+    patients.find((p) => p.id === id)?.name || "Pasien";
+  const session = (id: string) => schedules.find((s) => s.id === id);
   const notify = (message: string) => {
-    setToast(message)
-    window.setTimeout(() => setToast(""), 4500)
-  }
+    setToast(message);
+    window.setTimeout(() => setToast(""), 4500);
+  };
   const navigate = (target: string) => {
-    setPage(target)
-    setEditingProfile(false)
-    setMobile(false)
-    setSearch("")
-    setFilter("")
-    setDoctorFilter("")
-    setServiceFilter("")
-    setPagination(1)
-    setStep(1)
-    setReceipt(null)
-    setError("")
+    setPage(target);
+    setEditingProfile(false);
+    setMobile(false);
+    setSearch("");
+    setFilter("");
+    setDoctorFilter("");
+    setServiceFilter("");
+    setPagination(1);
+    setStep(1);
+    setReceipt(null);
+    setError("");
     if (typeof window !== "undefined") {
       const publicRoutes: Record<string, string> = {
         Beranda: "/",
@@ -472,39 +510,39 @@ export default function ClinicWorkspace({
         Login: "/login",
         Daftar: "/daftar",
         Registrasi: "/daftar",
-      }
+      };
       const roleBasePaths: Record<Role, string> = {
         Publik: "/",
         Pasien: "/pasien",
         Petugas: "/petugas",
         Dokter: "/dokter-dashboard",
         Admin: "/admin",
-      }
+      };
 
-      let path: string
+      let path: string;
       if (role === "Publik") {
-        path = publicRoutes[target] || "/"
+        path = publicRoutes[target] || "/";
       } else {
-        const basePath = roleBasePaths[role] || "/pasien"
+        const basePath = roleBasePaths[role] || "/pasien";
         path =
           target === "Dashboard"
             ? basePath
-            : `${basePath}?tab=${encodeURIComponent(target)}`
+            : `${basePath}?tab=${encodeURIComponent(target)}`;
       }
 
-      const currentFullPath = window.location.pathname + window.location.search
+      const currentFullPath = window.location.pathname + window.location.search;
       if (currentFullPath !== path) {
-        window.history.pushState(null, "", path)
+        window.history.pushState(null, "", path);
       }
-      window.scrollTo({ top: 0, behavior: "smooth" })
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
-  }
+  };
   const switchRole = (value: string) => {
-    const nextRole = value as Role
-    setRole(nextRole)
-    setSelected(null)
-    setEditor(null)
-    setBooking((b) => ({ ...b, patient: patients[0]?.id || "" }))
+    const nextRole = value as Role;
+    setRole(nextRole);
+    setSelected(null);
+    setEditor(null);
+    setBooking((b) => ({ ...b, patient: patients[0]?.id || "" }));
     if (typeof window !== "undefined") {
       const rolePaths: Record<Role, string> = {
         Publik: "/",
@@ -512,49 +550,63 @@ export default function ClinicWorkspace({
         Petugas: "/petugas",
         Dokter: "/dokter-dashboard",
         Admin: "/admin",
-      }
-      const nextPath = rolePaths[nextRole] || "/"
+      };
+      const nextPath = rolePaths[nextRole] || "/";
       if (window.location.pathname !== nextPath) {
-        window.history.pushState(null, "", nextPath)
+        window.history.pushState(null, "", nextPath);
       }
     }
-    navigate(nextRole === "Publik" ? "Beranda" : "Dashboard")
-  }
+    navigate(nextRole === "Publik" ? "Beranda" : "Dashboard");
+  };
   const activeDoctor =
     (currentUser &&
       doctors.find(
         (d) => d.name.toLowerCase() === currentUser.name.toLowerCase(),
       )) ||
     doctors.find((d) => d.name.toLowerCase().includes("reyhan")) ||
-    doctors[0]
-  const activeDoctorId = activeDoctor?.id || "b9cd5971-4e73-4f8b-b0dd-0bc2ba064092"
+    doctors[0];
+  const activeDoctorId =
+    activeDoctor?.id || "b9cd5971-4e73-4f8b-b0dd-0bc2ba064092";
   const formatQueue = (v: Visit) =>
     queueLabel(
       v,
       doctors.findIndex((d) => d.id === v.doctor),
-    )
+    );
 
-  const scoped = visits.filter((v) =>
-    role === "Pasien"
-      ? v.patient === patient.id
-      : role === "Dokter"
-        ? v.doctor === activeDoctorId
-        : true,
-  )
-  const today = scoped.filter((v) => v.date === DEMO_DATE)
+  const scoped = visits.filter((v) => {
+    if (role === "Pasien") {
+      const validIds = new Set(
+        [
+          patient.id,
+          userPatientId,
+          currentUser?.id,
+          (currentUser as any)?.noRekamMedis,
+        ].filter(Boolean),
+      );
+      return validIds.has(v.patient);
+    }
+    if (role === "Dokter") {
+      return v.doctor === activeDoctorId;
+    }
+    return true;
+  });
+  const today = scoped.filter((v) => v.date === DEMO_DATE);
   const active = scoped.filter(
     (v) => !["Selesai", "Dibatalkan", "Dilewati"].includes(v.queue),
-  )
-  const detail = scoped.find((v) => v.id === selected)
-  const canMedical = role === "Dokter" || role === "Pasien"
+  );
+  const detail = scoped.find((v) => v.id === selected);
+  const canMedical = role === "Dokter" || role === "Pasien";
   const openVisit = (v: Visit, syncUrl = true) => {
-    setSelected(v.id)
-    setError("")
-    setReason("")
-    setSavedExam(Boolean(v.examination))
+    setSelected(v.id);
+    setError("");
+    setReason("");
+    setSavedExam(Boolean(v.examination));
     setExam(
       v.examination
-        ? { ...structuredClone(v.examination), height: v.examination.height || "" }
+        ? {
+            ...structuredClone(v.examination),
+            height: v.examination.height || "",
+          }
         : {
             anamnesis: v.complaint,
             pressure: "",
@@ -565,20 +617,20 @@ export default function ClinicWorkspace({
             notes: "",
             actions: [],
           },
-    )
+    );
     if (syncUrl && typeof window !== "undefined") {
       const prefix =
         page === "Riwayat Kunjungan" || page === "Rekap Kunjungan"
           ? "/riwayat"
-          : "/kunjungan"
-      const nextPath = `${prefix}/${encodeURIComponent(v.id)}`
+          : "/kunjungan";
+      const nextPath = `${prefix}/${encodeURIComponent(v.id)}`;
       if (window.location.pathname !== nextPath) {
-        window.history.pushState(null, "", nextPath)
+        window.history.pushState(null, "", nextPath);
       }
     }
-  }
+  };
   const closeVisit = () => {
-    setSelected(null)
+    setSelected(null);
     if (
       typeof window !== "undefined" &&
       (window.location.pathname.startsWith("/riwayat/") ||
@@ -590,69 +642,69 @@ export default function ClinicWorkspace({
         Petugas: "/petugas",
         Dokter: "/dokter-dashboard",
         Admin: "/admin",
-      }
-      const basePath = roleBasePaths[role] || "/pasien"
+      };
+      const basePath = roleBasePaths[role] || "/pasien";
       const restorePath =
         page === "Dashboard"
           ? basePath
-          : `${basePath}?tab=${encodeURIComponent(page)}`
-      window.history.pushState(null, "", restorePath)
+          : `${basePath}?tab=${encodeURIComponent(page)}`;
+      window.history.pushState(null, "", restorePath);
     }
-  }
+  };
   useEffect(() => {
-    if (role === "Publik") return
-    const path = typeof window !== "undefined" ? window.location.pathname : ""
+    if (role === "Publik") return;
+    const path = typeof window !== "undefined" ? window.location.pathname : "";
     const urlId = path.startsWith("/riwayat/")
       ? decodeURIComponent(path.slice("/riwayat/".length))
       : path.startsWith("/kunjungan/")
         ? decodeURIComponent(path.slice("/kunjungan/".length))
-        : ""
-    const targetId = urlId || initialDetailId || ""
-    if (!targetId || lastAutoOpenedVisitId.current === targetId) return
-    const matched = scoped.find((v) => v.id === targetId)
+        : "";
+    const targetId = urlId || initialDetailId || "";
+    if (!targetId || lastAutoOpenedVisitId.current === targetId) return;
+    const matched = scoped.find((v) => v.id === targetId);
     if (matched) {
-      lastAutoOpenedVisitId.current = targetId
-      openVisit(matched, false)
+      lastAutoOpenedVisitId.current = targetId;
+      openVisit(matched, false);
     }
-  }, [initialDetailId, visits, role])
+  }, [initialDetailId, visits, role]);
   const updateVisit = (id: string, changes: Partial<Visit>) =>
     setVisits((previous) =>
       previous.map((v) => (v.id === id ? { ...v, ...changes } : v)),
-    )
+    );
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const flash = sessionStorage.getItem("sehatklinik_flash")
+      const flash = sessionStorage.getItem("sehatklinik_flash");
       if (flash) {
-        sessionStorage.removeItem("sehatklinik_flash")
-        setToast(flash)
-        const t = setTimeout(() => setToast(""), 4500)
-        return () => clearTimeout(t)
+        sessionStorage.removeItem("sehatklinik_flash");
+        setToast(flash);
+        const t = setTimeout(() => setToast(""), 4500);
+        return () => clearTimeout(t);
       }
     }
-  }, [setToast])
+  }, [setToast]);
 
   const showError = error && (
     <div className="ws-error" role="alert">
       <Icon name="help" size={18} />
       {getErrorMessage(error)}
     </div>
-  )
+  );
   const showEditor = (type: string, id?: string) => {
-    setEditor({ type, id })
-    setError("")
-    setDoctorPhotoError("")
+    setEditor({ type, id });
+    setError("");
+    setDoctorPhotoError("");
     if (type === "Dokter" && id) {
-      setDoctorPhoto(doctors.find((d) => d.id === id)?.photoUrl || "")
+      setDoctorPhoto(doctors.find((d) => d.id === id)?.photoUrl || "");
     } else {
-      setDoctorPhoto("")
+      setDoctorPhoto("");
     }
-  }
+  };
   const paginateList = <T,>(items: T[], perPage = 6) => {
-    const maxPage = Math.max(1, Math.ceil(items.length / perPage))
-    const current = Math.min(pagination, maxPage)
-    const paged = items.slice((current - 1) * perPage, current * perPage)
-    return { paged, current, maxPage }
-  }
+    const maxPage = Math.max(1, Math.ceil(items.length / perPage));
+    const current = Math.min(pagination, maxPage);
+    const paged = items.slice((current - 1) * perPage, current * perPage);
+    return { paged, current, maxPage };
+  };
   const renderPaginationBar = (
     total: number,
     shown: number,
@@ -693,7 +745,7 @@ export default function ClinicWorkspace({
         </button>
       </div>
     </div>
-  )
+  );
   const webPushBanner = (audience: "Pasien" | "Petugas") => {
     const stateClass =
       webPushPermission === "granted"
@@ -702,7 +754,7 @@ export default function ClinicWorkspace({
           ? "is-denied"
           : webPushPermission === "unsupported"
             ? "is-unsupported"
-            : ""
+            : "";
     return (
       <section
         className={`ws-push-banner ${stateClass}`}
@@ -802,15 +854,15 @@ export default function ClinicWorkspace({
           )}
         </div>
       </section>
-    )
-  }
+    );
+  };
   const statCards = (
     items: {
-      title: string
-      value: number
-      icon: string
-      sub: string
-      color: string
+      title: string;
+      value: number;
+      icon: string;
+      sub: string;
+      color: string;
     }[],
   ) =>
     loadingData ? (
@@ -844,13 +896,13 @@ export default function ClinicWorkspace({
           </section>
         ))}
       </div>
-    )
+    );
   const matchVisitFilter = (v: Visit, useReportRange: boolean) => {
-    const patientObj = patients.find((p) => p.id === v.patient)
+    const patientObj = patients.find((p) => p.id === v.patient);
     const searchTarget =
       role === "Pasien"
         ? `${doctorName(v.doctor)} ${serviceName(v.service)} ${v.id}`
-        : `${patientName(v.patient)} ${patientObj?.nik || ""} ${doctorName(v.doctor)} ${serviceName(v.service)} ${v.id}`
+        : `${patientName(v.patient)} ${patientObj?.nik || ""} ${doctorName(v.doctor)} ${serviceName(v.service)} ${v.id}`;
     return (
       searchTarget.toLowerCase().includes(search.toLowerCase()) &&
       (!filter || v.queue === filter) &&
@@ -860,19 +912,19 @@ export default function ClinicWorkspace({
         reportAllDates ||
         ((!range.from || v.date >= range.from) &&
           (!range.to || v.date <= range.to)))
-    )
-  }
+    );
+  };
   const exportRekapExcel = async (itemsToExport: Visit[]) => {
     if (!itemsToExport.length) {
-      notify("Tidak ada data kunjungan untuk diunduh pada filter saat ini.")
-      return
+      notify("Tidak ada data kunjungan untuk diunduh pada filter saat ini.");
+      return;
     }
     const periodLabel = reportAllDates
       ? "Semua Tanggal"
-      : `${range.from ? dateLabel(range.from) : "Awal"} s/d ${range.to ? dateLabel(range.to) : "Akhir"}`
+      : `${range.from ? dateLabel(range.from) : "Awal"} s/d ${range.to ? dateLabel(range.to) : "Akhir"}`;
     const fileSuffix = reportAllDates
       ? "Semua-Tanggal"
-      : `${range.from || "awal"}-sd-${range.to || "akhir"}`
+      : `${range.from || "awal"}-sd-${range.to || "akhir"}`;
     try {
       await downloadRekapExcel({
         visits: itemsToExport,
@@ -883,20 +935,20 @@ export default function ClinicWorkspace({
         periodLabel,
         sortOrder: reportSortOrder,
         fileSuffix,
-      })
+      });
       notify(
         `File Excel rekap (${itemsToExport.length} kunjungan) berhasil diunduh.`,
-      )
+      );
     } catch {
-      notify("Gagal membuat file Excel. Silakan coba kembali.")
+      notify("Gagal membuat file Excel. Silakan coba kembali.");
     }
-  }
+  };
   const statScope =
     role === "Admin"
       ? page === "Rekap Kunjungan"
         ? scoped.filter((v) => matchVisitFilter(v, true))
         : scoped
-      : today
+      : today;
   const stats = statCards([
     {
       title: role === "Admin" ? "Total kunjungan" : "Kunjungan hari ini",
@@ -909,7 +961,7 @@ export default function ClinicWorkspace({
               ? "Seluruh tanggal dan filter terpilih"
               : `Periode ${range.from || "awal"} s/d ${range.to || "akhir"}`
             : "Seluruh periode kunjungan"
-          : (todayFormatted || getTodayFormatted()),
+          : todayFormatted || getTodayFormatted(),
       color: "blue",
     },
     {
@@ -933,17 +985,17 @@ export default function ClinicWorkspace({
       sub: "Tidak mengurangi sisa kuota",
       color: "red",
     },
-  ])
+  ]);
   const visitTable = (items: Visit[], title: string, report = false) => {
-    const baseFiltered = items.filter((v) => matchVisitFilter(v, report))
+    const baseFiltered = items.filter((v) => matchVisitFilter(v, report));
     const filtered = report
       ? [...baseFiltered].sort((a, b) => {
-          const cmp = a.date.localeCompare(b.date) || a.id.localeCompare(b.id)
-          return reportSortOrder === "asc" ? cmp : -cmp
+          const cmp = a.date.localeCompare(b.date) || a.id.localeCompare(b.id);
+          return reportSortOrder === "asc" ? cmp : -cmp;
         })
-      : baseFiltered
-    const maxPage = Math.max(1, Math.ceil(filtered.length / 6))
-    const current = Math.min(pagination, maxPage)
+      : baseFiltered;
+    const maxPage = Math.max(1, Math.ceil(filtered.length / 6));
+    const current = Math.min(pagination, maxPage);
     return (
       <section className="panel queue-panel">
         <div className="panel-heading">
@@ -978,8 +1030,8 @@ export default function ClinicWorkspace({
                 type="button"
                 className={reportAllDates ? "primary" : "secondary"}
                 onClick={() => {
-                  setReportAllDates(true)
-                  setPagination(1)
+                  setReportAllDates(true);
+                  setPagination(1);
                 }}
               >
                 Semua Tanggal
@@ -988,16 +1040,16 @@ export default function ClinicWorkspace({
                 type="button"
                 className={!reportAllDates ? "primary" : "secondary"}
                 onClick={() => {
-                  setReportAllDates(false)
+                  setReportAllDates(false);
                   if (!range.from || !range.to) {
-                    const todayStr = getTodayISODate()
-                    const firstDayOfMonth = `${todayStr.slice(0, 7)}-01`
+                    const todayStr = getTodayISODate();
+                    const firstDayOfMonth = `${todayStr.slice(0, 7)}-01`;
                     setRange({
                       from: range.from || firstDayOfMonth,
                       to: range.to || todayStr,
-                    })
+                    });
                   }
-                  setPagination(1)
+                  setPagination(1);
                 }}
               >
                 Pilih Rentang Tanggal
@@ -1008,15 +1060,15 @@ export default function ClinicWorkspace({
                 type="date"
                 value={reportAllDates ? "" : range.from}
                 onChange={(e) => {
-                  const val = e.target.value
+                  const val = e.target.value;
                   if (!val && !range.to) {
-                    setReportAllDates(true)
-                    setRange({ ...range, from: "" })
+                    setReportAllDates(true);
+                    setRange({ ...range, from: "" });
                   } else {
-                    setReportAllDates(false)
-                    setRange({ ...range, from: val })
+                    setReportAllDates(false);
+                    setRange({ ...range, from: val });
                   }
-                  setPagination(1)
+                  setPagination(1);
                 }}
               />
             </Field>
@@ -1026,15 +1078,15 @@ export default function ClinicWorkspace({
                 min={(!reportAllDates && range.from) || undefined}
                 value={reportAllDates ? "" : range.to}
                 onChange={(e) => {
-                  const val = e.target.value
+                  const val = e.target.value;
                   if (!val && !range.from) {
-                    setReportAllDates(true)
-                    setRange({ ...range, to: "" })
+                    setReportAllDates(true);
+                    setRange({ ...range, to: "" });
                   } else {
-                    setReportAllDates(false)
-                    setRange({ ...range, to: val })
+                    setReportAllDates(false);
+                    setRange({ ...range, to: val });
                   }
-                  setPagination(1)
+                  setPagination(1);
                 }}
               />
             </Field>
@@ -1043,8 +1095,8 @@ export default function ClinicWorkspace({
                 aria-label="Urutan tanggal"
                 value={reportSortOrder}
                 onChange={(e) => {
-                  setReportSortOrder(e.target.value as "desc" | "asc")
-                  setPagination(1)
+                  setReportSortOrder(e.target.value as "desc" | "asc");
+                  setPagination(1);
                 }}
               >
                 <option value="desc">Terbaru → Terlama</option>
@@ -1073,8 +1125,8 @@ export default function ClinicWorkspace({
               }
               value={search}
               onChange={(e) => {
-                setSearch(e.target.value)
-                setPagination(1)
+                setSearch(e.target.value);
+                setPagination(1);
               }}
             />
           </div>
@@ -1084,8 +1136,8 @@ export default function ClinicWorkspace({
                 aria-label="Filter dokter"
                 value={doctorFilter}
                 onChange={(e) => {
-                  setDoctorFilter(e.target.value)
-                  setPagination(1)
+                  setDoctorFilter(e.target.value);
+                  setPagination(1);
                 }}
               >
                 <option value="">Semua dokter</option>
@@ -1100,8 +1152,8 @@ export default function ClinicWorkspace({
               aria-label="Filter layanan"
               value={serviceFilter}
               onChange={(e) => {
-                setServiceFilter(e.target.value)
-                setPagination(1)
+                setServiceFilter(e.target.value);
+                setPagination(1);
               }}
             >
               <option value="">Semua layanan</option>
@@ -1115,8 +1167,8 @@ export default function ClinicWorkspace({
               aria-label="Filter status antrean"
               value={filter}
               onChange={(e) => {
-                setFilter(e.target.value)
-                setPagination(1)
+                setFilter(e.target.value);
+                setPagination(1);
               }}
             >
               <option value="">Semua status</option>
@@ -1153,63 +1205,69 @@ export default function ClinicWorkspace({
                     </tr>
                   ))
                 : filtered.slice((current - 1) * 6, current * 6).map((v) => {
-                const patientObj = patients.find((p) => p.id === v.patient)
-                return (
-                  <tr key={v.id}>
-                    <td>
-                      {report ? (
-                        <b>{v.id}</b>
-                      ) : (
-                        <>
-                          <span className="queue-number">{formatQueue(v)}</span>
-                          <small>{v.id}</small>
-                        </>
-                      )}
-                    </td>
-                    {role !== "Pasien" && (
-                      <td>
-                        <div className="person">
-                          <GenderAvatar
-                            gender={patientObj?.gender}
-                            name={patientName(v.patient)}
-                          />
-                          <div>
-                            <b>{patientName(v.patient)}</b>
-                            <small>
-                              {patientObj?.nik
-                                ? `NIK: ${patientObj.nik}`
-                                : patientObj?.gender || ""}
-                            </small>
-                          </div>
-                        </div>
-                      </td>
-                    )}
-                    <td>
-                      <b>{role === "Dokter" ? (activeDoctor?.name || doctorName(v.doctor)) : doctorName(v.doctor)}</b>
-                      <small>{serviceName(v.service)}</small>
-                    </td>
-                    <td>
-                      {dateLabel(v.date)}
-                      <small>{v.source}</small>
-                    </td>
-                    <td>
-                      <Badge text={v.status} />
-                    </td>
-                    <td>
-                      <Badge text={v.queue} />
-                    </td>
-                    <td>
-                      <button
-                        className="square"
-                        aria-label={`Detail ${v.id}`}
-                        onClick={() => openVisit(v)}
-                      >
-                        <Icon name="arrow" size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
+                    const patientObj = patients.find((p) => p.id === v.patient);
+                    return (
+                      <tr key={v.id}>
+                        <td>
+                          {report ? (
+                            <b>{v.id}</b>
+                          ) : (
+                            <>
+                              <span className="queue-number">
+                                {formatQueue(v)}
+                              </span>
+                              <small>{v.id}</small>
+                            </>
+                          )}
+                        </td>
+                        {role !== "Pasien" && (
+                          <td>
+                            <div className="person">
+                              <GenderAvatar
+                                gender={patientObj?.gender}
+                                name={patientName(v.patient)}
+                              />
+                              <div>
+                                <b>{patientName(v.patient)}</b>
+                                <small>
+                                  {patientObj?.nik
+                                    ? `NIK: ${patientObj.nik}`
+                                    : patientObj?.gender || ""}
+                                </small>
+                              </div>
+                            </div>
+                          </td>
+                        )}
+                        <td>
+                          <b>
+                            {role === "Dokter"
+                              ? activeDoctor?.name || doctorName(v.doctor)
+                              : doctorName(v.doctor)}
+                          </b>
+                          <small>{serviceName(v.service)}</small>
+                        </td>
+                        <td>
+                          {dateLabel(v.date)}
+                          <small>{v.source}</small>
+                        </td>
+                        <td>
+                          <Badge text={v.status} />
+                        </td>
+                        <td>
+                          <Badge text={v.queue} />
+                        </td>
+                        <td>
+                          <button
+                            className="square"
+                            aria-label={`Detail ${v.id}`}
+                            onClick={() => openVisit(v)}
+                          >
+                            <Icon name="arrow" size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
             </tbody>
           </table>
           {!loadingData && !filtered.length && (
@@ -1254,28 +1312,28 @@ export default function ClinicWorkspace({
           </div>
         </div>
       </section>
-    )
-  }
+    );
+  };
   const schedulePanel = (() => {
-    const targetDate = booking?.date || DEMO_DATE
-    const targetDay = new Date(`${targetDate}T12:00:00`).getDay()
+    const targetDate = booking?.date || DEMO_DATE;
+    const targetDay = new Date(`${targetDate}T12:00:00`).getDay();
 
     // Ambil jadwal aktif pada hari target
     const daySchedules = schedules.filter((s) => {
-      if (s.active === false) return false
-      if (role === "Dokter" && s.doctor !== activeDoctorId) return false
+      if (s.active === false) return false;
+      if (role === "Dokter" && s.doctor !== activeDoctorId) return false;
       if (s.day !== undefined && s.day !== null) {
-        return s.day === targetDay
+        return s.day === targetDay;
       }
-      return true
-    })
+      return true;
+    });
 
     // Kelompokkan per dokter agar tidak muncul ganda
-    const groupedByDoctor = new Map<string, Schedule[]>()
+    const groupedByDoctor = new Map<string, Schedule[]>();
     for (const s of daySchedules) {
-      const list = groupedByDoctor.get(s.doctor) || []
-      list.push(s)
-      groupedByDoctor.set(s.doctor, list)
+      const list = groupedByDoctor.get(s.doctor) || [];
+      list.push(s);
+      groupedByDoctor.set(s.doctor, list);
     }
 
     return (
@@ -1283,53 +1341,62 @@ export default function ClinicWorkspace({
         <div className="panel-heading">
           <div>
             <h3>Jadwal & ketersediaan</h3>
-            <p suppressHydrationWarning>{formatDateIndonesian(targetDate, true)} · Kuota per sesi</p>
+            <p suppressHydrationWarning>
+              {formatDateIndonesian(targetDate, true)} · Kuota per sesi
+            </p>
           </div>
           <Icon name="calendar" size={19} />
         </div>
         {groupedByDoctor.size === 0 ? (
-          <div style={{ padding: "1.5rem", textAlign: "center", color: "#64748b" }}>
+          <div
+            style={{ padding: "1.5rem", textAlign: "center", color: "#64748b" }}
+          >
             <p>Tidak ada jadwal praktik dokter pada hari ini.</p>
           </div>
         ) : (
-          Array.from(groupedByDoctor.entries()).map(([doctorId, docSessions]) => {
-            // Jika dokter memiliki lebih dari 1 sesi jam di hari itu, buat 1 baris isinya jamnya saja
-            const timeLabels = docSessions
-              .map((s) => `${s.start} – ${s.end}`)
-              .join(" · ")
-            const totalQuota = docSessions.reduce((sum, s) => sum + s.quota, 0)
-            const totalLeft = docSessions.reduce(
-              (sum, s) => sum + remaining(s, targetDate, visits),
-              0,
-            )
+          Array.from(groupedByDoctor.entries()).map(
+            ([doctorId, docSessions]) => {
+              // Jika dokter memiliki lebih dari 1 sesi jam di hari itu, buat 1 baris isinya jamnya saja
+              const timeLabels = docSessions
+                .map((s) => `${s.start} – ${s.end}`)
+                .join(" · ");
+              const totalQuota = docSessions.reduce(
+                (sum, s) => sum + s.quota,
+                0,
+              );
+              const totalLeft = docSessions.reduce(
+                (sum, s) => sum + remaining(s, targetDate, visits),
+                0,
+              );
 
-            return (
-              <div className="ws-session" key={doctorId}>
-                <GenderAvatar name={doctorName(doctorId)} />
-                <div>
-                  <b>{doctorName(doctorId)}</b>
-                  <small>{timeLabels}</small>
-                  <div className="ws-quota-track">
-                    <span
-                      style={{
-                        width:
-                          totalQuota > 0
-                            ? `${((totalQuota - totalLeft) / totalQuota) * 100}%`
-                            : "0%",
-                      }}
-                    />
+              return (
+                <div className="ws-session" key={doctorId}>
+                  <GenderAvatar name={doctorName(doctorId)} />
+                  <div>
+                    <b>{doctorName(doctorId)}</b>
+                    <small>{timeLabels}</small>
+                    <div className="ws-quota-track">
+                      <span
+                        style={{
+                          width:
+                            totalQuota > 0
+                              ? `${((totalQuota - totalLeft) / totalQuota) * 100}%`
+                              : "0%",
+                        }}
+                      />
+                    </div>
                   </div>
+                  <span className={totalLeft ? "ws-quota" : "ws-quota full"}>
+                    {totalLeft ? `${totalLeft}/${totalQuota} tersisa` : "Penuh"}
+                  </span>
                 </div>
-                <span className={totalLeft ? "ws-quota" : "ws-quota full"}>
-                  {totalLeft ? `${totalLeft}/${totalQuota} tersisa` : "Penuh"}
-                </span>
-              </div>
-            )
-          })
+              );
+            },
+          )
         )}
       </section>
-    )
-  })()
+    );
+  })();
   const workflow = (
     <section className="panel ws-workflow">
       <div className="panel-heading">
@@ -1357,7 +1424,7 @@ export default function ClinicWorkspace({
         ))}
       </div>
     </section>
-  )
+  );
   const patientCard = (v: Visit) => (
     <section className="panel ws-ticket" key={v.id}>
       <div className="panel-heading">
@@ -1404,7 +1471,7 @@ export default function ClinicWorkspace({
                     ? 2
                     : v.status === "Hadir"
                       ? 1
-                      : 0
+                      : 0;
               return (
                 <li
                   key={label}
@@ -1426,7 +1493,7 @@ export default function ClinicWorkspace({
                   </span>
                   <small>{label}</small>
                 </li>
-              )
+              );
             },
           )}
         </ol>
@@ -1441,7 +1508,7 @@ export default function ClinicWorkspace({
         )}
       </div>
     </section>
-  )
+  );
   const patientDashboard = (
     <>
       <div className="patient-welcome">
@@ -1506,7 +1573,7 @@ export default function ClinicWorkspace({
             (() => {
               const next = [...active].sort(
                 (a, b) => a.date.localeCompare(b.date) || a.number - b.number,
-              )[0]
+              )[0];
               return (
                 <div className="patient-panel-body">
                   <div className="patient-appointment-date">
@@ -1538,7 +1605,7 @@ export default function ClinicWorkspace({
                     <Icon name="arrow" size={17} />
                   </button>
                 </div>
-              )
+              );
             })()
           ) : (
             <div className="empty">
@@ -1616,7 +1683,9 @@ export default function ClinicWorkspace({
         </div>
         <div className="patient-panel-body">
           {loadingData ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+            >
               {[0, 1, 2].map((idx) => (
                 <div
                   className="ws-skeleton ws-skeleton-line"
@@ -1626,8 +1695,8 @@ export default function ClinicWorkspace({
               ))}
             </div>
           ) : scoped.some((v) =>
-            ["Selesai", "Dibatalkan", "Dilewati"].includes(v.queue),
-          ) ? (
+              ["Selesai", "Dibatalkan", "Dilewati"].includes(v.queue),
+            ) ? (
             [...scoped]
               .filter((v) =>
                 ["Selesai", "Dibatalkan", "Dilewati"].includes(v.queue),
@@ -1661,7 +1730,7 @@ export default function ClinicWorkspace({
         </div>
       </section>
     </>
-  )
+  );
   const patientQueue = (
     <div className="patient-queue-layout">
       <div className="patient-queue-tickets">
@@ -1724,7 +1793,7 @@ export default function ClinicWorkspace({
         </section>
       </aside>
     </div>
-  )
+  );
   const registration = (
     <div className="ws-booking-grid">
       <section className="panel form-panel">
@@ -1826,13 +1895,13 @@ export default function ClinicWorkspace({
                     onChange={(e) => {
                       const doctor = doctors.find(
                         (d) => d.active && d.services.includes(e.target.value),
-                      )
+                      );
                       setBooking({
                         ...booking,
                         service: e.target.value,
                         doctor: doctor?.id || "",
                         schedule: "",
-                      })
+                      });
                     }}
                   >
                     {services
@@ -1991,8 +2060,8 @@ export default function ClinicWorkspace({
                   type="button"
                   disabled={busy}
                   onClick={() => {
-                    setStep(step - 1)
-                    setError("")
+                    setStep(step - 1);
+                    setError("");
                   }}
                 >
                   Kembali
@@ -2014,22 +2083,24 @@ export default function ClinicWorkspace({
         {schedulePanel}
         <div className="notice" suppressHydrationWarning>
           <Icon name="help" size={20} />
-          Jadwal praktik dan ketersediaan kuota diperbarui secara real-time untuk hari ini ({todayFormatted || getTodayFormatted()}).
+          Jadwal praktik dan ketersediaan kuota diperbarui secara real-time
+          untuk hari ini ({todayFormatted || getTodayFormatted()}).
         </div>
       </div>
     </div>
-  )
+  );
   const saveEditor = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (!editor || busy) return
-    const data = new FormData(e.currentTarget)
-    const get = (key: string) => String(data.get(key) || "").trim()
-    const active = get("active") !== "Nonaktif"
-    setBusy(true)
+    e.preventDefault();
+    if (!editor || busy) return;
+    const data = new FormData(e.currentTarget);
+    const get = (key: string) => String(data.get(key) || "").trim();
+    const active = get("active") !== "Nonaktif";
+    setBusy(true);
     try {
       if (editor.type === "Pasien") {
         const value: Patient = {
-          id: editor.id || `RM-${String(128 + patients.length).padStart(5, "0")}`,
+          id:
+            editor.id || `RM-${String(128 + patients.length).padStart(5, "0")}`,
           name: get("name"),
           phone: get("phone"),
           birth: get("birth"),
@@ -2037,7 +2108,7 @@ export default function ClinicWorkspace({
           address: get("address"),
           emergency: get("emergency"),
           account: false,
-        }
+        };
         setPatients((p) =>
           editor.id
             ? p.map((item) =>
@@ -2046,25 +2117,25 @@ export default function ClinicWorkspace({
                   : item,
               )
             : [...p, value],
-        )
-        if (!editor.id) setBooking((b) => ({ ...b, patient: value.id }))
+        );
+        if (!editor.id) setBooking((b) => ({ ...b, patient: value.id }));
       } else if (editor.type === "Dokter") {
         if (doctorPhotoError) {
-          setError(doctorPhotoError)
-          return
+          setError(doctorPhotoError);
+          return;
         }
         if (doctors.some((d) => d.sip === get("sip") && d.id !== editor.id)) {
-          setError("Nomor SIP sudah terdaftar.")
-          return
+          setError("Nomor SIP sudah terdaftar.");
+          return;
         }
-        const linked = data.getAll("services").map(String)
+        const linked = data.getAll("services").map(String);
         if (!linked.length) {
-          setError("Pilih setidaknya satu layanan untuk dokter.")
-          return
+          setError("Pilih setidaknya satu layanan untuk dokter.");
+          return;
         }
         const existingDoc = editor.id
           ? doctors.find((item) => item.id === editor.id)
-          : null
+          : null;
         const value: Doctor = {
           id: editor.id || `d${Date.now()}`,
           name: get("name"),
@@ -2086,152 +2157,157 @@ export default function ClinicWorkspace({
           certifications: existingDoc?.certifications || [
             "Sertifikasi Kompetensi Klinis IDI",
           ],
-          bio: existingDoc?.bio || "Dokter berdedikasi melayani pasien keluarga.",
-        }
+          bio:
+            existingDoc?.bio || "Dokter berdedikasi melayani pasien keluarga.",
+        };
         setDoctors((d) =>
           editor.id
             ? d.map((item) => (item.id === editor.id ? value : item))
             : [...d, value],
-        )
-    } else if (editor.type === "Layanan") {
-      if (
-        services.some(
-          (s) =>
-            s.name.toLowerCase() === get("name").toLowerCase() &&
-            s.id !== editor.id,
-        )
-      ) {
-        setError("Nama layanan sudah digunakan.")
-        return
-      }
-      const existingSrv = editor.id
-        ? services.find((item) => item.id === editor.id)
-        : null
-      const value: Service = {
-        id: editor.id || `s${Date.now()}`,
-        name: get("name"),
-        description: get("description"),
-        duration: Number(get("duration")),
-        active,
-        overview: existingSrv?.overview || get("description"),
-        steps: existingSrv?.steps || [
+        );
+      } else if (editor.type === "Layanan") {
+        if (
+          services.some(
+            (s) =>
+              s.name.toLowerCase() === get("name").toLowerCase() &&
+              s.id !== editor.id,
+          )
+        ) {
+          setError("Nama layanan sudah digunakan.");
+          return;
+        }
+        const existingSrv = editor.id
+          ? services.find((item) => item.id === editor.id)
+          : null;
+        const value: Service = {
+          id: editor.id || `s${Date.now()}`,
+          name: get("name"),
+          description: get("description"),
+          duration: Number(get("duration")),
+          active,
+          overview: existingSrv?.overview || get("description"),
+          steps: existingSrv?.steps || [
+            {
+              step: 1,
+              title: "Skrining Awal",
+              description: "Pemeriksaan tanda vital",
+            },
+            {
+              step: 2,
+              title: "Anamnesis",
+              description: "Konsultasi keluhan pasien",
+            },
+            {
+              step: 3,
+              title: "Pemeriksaan Fisik",
+              description: "Pemeriksaan organ terarah",
+            },
+            {
+              step: 4,
+              title: "Edukasi & Terapi",
+              description: "Penetapan resep dan rencana kontrol",
+            },
+          ],
+          cases: existingSrv?.cases || ["Pemeriksaan keluhan medis umum"],
+          facilities: existingSrv?.facilities || [
+            "Peralatan diagnostik medis terstandar",
+          ],
+          preparation:
+            existingSrv?.preparation || "Membawa kartu identitas resmi.",
+        };
+        setServices((s) =>
+          editor.id
+            ? s.map((item) => (item.id === editor.id ? value : item))
+            : [...s, value],
+        );
+      } else if (editor.type === "Jadwal") {
+        if (get("start") >= get("end")) {
+          setError("Jam selesai harus setelah jam mulai.");
+          return;
+        }
+        if (
+          active &&
+          schedules.some(
+            (s) =>
+              s.id !== editor.id &&
+              s.active &&
+              s.doctor === get("doctor") &&
+              s.day === Number(get("day")) &&
+              s.start < get("end") &&
+              s.end > get("start"),
+          )
+        ) {
+          setError("Jadwal bentrok dengan sesi aktif dokter yang sama.");
+          return;
+        }
+        const value = {
+          id: editor.id || `j${Date.now()}`,
+          doctor: get("doctor"),
+          day: Number(get("day")),
+          start: get("start"),
+          end: get("end"),
+          quota: Number(get("quota")),
+          active,
+        };
+        setSchedules((s) =>
+          editor.id
+            ? s.map((item) => (item.id === editor.id ? value : item))
+            : [...s, value],
+        );
+      } else if (editor.type === "Pengguna") {
+        if (users.some((u) => u.email === get("email"))) {
+          setError("Email sudah digunakan.");
+          return;
+        }
+        const newStaffName = get("name");
+        const newStaffRole = get("role");
+        setUsers((u) => [
+          ...u,
           {
-            step: 1,
-            title: "Skrining Awal",
-            description: "Pemeriksaan tanda vital",
+            name: newStaffName,
+            email: get("email"),
+            role: newStaffRole,
+            active: true,
+            password: get("password") || "password123",
           },
-          {
-            step: 2,
-            title: "Anamnesis",
-            description: "Konsultasi keluhan pasien",
-          },
-          {
-            step: 3,
-            title: "Pemeriksaan Fisik",
-            description: "Pemeriksaan organ terarah",
-          },
-          {
-            step: 4,
-            title: "Edukasi & Terapi",
-            description: "Penetapan resep dan rencana kontrol",
-          },
-        ],
-        cases: existingSrv?.cases || ["Pemeriksaan keluhan medis umum"],
-        facilities: existingSrv?.facilities || [
-          "Peralatan diagnostik medis terstandar",
-        ],
-        preparation:
-          existingSrv?.preparation || "Membawa kartu identitas resmi.",
+        ]);
+        setEditor(null);
+        setError("");
+        notify(
+          `Akun staf ${newStaffName} (${newStaffRole}) berhasil didaftarkan. Pengguna kini dapat login ke dashboard ${newStaffRole}.`,
+        );
+        return;
       }
-      setServices((s) =>
-        editor.id
-          ? s.map((item) => (item.id === editor.id ? value : item))
-          : [...s, value],
-      )
-    } else if (editor.type === "Jadwal") {
-      if (get("start") >= get("end")) {
-        setError("Jam selesai harus setelah jam mulai.")
-        return
-      }
-      if (
-        active &&
-        schedules.some(
-          (s) =>
-            s.id !== editor.id &&
-            s.active &&
-            s.doctor === get("doctor") &&
-            s.day === Number(get("day")) &&
-            s.start < get("end") &&
-            s.end > get("start"),
-        )
-      ) {
-        setError("Jadwal bentrok dengan sesi aktif dokter yang sama.")
-        return
-      }
-      const value = {
-        id: editor.id || `j${Date.now()}`,
-        doctor: get("doctor"),
-        day: Number(get("day")),
-        start: get("start"),
-        end: get("end"),
-        quota: Number(get("quota")),
-        active,
-      }
-      setSchedules((s) =>
-        editor.id
-          ? s.map((item) => (item.id === editor.id ? value : item))
-          : [...s, value],
-      )
-    } else if (editor.type === "Pengguna") {
-      if (users.some((u) => u.email === get("email"))) {
-        setError("Email sudah digunakan.")
-        return
-      }
-      const newStaffName = get("name")
-      const newStaffRole = get("role")
-      setUsers((u) => [
-        ...u,
-        {
-          name: newStaffName,
-          email: get("email"),
-          role: newStaffRole,
-          active: true,
-          password: get("password") || "password123",
-        },
-      ])
-      setEditor(null)
-      setError("")
+      setEditor(null);
+      setError("");
       notify(
-        `Akun staf ${newStaffName} (${newStaffRole}) berhasil didaftarkan. Pengguna kini dapat login ke dashboard ${newStaffRole}.`
-      )
-      return
-    }
-    setEditor(null)
-    setError("")
-    notify(
-      "Data demo berhasil diperbarui. Perubahan hanya berlaku selama sesi ini.",
-    )
+        "Data demo berhasil diperbarui. Perubahan hanya berlaku selama sesi ini.",
+      );
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
-  }
+  };
   const editRecord =
-    editor?.type === "Dokter" ? doctors.find((d) => d.id === editor.id) : null
+    editor?.type === "Dokter" ? doctors.find((d) => d.id === editor.id) : null;
   const editService =
-    editor?.type === "Layanan" ? services.find((s) => s.id === editor.id) : null
+    editor?.type === "Layanan"
+      ? services.find((s) => s.id === editor.id)
+      : null;
   const editSchedule =
-    editor?.type === "Jadwal" ? schedules.find((s) => s.id === editor.id) : null
+    editor?.type === "Jadwal"
+      ? schedules.find((s) => s.id === editor.id)
+      : null;
   const editPatient =
-    editor?.type === "Pasien" ? patients.find((p) => p.id === editor.id) : null
+    editor?.type === "Pasien" ? patients.find((p) => p.id === editor.id) : null;
   const management = () => {
     if (page === "Pendaftaran Kunjungan" || page === "Pendaftaran Walk-in")
-      return registration
-    if (page === "Antrean Saya" && role === "Pasien") return patientQueue
+      return registration;
+    if (page === "Antrean Saya" && role === "Pasien") return patientQueue;
     if (page === "Antrean Hari Ini" || page === "Antrean Saya")
       return visitTable(
         today,
         role === "Dokter" ? "Antrean dokter Anda hari ini" : "Antrean hari ini",
-      )
+      );
     if (page === "Riwayat Kunjungan" || page === "Riwayat Pasien")
       return visitTable(
         scoped.filter((v) =>
@@ -2240,22 +2316,22 @@ export default function ClinicWorkspace({
         role === "Pasien"
           ? "Riwayat kunjungan Anda"
           : "Riwayat pasien yang Anda tangani",
-      )
+      );
     if (page === "Rekap Kunjungan") {
-      const dateMap = new Map<string, number>()
+      const dateMap = new Map<string, number>();
       for (const v of statScope) {
-        dateMap.set(v.date, (dateMap.get(v.date) || 0) + 1)
+        dateMap.set(v.date, (dateMap.get(v.date) || 0) + 1);
       }
       const trendDates = Array.from(dateMap.entries())
         .sort(([a], [b]) => a.localeCompare(b))
-        .slice(-10)
-      const maxTrend = Math.max(...trendDates.map(([, count]) => count), 1)
-      const doneCount = statScope.filter((v) => v.queue === "Selesai").length
+        .slice(-10);
+      const maxTrend = Math.max(...trendDates.map(([, count]) => count), 1);
+      const doneCount = statScope.filter((v) => v.queue === "Selesai").length;
       const cancelledCount = statScope.filter((v) =>
         ["Dibatalkan", "Dilewati"].includes(v.queue),
-      ).length
-      const onlineCount = statScope.filter((v) => v.source === "Online").length
-      const walkinCount = statScope.length - onlineCount
+      ).length;
+      const onlineCount = statScope.filter((v) => v.source === "Online").length;
+      const walkinCount = statScope.length - onlineCount;
       return (
         <>
           {stats}
@@ -2276,14 +2352,27 @@ export default function ClinicWorkspace({
                   <Icon name="chart" size={18} />
                 </div>
                 {trendDates.length ? (
-                  <div className="ws-trend-bars" role="img" aria-label="Grafik batang tren kunjungan per tanggal">
+                  <div
+                    className="ws-trend-bars"
+                    role="img"
+                    aria-label="Grafik batang tren kunjungan per tanggal"
+                  >
                     {trendDates.map(([dateKey, count]) => {
-                      const pct = Math.max(8, Math.round((count / maxTrend) * 100))
-                      const parts = dateKey.split("-")
+                      const pct = Math.max(
+                        8,
+                        Math.round((count / maxTrend) * 100),
+                      );
+                      const parts = dateKey.split("-");
                       const shortDate =
-                        parts.length === 3 ? `${parts[2]}/${parts[1]}` : dateKey
+                        parts.length === 3
+                          ? `${parts[2]}/${parts[1]}`
+                          : dateKey;
                       return (
-                        <div className="ws-trend-col" key={dateKey} title={`${dateLabel(dateKey)}: ${count} kunjungan`}>
+                        <div
+                          className="ws-trend-col"
+                          key={dateKey}
+                          title={`${dateLabel(dateKey)}: ${count} kunjungan`}
+                        >
                           <span className="ws-trend-count">{count}</span>
                           <div className="ws-trend-track">
                             <span
@@ -2293,7 +2382,7 @@ export default function ClinicWorkspace({
                           </div>
                           <span className="ws-trend-label">{shortDate}</span>
                         </div>
-                      )
+                      );
                     })}
                   </div>
                 ) : (
@@ -2307,7 +2396,13 @@ export default function ClinicWorkspace({
                     Selesai: <b>{doneCount}</b>
                   </span>
                   <span>
-                    Aktif / Antrean: <b>{Math.max(0, statScope.length - doneCount - cancelledCount)}</b>
+                    Aktif / Antrean:{" "}
+                    <b>
+                      {Math.max(
+                        0,
+                        statScope.length - doneCount - cancelledCount,
+                      )}
+                    </b>
                   </span>
                   <span>
                     Batal / Lewat: <b>{cancelledCount}</b>
@@ -2323,7 +2418,9 @@ export default function ClinicWorkspace({
                   <Icon name="heart" size={18} />
                 </div>
                 {services.map((s) => {
-                  const count = statScope.filter((v) => v.service === s.id).length
+                  const count = statScope.filter(
+                    (v) => v.service === s.id,
+                  ).length;
                   return (
                     <div className="ws-distribution-row" key={s.id}>
                       <div>
@@ -2340,9 +2437,12 @@ export default function ClinicWorkspace({
                         />
                       </div>
                     </div>
-                  )
+                  );
                 })}
-                <div className="ws-trend-legend" style={{ paddingInline: 0, paddingBottom: 0 }}>
+                <div
+                  className="ws-trend-legend"
+                  style={{ paddingInline: 0, paddingBottom: 0 }}
+                >
                   <span>
                     Online: <b>{onlineCount}</b>
                   </span>
@@ -2355,7 +2455,7 @@ export default function ClinicWorkspace({
           )}
           {visitTable(scoped, "Rekap administratif kunjungan", true)}
         </>
-      )
+      );
     }
     if (page === "Data Pasien") {
       const list = patients.filter(
@@ -2364,8 +2464,8 @@ export default function ClinicWorkspace({
           `${p.name} ${p.id} ${p.nik || ""} ${p.phone}`
             .toLowerCase()
             .includes(search.toLowerCase()),
-      )
-      const { paged: pagedPatients, current, maxPage } = paginateList(list, 6)
+      );
+      const { paged: pagedPatients, current, maxPage } = paginateList(list, 6);
       return (
         <section className="panel">
           <div className="panel-heading">
@@ -2384,8 +2484,8 @@ export default function ClinicWorkspace({
                 aria-label="Cari pasien"
                 value={search}
                 onChange={(e) => {
-                  setSearch(e.target.value)
-                  setPagination(1)
+                  setSearch(e.target.value);
+                  setPagination(1);
                 }}
               />
             </div>
@@ -2394,8 +2494,8 @@ export default function ClinicWorkspace({
                 aria-label="Filter tipe pasien"
                 value={filter}
                 onChange={(e) => {
-                  setFilter(e.target.value)
-                  setPagination(1)
+                  setFilter(e.target.value);
+                  setPagination(1);
                 }}
               >
                 <option value="">Semua tipe</option>
@@ -2434,7 +2534,9 @@ export default function ClinicWorkspace({
                         <td>{p.phone}</td>
                         <td>
                           <Badge
-                            text={p.account ? "Berakun" : "Walk-in · Tanpa akun"}
+                            text={
+                              p.account ? "Berakun" : "Walk-in · Tanpa akun"
+                            }
                           />
                         </td>
                         <td>
@@ -2463,7 +2565,7 @@ export default function ClinicWorkspace({
             current,
           )}
         </section>
-      )
+      );
     }
     if (page === "Data Dokter") {
       const list = doctors.filter(
@@ -2472,8 +2574,8 @@ export default function ClinicWorkspace({
           `${d.name} ${d.specialty} ${d.sip}`
             .toLowerCase()
             .includes(search.toLowerCase()),
-      )
-      const { paged: pagedDoctors, current, maxPage } = paginateList(list, 6)
+      );
+      const { paged: pagedDoctors, current, maxPage } = paginateList(list, 6);
       return (
         <>
           <div className="section-toolbar">
@@ -2484,8 +2586,8 @@ export default function ClinicWorkspace({
                 placeholder="Cari dokter, spesialisasi, atau SIP…"
                 value={search}
                 onChange={(e) => {
-                  setSearch(e.target.value)
-                  setPagination(1)
+                  setSearch(e.target.value);
+                  setPagination(1);
                 }}
               />
             </div>
@@ -2494,8 +2596,8 @@ export default function ClinicWorkspace({
                 aria-label="Filter status dokter"
                 value={filter}
                 onChange={(e) => {
-                  setFilter(e.target.value)
-                  setPagination(1)
+                  setFilter(e.target.value);
+                  setPagination(1);
                 }}
               >
                 <option value="">Semua status</option>
@@ -2511,7 +2613,10 @@ export default function ClinicWorkspace({
           {loadingData ? (
             <div className="doctor-cards" aria-busy="true">
               {[0, 1, 2].map((idx) => (
-                <section className="panel doctor-card ws-skeleton-card" key={idx}>
+                <section
+                  className="panel doctor-card ws-skeleton-card"
+                  key={idx}
+                >
                   <div className="ws-skeleton ws-skeleton-line short" />
                   <div className="ws-skeleton ws-skeleton-line tall" />
                   <div className="ws-skeleton ws-skeleton-line" />
@@ -2529,10 +2634,15 @@ export default function ClinicWorkspace({
                         alt={d.name}
                         className="ws-doctor-photo"
                         onError={(e) => {
-                          const target = e.currentTarget
-                          target.onerror = null
-                          const isFemale = /nadira|annisa|alea|siti|putri|sarah|maya/i.test(d.name)
-                          target.src = isFemale ? "/images/avatar-female.jpg" : "/images/avatar-male.jpg"
+                          const target = e.currentTarget;
+                          target.onerror = null;
+                          const isFemale =
+                            /nadira|annisa|alea|siti|putri|sarah|maya/i.test(
+                              d.name,
+                            );
+                          target.src = isFemale
+                            ? "/images/avatar-female.jpg"
+                            : "/images/avatar-male.jpg";
                         }}
                       />
                     </div>
@@ -2544,15 +2654,32 @@ export default function ClinicWorkspace({
                   <p>{d.specialty}</p>
 
                   {/* Riwayat Pendidikan Dokter */}
-                  <div className="doctor-edu-preview" style={{ margin: "8px 0" }}>
+                  <div
+                    className="doctor-edu-preview"
+                    style={{ margin: "8px 0" }}
+                  >
                     <span className="doctor-almamater-pill">
                       <Icon name="education" size={13} />
                       {d.almamater}
                     </span>
-                    <small style={{ display: "block", color: "#64748b", fontSize: "10.5px" }}>
-                      {d.education?.[0]?.degree || "Pendidikan Dokter"} · {d.experienceYears}+ Thn Pengalaman
+                    <small
+                      style={{
+                        display: "block",
+                        color: "#64748b",
+                        fontSize: "10.5px",
+                      }}
+                    >
+                      {d.education?.[0]?.degree || "Pendidikan Dokter"} ·{" "}
+                      {d.experienceYears}+ Thn Pengalaman
                     </small>
-                    <small style={{ display: "block", color: "#94a3b8", fontSize: "10px", marginTop: "2px" }}>
+                    <small
+                      style={{
+                        display: "block",
+                        color: "#94a3b8",
+                        fontSize: "10px",
+                        marginTop: "2px",
+                      }}
+                    >
                       STR: {d.str} · SIP: {d.sip}
                     </small>
                   </div>
@@ -2585,7 +2712,7 @@ export default function ClinicWorkspace({
             )}
           </section>
         </>
-      )
+      );
     }
     if (page === "Data Layanan") {
       const list = services.filter(
@@ -2594,8 +2721,8 @@ export default function ClinicWorkspace({
           `${s.name} ${s.description}`
             .toLowerCase()
             .includes(search.toLowerCase()),
-      )
-      const { paged: pagedServices, current, maxPage } = paginateList(list, 6)
+      );
+      const { paged: pagedServices, current, maxPage } = paginateList(list, 6);
       return (
         <>
           <div className="section-toolbar">
@@ -2606,8 +2733,8 @@ export default function ClinicWorkspace({
                 placeholder="Cari nama atau deskripsi layanan…"
                 value={search}
                 onChange={(e) => {
-                  setSearch(e.target.value)
-                  setPagination(1)
+                  setSearch(e.target.value);
+                  setPagination(1);
                 }}
               />
             </div>
@@ -2616,8 +2743,8 @@ export default function ClinicWorkspace({
                 aria-label="Filter status layanan"
                 value={filter}
                 onChange={(e) => {
-                  setFilter(e.target.value)
-                  setPagination(1)
+                  setFilter(e.target.value);
+                  setPagination(1);
                 }}
               >
                 <option value="">Semua status</option>
@@ -2633,7 +2760,10 @@ export default function ClinicWorkspace({
           {loadingData ? (
             <div className="doctor-cards" aria-busy="true">
               {[0, 1, 2].map((idx) => (
-                <section className="panel doctor-card ws-skeleton-card" key={idx}>
+                <section
+                  className="panel doctor-card ws-skeleton-card"
+                  key={idx}
+                >
                   <div className="ws-skeleton ws-skeleton-line short" />
                   <div className="ws-skeleton ws-skeleton-line tall" />
                   <div className="ws-skeleton ws-skeleton-line" />
@@ -2657,13 +2787,43 @@ export default function ClinicWorkspace({
 
                   {/* 4 Tahapan Alur Pelayanan */}
                   {s.steps && s.steps.length > 0 && (
-                    <div style={{ margin: "10px 0", padding: "8px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #edf2f7" }}>
-                      <small style={{ fontWeight: 600, color: "#1e40af", display: "block", marginBottom: "4px" }}>
+                    <div
+                      style={{
+                        margin: "10px 0",
+                        padding: "8px",
+                        background: "#f8fafc",
+                        borderRadius: "8px",
+                        border: "1px solid #edf2f7",
+                      }}
+                    >
+                      <small
+                        style={{
+                          fontWeight: 600,
+                          color: "#1e40af",
+                          display: "block",
+                          marginBottom: "4px",
+                        }}
+                      >
                         Alur Pelayanan (4 Tahap):
                       </small>
-                      <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "4px",
+                          flexWrap: "wrap",
+                        }}
+                      >
                         {s.steps.map((st) => (
-                          <span key={st.step} style={{ background: "#eff6ff", color: "#1d4ed8", padding: "2px 6px", borderRadius: "4px", fontSize: "9px" }}>
+                          <span
+                            key={st.step}
+                            style={{
+                              background: "#eff6ff",
+                              color: "#1d4ed8",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                              fontSize: "9px",
+                            }}
+                          >
                             {st.step}. {st.title.split(" ")[0]}
                           </span>
                         ))}
@@ -2693,46 +2853,44 @@ export default function ClinicWorkspace({
             )}
           </section>
         </>
-      )
+      );
     }
     if (page === "Jadwal Praktik") {
-      const dayShort = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"]
-      const dayOrder = [1, 2, 3, 4, 5, 6, 0]
-      const groupedByDoc = new Map<string, Schedule[]>()
+      const dayShort = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+      const dayOrder = [1, 2, 3, 4, 5, 6, 0];
+      const groupedByDoc = new Map<string, Schedule[]>();
       for (const s of schedules) {
-        const list = groupedByDoc.get(s.doctor) || []
+        const list = groupedByDoc.get(s.doctor) || [];
         const isDuplicateSlot = list.some(
           (item) =>
-            item.day === s.day &&
-            item.start === s.start &&
-            item.end === s.end,
-        )
+            item.day === s.day && item.start === s.start && item.end === s.end,
+        );
         if (!isDuplicateSlot) {
-          list.push(s)
-          groupedByDoc.set(s.doctor, list)
+          list.push(s);
+          groupedByDoc.set(s.doctor, list);
         }
       }
       const doctorRows = Array.from(groupedByDoc.entries()).map(
         ([doctorId, docSchedules]) => {
           const sorted = [...docSchedules].sort((a, b) => {
-            const dDiff = dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day)
-            return dDiff !== 0 ? dDiff : a.start.localeCompare(b.start)
-          })
-          const docObj = doctors.find((d) => d.id === doctorId)
+            const dDiff = dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
+            return dDiff !== 0 ? dDiff : a.start.localeCompare(b.start);
+          });
+          const docObj = doctors.find((d) => d.id === doctorId);
           const uniqueTimes = Array.from(
             new Set(sorted.map((s) => `${s.start} – ${s.end}`)),
-          )
-          const quotas = sorted.map((s) => s.quota)
-          const minQuota = Math.min(...quotas)
-          const maxQuota = Math.max(...quotas)
+          );
+          const quotas = sorted.map((s) => s.quota);
+          const minQuota = Math.min(...quotas);
+          const maxQuota = Math.max(...quotas);
           const quotaText =
             minQuota === maxQuota
               ? `${minQuota} pasien`
-              : `${minQuota}–${maxQuota} pasien`
-          const mondaySessions = sorted.filter((s) => s.day === 1)
-          const activeCount = sorted.filter((s) => s.active).length
+              : `${minQuota}–${maxQuota} pasien`;
+          const mondaySessions = sorted.filter((s) => s.day === 1);
+          const activeCount = sorted.filter((s) => s.active).length;
           const primarySched =
-            mondaySessions[0] || sorted.find((s) => s.active) || sorted[0]
+            mondaySessions[0] || sorted.find((s) => s.active) || sorted[0];
           return {
             doctorId,
             docObj,
@@ -2742,22 +2900,23 @@ export default function ClinicWorkspace({
             mondaySessions,
             activeCount,
             primarySched,
-          }
+          };
         },
-      )
+      );
       const filteredDoctorRows = doctorRows.filter((row) => {
-        const docTitle = `${doctorName(row.doctorId)} ${row.docObj?.specialty || ""}`.toLowerCase()
-        const matchSearch = docTitle.includes(search.toLowerCase())
+        const docTitle =
+          `${doctorName(row.doctorId)} ${row.docObj?.specialty || ""}`.toLowerCase();
+        const matchSearch = docTitle.includes(search.toLowerCase());
         const matchFilter =
           !filter ||
-          (filter === "Aktif" ? row.activeCount > 0 : row.activeCount === 0)
-        return matchSearch && matchFilter
-      })
+          (filter === "Aktif" ? row.activeCount > 0 : row.activeCount === 0);
+        return matchSearch && matchFilter;
+      });
       const {
         paged: pagedDoctorRows,
         current,
         maxPage,
-      } = paginateList(filteredDoctorRows, 6)
+      } = paginateList(filteredDoctorRows, 6);
 
       return (
         <section className="panel">
@@ -2765,10 +2924,13 @@ export default function ClinicWorkspace({
             <div>
               <h3>
                 Jadwal praktik & kuota{" "}
-                <span className="count">{filteredDoctorRows.length} dokter</span>
+                <span className="count">
+                  {filteredDoctorRows.length} dokter
+                </span>
               </h3>
               <p>
-                Satu baris per dokter menampilkan seluruh hari praktiknya. Klik hari untuk mengedit sesi tersebut.
+                Satu baris per dokter menampilkan seluruh hari praktiknya. Klik
+                hari untuk mengedit sesi tersebut.
               </p>
             </div>
             <button className="primary" onClick={() => showEditor("Jadwal")}>
@@ -2784,8 +2946,8 @@ export default function ClinicWorkspace({
                 placeholder="Cari dokter atau spesialisasi…"
                 value={search}
                 onChange={(e) => {
-                  setSearch(e.target.value)
-                  setPagination(1)
+                  setSearch(e.target.value);
+                  setPagination(1);
                 }}
               />
             </div>
@@ -2794,8 +2956,8 @@ export default function ClinicWorkspace({
                 aria-label="Filter status jadwal"
                 value={filter}
                 onChange={(e) => {
-                  setFilter(e.target.value)
-                  setPagination(1)
+                  setFilter(e.target.value);
+                  setPagination(1);
                 }}
               >
                 <option value="">Semua status</option>
@@ -2831,70 +2993,77 @@ export default function ClinicWorkspace({
                       </tr>
                     ))
                   : pagedDoctorRows.map(
-                  ({
-                    doctorId,
-                    docObj,
-                    sorted,
-                    uniqueTimes,
-                    quotaText,
-                    mondaySessions,
-                    activeCount,
-                    primarySched,
-                  }) => (
-                    <tr key={doctorId}>
-                      <td>
-                        <b>{doctorName(doctorId)}</b>
-                        {docObj?.specialty && <small>{docObj.specialty}</small>}
-                      </td>
-                      <td>
-                        <div className="ws-day-chips">
-                          {sorted.map((s) => (
+                      ({
+                        doctorId,
+                        docObj,
+                        sorted,
+                        uniqueTimes,
+                        quotaText,
+                        mondaySessions,
+                        activeCount,
+                        primarySched,
+                      }) => (
+                        <tr key={doctorId}>
+                          <td>
+                            <b>{doctorName(doctorId)}</b>
+                            {docObj?.specialty && (
+                              <small>{docObj.specialty}</small>
+                            )}
+                          </td>
+                          <td>
+                            <div className="ws-day-chips">
+                              {sorted.map((s) => (
+                                <button
+                                  key={s.id}
+                                  type="button"
+                                  className={`ws-day-chip ${s.active ? "" : "inactive"}`}
+                                  title={`Edit jadwal ${dayShort[s.day]} (${s.start} – ${s.end})`}
+                                  onClick={() => showEditor("Jadwal", s.id)}
+                                >
+                                  <b>{dayShort[s.day]}</b>
+                                  <span>
+                                    {s.start}–{s.end}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </td>
+                          <td>
+                            {uniqueTimes.map((t) => (
+                              <div key={t}>{t}</div>
+                            ))}
+                          </td>
+                          <td>{quotaText}</td>
+                          <td>
+                            {mondaySessions.length > 0
+                              ? `${mondaySessions.reduce(
+                                  (sum, s) =>
+                                    sum + remaining(s, DEMO_DATE, visits),
+                                  0,
+                                )} tersisa`
+                              : "—"}
+                          </td>
+                          <td>
+                            <Badge
+                              text={activeCount > 0 ? "Aktif" : "Nonaktif"}
+                            />
+                            <small>
+                              {activeCount}/{sorted.length} hari aktif
+                            </small>
+                          </td>
+                          <td>
                             <button
-                              key={s.id}
-                              type="button"
-                              className={`ws-day-chip ${s.active ? "" : "inactive"}`}
-                              title={`Edit jadwal ${dayShort[s.day]} (${s.start} – ${s.end})`}
-                              onClick={() => showEditor("Jadwal", s.id)}
+                              className="text-button"
+                              onClick={() =>
+                                showEditor("Jadwal", primarySched.id)
+                              }
                             >
-                              <b>{dayShort[s.day]}</b>
-                              <span>
-                                {s.start}–{s.end}
-                              </span>
+                              Edit Jadwal
                             </button>
-                          ))}
-                        </div>
-                      </td>
-                      <td>
-                        {uniqueTimes.map((t) => (
-                          <div key={t}>{t}</div>
-                        ))}
-                      </td>
-                      <td>{quotaText}</td>
-                      <td>
-                        {mondaySessions.length > 0
-                          ? `${mondaySessions.reduce(
-                              (sum, s) => sum + remaining(s, DEMO_DATE, visits),
-                              0,
-                            )} tersisa`
-                          : "—"}
-                      </td>
-                      <td>
-                        <Badge text={activeCount > 0 ? "Aktif" : "Nonaktif"} />
-                        <small>
-                          {activeCount}/{sorted.length} hari aktif
-                        </small>
-                      </td>
-                      <td>
-                        <button
-                          className="text-button"
-                          onClick={() => showEditor("Jadwal", primarySched.id)}
-                        >
-                          Edit Jadwal
-                        </button>
-                      </td>
-                    </tr>
-                  ),
-                )}
+                          </td>
+                        </tr>
+                      ),
+                    )}
               </tbody>
             </table>
             {!loadingData && !filteredDoctorRows.length && (
@@ -2909,7 +3078,7 @@ export default function ClinicWorkspace({
             current,
           )}
         </section>
-      )
+      );
     }
     if (page === "Manajemen Pengguna") {
       const filteredUsers = users.filter(
@@ -2919,11 +3088,12 @@ export default function ClinicWorkspace({
           `${u.name} ${u.email} ${u.role}`
             .toLowerCase()
             .includes(search.toLowerCase()),
-      )
-      const { paged: pagedUsers, current, maxPage } = paginateList(
-        filteredUsers,
-        6,
-      )
+      );
+      const {
+        paged: pagedUsers,
+        current,
+        maxPage,
+      } = paginateList(filteredUsers, 6);
       return (
         <section className="panel">
           <div className="panel-heading">
@@ -2947,8 +3117,8 @@ export default function ClinicWorkspace({
                 placeholder="Cari nama atau email staf…"
                 value={search}
                 onChange={(e) => {
-                  setSearch(e.target.value)
-                  setPagination(1)
+                  setSearch(e.target.value);
+                  setPagination(1);
                 }}
               />
             </div>
@@ -2957,8 +3127,8 @@ export default function ClinicWorkspace({
                 aria-label="Filter peran pengguna"
                 value={filter}
                 onChange={(e) => {
-                  setFilter(e.target.value)
-                  setPagination(1)
+                  setFilter(e.target.value);
+                  setPagination(1);
                 }}
               >
                 <option value="">Semua peran</option>
@@ -2970,8 +3140,8 @@ export default function ClinicWorkspace({
                 aria-label="Filter status pengguna"
                 value={subFilter}
                 onChange={(e) => {
-                  setSubFilter(e.target.value)
-                  setPagination(1)
+                  setSubFilter(e.target.value);
+                  setPagination(1);
                 }}
               >
                 <option value="">Semua status</option>
@@ -3003,7 +3173,7 @@ export default function ClinicWorkspace({
                   : pagedUsers.map((u) => {
                       const isProtected =
                         u.email === "rina@sehatklinik.id" ||
-                        (currentUser?.email && u.email === currentUser.email)
+                        (currentUser?.email && u.email === currentUser.email);
                       return (
                         <tr key={u.email}>
                           <td>
@@ -3025,8 +3195,8 @@ export default function ClinicWorkspace({
                                       ? { ...item, active: !item.active }
                                       : item,
                                   ),
-                                )
-                                notify("Status akun demo diperbarui.")
+                                );
+                                notify("Status akun demo diperbarui.");
                               }}
                             >
                               {isProtected
@@ -3037,7 +3207,7 @@ export default function ClinicWorkspace({
                             </button>
                           </td>
                         </tr>
-                      )
+                      );
                     })}
               </tbody>
             </table>
@@ -3060,7 +3230,7 @@ export default function ClinicWorkspace({
             server belum terhubung.
           </div>
         </section>
-      )
+      );
     }
     if (page === "Profil Saya" && !editingProfile)
       return (
@@ -3140,10 +3310,10 @@ export default function ClinicWorkspace({
             </div>
           </section>
         </div>
-      )
+      );
     if (page === "Pekerjaan Notifikasi") {
-      const statusFilter = filter || ""
-      const roleFilter = subFilter || ""
+      const statusFilter = filter || "";
+      const roleFilter = subFilter || "";
       const filteredJobs = notificationJobs.filter(
         (j) =>
           (!statusFilter || j.status === statusFilter) &&
@@ -3151,19 +3321,23 @@ export default function ClinicWorkspace({
           `${j.id} ${j.recipientName} ${j.eventType} ${j.visitId}`
             .toLowerCase()
             .includes(search.toLowerCase()),
-      )
-      const { paged: pagedJobs, current, maxPage } = paginateList(
-        filteredJobs,
-        6,
-      )
+      );
+      const {
+        paged: pagedJobs,
+        current,
+        maxPage,
+      } = paginateList(filteredJobs, 6);
       return (
         <section className="panel queue-panel">
           <div className="panel-heading">
             <div>
               <span className="eyebrow">POLA OUTBOX BULLMQ & REDIS</span>
-              <h3>Pelacak Antrean Pekerjaan Notifikasi (Tabel notifikasi_job)</h3>
+              <h3>
+                Pelacak Antrean Pekerjaan Notifikasi (Tabel notifikasi_job)
+              </h3>
               <p>
-                Status pengiriman push notification ke browser secara asinkron sesuai spesifikasi SRS Bab III & IV.
+                Status pengiriman push notification ke browser secara asinkron
+                sesuai spesifikasi SRS Bab III & IV.
               </p>
             </div>
             <div style={{ display: "flex", gap: "8px" }}>
@@ -3191,8 +3365,8 @@ export default function ClinicWorkspace({
                 placeholder="Cari ID job, penerima, atau event…"
                 value={search}
                 onChange={(e) => {
-                  setSearch(e.target.value)
-                  setPagination(1)
+                  setSearch(e.target.value);
+                  setPagination(1);
                 }}
               />
             </div>
@@ -3201,27 +3375,40 @@ export default function ClinicWorkspace({
                 aria-label="Filter status notifikasi"
                 value={filter}
                 onChange={(e) => {
-                  setFilter(e.target.value)
-                  setPagination(1)
+                  setFilter(e.target.value);
+                  setPagination(1);
                 }}
               >
-                <option value="">Semua status ({notificationJobs.length})</option>
+                <option value="">
+                  Semua status ({notificationJobs.length})
+                </option>
                 <option value="berhasil">
-                  Berhasil ({notificationJobs.filter((j) => j.status === "berhasil").length})
+                  Berhasil (
+                  {
+                    notificationJobs.filter((j) => j.status === "berhasil")
+                      .length
+                  }
+                  )
                 </option>
                 <option value="menunggu">
-                  Menunggu ({notificationJobs.filter((j) => j.status === "menunggu").length})
+                  Menunggu (
+                  {
+                    notificationJobs.filter((j) => j.status === "menunggu")
+                      .length
+                  }
+                  )
                 </option>
                 <option value="gagal">
-                  Gagal ({notificationJobs.filter((j) => j.status === "gagal").length})
+                  Gagal (
+                  {notificationJobs.filter((j) => j.status === "gagal").length})
                 </option>
               </select>
               <select
                 aria-label="Filter peran penerima notifikasi"
                 value={subFilter}
                 onChange={(e) => {
-                  setSubFilter(e.target.value)
-                  setPagination(1)
+                  setSubFilter(e.target.value);
+                  setPagination(1);
                 }}
               >
                 <option value="">Semua peran</option>
@@ -3259,61 +3446,89 @@ export default function ClinicWorkspace({
                       </tr>
                     ))
                   : pagedJobs.map((j) => (
-                  <tr key={j.id}>
-                    <td><code>{j.id}</code></td>
-                    <td><b>{j.recipientName}</b></td>
-                    <td><span className="tiny-tag">{j.recipientRole}</span></td>
-                    <td><code>{j.eventType}</code></td>
-                    <td>{j.queueNumber ? <span className="queue-number">{j.queueNumber}</span> : "-"}</td>
-                    <td><small>{j.visitId}</small></td>
-                    <td>
-                      <span
-                        className={`job-status-badge ${
-                          j.status === "berhasil"
-                            ? "status-success"
-                            : j.status === "gagal"
-                            ? "status-failed"
-                            : "status-queued"
-                        }`}
-                      >
-                        {j.status === "berhasil"
-                          ? "Berhasil"
-                          : j.status === "gagal"
-                          ? "Gagal"
-                          : "Menunggu"}
-                      </span>
-                    </td>
-                    <td>{j.attempts}x</td>
-                    <td>
-                      {j.error ? (
-                        <span style={{ color: "#dc2626", fontSize: "10.5px" }}>
-                          {getErrorMessage(j.error)}
-                        </span>
-                      ) : (
-                        <span style={{ color: "#16a34a", fontSize: "10.5px" }}>
-                          Diproses worker
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      {j.status === "gagal" ? (
-                        <button
-                          className="notif-retry-btn"
-                          onClick={() => retryNotificationJob(j.id)}
-                        >
-                          <Icon name="refresh" size={12} />
-                          Retry
-                        </button>
-                      ) : (
-                        <span style={{ color: "#94a3b8", fontSize: "10px" }}>Tuntas</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      <tr key={j.id}>
+                        <td>
+                          <code>{j.id}</code>
+                        </td>
+                        <td>
+                          <b>{j.recipientName}</b>
+                        </td>
+                        <td>
+                          <span className="tiny-tag">{j.recipientRole}</span>
+                        </td>
+                        <td>
+                          <code>{j.eventType}</code>
+                        </td>
+                        <td>
+                          {j.queueNumber ? (
+                            <span className="queue-number">
+                              {j.queueNumber}
+                            </span>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                        <td>
+                          <small>{j.visitId}</small>
+                        </td>
+                        <td>
+                          <span
+                            className={`job-status-badge ${
+                              j.status === "berhasil"
+                                ? "status-success"
+                                : j.status === "gagal"
+                                  ? "status-failed"
+                                  : "status-queued"
+                            }`}
+                          >
+                            {j.status === "berhasil"
+                              ? "Berhasil"
+                              : j.status === "gagal"
+                                ? "Gagal"
+                                : "Menunggu"}
+                          </span>
+                        </td>
+                        <td>{j.attempts}x</td>
+                        <td>
+                          {j.error ? (
+                            <span
+                              style={{ color: "#dc2626", fontSize: "10.5px" }}
+                            >
+                              {getErrorMessage(j.error)}
+                            </span>
+                          ) : (
+                            <span
+                              style={{ color: "#16a34a", fontSize: "10.5px" }}
+                            >
+                              Diproses worker
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          {j.status === "gagal" ? (
+                            <button
+                              className="notif-retry-btn"
+                              onClick={() => retryNotificationJob(j.id)}
+                            >
+                              <Icon name="refresh" size={12} />
+                              Retry
+                            </button>
+                          ) : (
+                            <span
+                              style={{ color: "#94a3b8", fontSize: "10px" }}
+                            >
+                              Tuntas
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
               </tbody>
             </table>
             {!loadingData && !filteredJobs.length && (
-              <div className="empty">Tidak ada pekerjaan notifikasi yang cocok.</div>
+              <div className="empty">
+                Tidak ada pekerjaan notifikasi yang cocok.
+              </div>
             )}
           </div>
           {renderPaginationBar(
@@ -3324,7 +3539,7 @@ export default function ClinicWorkspace({
             current,
           )}
         </section>
-      )
+      );
     }
     if (page === "Profil Saya" || page === "Profil Klinik")
       return (
@@ -3333,12 +3548,27 @@ export default function ClinicWorkspace({
             <section className="panel ws-clinic-profile-panel">
               <div className="ws-clinic-hero-head">
                 <div>
-                  <span className="eyebrow">IDENTITAS FASILITAS KESEHATAN TINGKAT PERTAMA (FKTP)</span>
-                  <h2 style={{ fontSize: "22px", margin: "4px 0", color: "#0f172a" }}>
+                  <span className="eyebrow">
+                    IDENTITAS FASILITAS KESEHATAN TINGKAT PERTAMA (FKTP)
+                  </span>
+                  <h2
+                    style={{
+                      fontSize: "22px",
+                      margin: "4px 0",
+                      color: "#0f172a",
+                    }}
+                  >
                     {clinic.name}
                   </h2>
-                  <p style={{ color: "#2563eb", fontWeight: 600, fontSize: "12.5px" }}>
-                    {clinic.tagline || "Perawatan Sepenuh Hati, Hidup Lebih Berarti"}
+                  <p
+                    style={{
+                      color: "#2563eb",
+                      fontWeight: 600,
+                      fontSize: "12.5px",
+                    }}
+                  >
+                    {clinic.tagline ||
+                      "Perawatan Sepenuh Hati, Hidup Lebih Berarti"}
                   </p>
                 </div>
                 <span className="clinic-accredit-badge">
@@ -3347,34 +3577,99 @@ export default function ClinicWorkspace({
                 </span>
               </div>
 
-              <p style={{ fontSize: "13px", color: "#475569", lineHeight: 1.7, marginBottom: "20px" }}>
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "#475569",
+                  lineHeight: 1.7,
+                  marginBottom: "20px",
+                }}
+              >
                 {clinic.history || clinic.description}
               </p>
 
               <div className="ws-clinic-stats-grid">
                 {clinic.stats?.map((st) => (
                   <div key={st.label}>
-                    <b style={{ color: "#2563eb", fontSize: "18px", display: "block" }}>{st.value}</b>
-                    <span style={{ fontSize: "11px", fontWeight: 600, color: "#1e293b" }}>{st.label}</span>
-                    <small style={{ display: "block", color: "#64748b", fontSize: "10px" }}>{st.sub}</small>
+                    <b
+                      style={{
+                        color: "#2563eb",
+                        fontSize: "18px",
+                        display: "block",
+                      }}
+                    >
+                      {st.value}
+                    </b>
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        color: "#1e293b",
+                      }}
+                    >
+                      {st.label}
+                    </span>
+                    <small
+                      style={{
+                        display: "block",
+                        color: "#64748b",
+                        fontSize: "10px",
+                      }}
+                    >
+                      {st.sub}
+                    </small>
                   </div>
                 ))}
               </div>
 
               <div className="ws-clinic-vm-grid">
                 <div className="ws-clinic-vm-card">
-                  <b style={{ color: "#0f172a", display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
+                  <b
+                    style={{
+                      color: "#0f172a",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      marginBottom: "6px",
+                    }}
+                  >
                     <Icon name="heart" size={15} /> Visi Rumah Sakit / Klinik
                   </b>
-                  <p style={{ color: "#64748b", margin: 0, lineHeight: 1.6 }}>{clinic.vision}</p>
+                  <p style={{ color: "#64748b", margin: 0, lineHeight: 1.6 }}>
+                    {clinic.vision}
+                  </p>
                 </div>
                 <div className="ws-clinic-vm-card">
-                  <b style={{ color: "#0f172a", display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
+                  <b
+                    style={{
+                      color: "#0f172a",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      marginBottom: "6px",
+                    }}
+                  >
                     <Icon name="shield" size={15} /> 4 Nilai Utama Layanan
                   </b>
-                  <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginTop: "4px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "5px",
+                      flexWrap: "wrap",
+                      marginTop: "4px",
+                    }}
+                  >
                     {clinic.values?.map((v) => (
-                      <span key={v.title} style={{ background: "#eff6ff", color: "#1d4ed8", padding: "3px 8px", borderRadius: "4px", fontSize: "10.5px" }}>
+                      <span
+                        key={v.title}
+                        style={{
+                          background: "#eff6ff",
+                          color: "#1d4ed8",
+                          padding: "3px 8px",
+                          borderRadius: "4px",
+                          fontSize: "10.5px",
+                        }}
+                      >
                         {v.title.split("(")[0]}
                       </span>
                     ))}
@@ -3390,169 +3685,173 @@ export default function ClinicWorkspace({
                 ? "EDIT INFORMASI PUBLIK KLINIK"
                 : "INFORMASI PRIBADI"}
             </span>
-            <h3>{role === "Pasien" ? "Edit Profil" : "Perbarui Data Publik Klinik"}</h3>
+            <h3>
+              {role === "Pasien"
+                ? "Edit Profil"
+                : "Perbarui Data Publik Klinik"}
+            </h3>
             <p className="muted">
               {role === "Admin"
                 ? "Perubahan data alamat, kontak darurat, koordinat GPS, dan jam operasional langsung tersinkronisasi ke halaman publik."
                 : "Peran akun pasien dikelola oleh sistem."}
             </p>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              const data = new FormData(e.currentTarget)
-              const get = (key: string) => String(data.get(key) || "")
-              if (role === "Admin")
-                setClinic({
-                  name: get("name"),
-                  description: get("description"),
-                  address: get("address"),
-                  phone: get("phone"),
-                  latitude: get("latitude"),
-                  longitude: get("longitude"),
-                  hours: get("hours"),
-                })
-              else
-                setPatients((p) =>
-                  p.map((item) =>
-                    item.id === patient.id
-                      ? {
-                          ...item,
-                          name: get("name"),
-                          nik: get("nik") || item.nik,
-                          phone: get("phone"),
-                          birth: get("birth"),
-                          gender: get("gender"),
-                          address: get("address"),
-                          emergency: get("emergency"),
-                        }
-                      : item,
-                  ),
-                )
-              setEditingProfile(false)
-              notify("Profil demo berhasil diperbarui untuk sesi ini.")
-            }}
-          >
-            <Field label="Nama">
-              <input
-                name="name"
-                required
-                defaultValue={role === "Admin" ? clinic.name : patient.name}
-              />
-            </Field>
-            {role === "Admin" ? (
-              <Field label="Deskripsi">
-                <textarea
-                  name="description"
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const data = new FormData(e.currentTarget);
+                const get = (key: string) => String(data.get(key) || "");
+                if (role === "Admin")
+                  setClinic({
+                    name: get("name"),
+                    description: get("description"),
+                    address: get("address"),
+                    phone: get("phone"),
+                    latitude: get("latitude"),
+                    longitude: get("longitude"),
+                    hours: get("hours"),
+                  });
+                else
+                  setPatients((p) =>
+                    p.map((item) =>
+                      item.id === patient.id
+                        ? {
+                            ...item,
+                            name: get("name"),
+                            nik: get("nik") || item.nik,
+                            phone: get("phone"),
+                            birth: get("birth"),
+                            gender: get("gender"),
+                            address: get("address"),
+                            emergency: get("emergency"),
+                          }
+                        : item,
+                    ),
+                  );
+                setEditingProfile(false);
+                notify("Profil demo berhasil diperbarui untuk sesi ini.");
+              }}
+            >
+              <Field label="Nama">
+                <input
+                  name="name"
                   required
-                  defaultValue={clinic.description}
+                  defaultValue={role === "Admin" ? clinic.name : patient.name}
                 />
               </Field>
-            ) : (
-              <div className="ws-form-grid">
-                <Field label="Tanggal lahir">
-                  <input
-                    name="birth"
+              {role === "Admin" ? (
+                <Field label="Deskripsi">
+                  <textarea
+                    name="description"
                     required
-                    type="date"
-                    max={DEMO_DATE}
-                    defaultValue={patient.birth}
+                    defaultValue={clinic.description}
                   />
                 </Field>
-                <Field label="Jenis kelamin">
-                  <select name="gender" defaultValue={patient.gender}>
-                    <option>Laki-laki</option>
-                    <option>Perempuan</option>
-                  </select>
-                </Field>
-              </div>
-            )}
-            {role === "Pasien" && (
-              <Field label="NIK (Nomor Induk Kependudukan)">
-                <input
-                  name="nik"
-                  pattern="[0-9]{16}"
-                  maxLength={16}
-                  placeholder="16 digit NIK sesuai KTP"
-                  defaultValue={patient.nik || ""}
-                />
-              </Field>
-            )}
-            <Field label="Alamat">
-              <textarea
-                name="address"
-                required
-                defaultValue={
-                  role === "Admin" ? clinic.address : patient.address
-                }
-              />
-            </Field>
-            <Field label="Nomor telepon">
-              <input
-                name="phone"
-                required
-                type="tel"
-                defaultValue={role === "Admin" ? clinic.phone : patient.phone}
-              />
-            </Field>
-            {role === "Admin" ? (
-              <>
+              ) : (
                 <div className="ws-form-grid">
-                  <Field label="Latitude">
+                  <Field label="Tanggal lahir">
                     <input
+                      name="birth"
                       required
-                      name="latitude"
-                      type="number"
-                      step="any"
-                      min="-90"
-                      max="90"
-                      defaultValue={clinic.latitude}
+                      type="date"
+                      max={DEMO_DATE}
+                      defaultValue={patient.birth}
                     />
                   </Field>
-                  <Field label="Longitude">
-                    <input
-                      required
-                      name="longitude"
-                      type="number"
-                      step="any"
-                      min="-180"
-                      max="180"
-                      defaultValue={clinic.longitude}
-                    />
+                  <Field label="Jenis kelamin">
+                    <select name="gender" defaultValue={patient.gender}>
+                      <option>Laki-laki</option>
+                      <option>Perempuan</option>
+                    </select>
                   </Field>
                 </div>
-                <Field label="Jam operasional">
-                  <input required name="hours" defaultValue={clinic.hours} />
+              )}
+              {role === "Pasien" && (
+                <Field label="NIK (Nomor Induk Kependudukan)">
+                  <input
+                    name="nik"
+                    pattern="[0-9]{16}"
+                    maxLength={16}
+                    placeholder="16 digit NIK sesuai KTP"
+                    defaultValue={patient.nik || ""}
+                  />
                 </Field>
-              </>
-            ) : (
-              <Field label="Kontak darurat">
-                <input
-                  name="emergency"
-                  type="tel"
-                  defaultValue={patient.emergency}
+              )}
+              <Field label="Alamat">
+                <textarea
+                  name="address"
+                  required
+                  defaultValue={
+                    role === "Admin" ? clinic.address : patient.address
+                  }
                 />
               </Field>
-            )}
-            <div className="form-actions">
-              {role === "Pasien" && (
-                <button
-                  className="secondary"
-                  type="button"
-                  disabled={busy}
-                  onClick={() => setEditingProfile(false)}
-                >
-                  Batal
-                </button>
+              <Field label="Nomor telepon">
+                <input
+                  name="phone"
+                  required
+                  type="tel"
+                  defaultValue={role === "Admin" ? clinic.phone : patient.phone}
+                />
+              </Field>
+              {role === "Admin" ? (
+                <>
+                  <div className="ws-form-grid">
+                    <Field label="Latitude">
+                      <input
+                        required
+                        name="latitude"
+                        type="number"
+                        step="any"
+                        min="-90"
+                        max="90"
+                        defaultValue={clinic.latitude}
+                      />
+                    </Field>
+                    <Field label="Longitude">
+                      <input
+                        required
+                        name="longitude"
+                        type="number"
+                        step="any"
+                        min="-180"
+                        max="180"
+                        defaultValue={clinic.longitude}
+                      />
+                    </Field>
+                  </div>
+                  <Field label="Jam operasional">
+                    <input required name="hours" defaultValue={clinic.hours} />
+                  </Field>
+                </>
+              ) : (
+                <Field label="Kontak darurat">
+                  <input
+                    name="emergency"
+                    type="tel"
+                    defaultValue={patient.emergency}
+                  />
+                </Field>
               )}
-              <button className="primary" type="submit" disabled={busy}>
-                {busy ? "Menyimpan..." : "Simpan Perubahan"}
-                <Icon name="check" size={16} />
-              </button>
-            </div>
-          </form>
-        </section>
-      </div>
-    )
+              <div className="form-actions">
+                {role === "Pasien" && (
+                  <button
+                    className="secondary"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setEditingProfile(false)}
+                  >
+                    Batal
+                  </button>
+                )}
+                <button className="primary" type="submit" disabled={busy}>
+                  {busy ? "Menyimpan..." : "Simpan Perubahan"}
+                  <Icon name="check" size={16} />
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      );
     return (
       <>
         {stats}
@@ -3568,7 +3867,7 @@ export default function ClinicWorkspace({
                   <Icon name="chart" size={18} />
                 </div>
                 {services.map((s) => {
-                  const count = visits.filter((v) => v.service === s.id).length
+                  const count = visits.filter((v) => v.service === s.id).length;
                   return (
                     <div className="ws-distribution-row" key={s.id}>
                       <div>
@@ -3585,7 +3884,7 @@ export default function ClinicWorkspace({
                         />
                       </div>
                     </div>
-                  )
+                  );
                 })}
                 <button
                   className="schedule-link"
@@ -3616,8 +3915,8 @@ export default function ClinicWorkspace({
           </>
         )}
       </>
-    )
-  }
+    );
+  };
   if (role === "Publik")
     return (
       <PublicSite
@@ -3634,54 +3933,61 @@ export default function ClinicWorkspace({
         visits={visits}
         clinic={clinic}
       />
-    )
+    );
   const staffRoleName =
     initialRole === "Admin"
       ? "Administrator"
       : initialRole === "Dokter"
-      ? "Ruang Dokter"
-      : "Loket Petugas"
+        ? "Ruang Dokter"
+        : "Loket Petugas";
 
-  const handleModalLogin = async (emailInput?: string, passwordInput?: string) => {
-    if (modalBusy) return
-    const e = emailInput !== undefined ? emailInput : modalEmail
-    const p = passwordInput !== undefined ? passwordInput : modalPassword
+  const handleModalLogin = async (
+    emailInput?: string,
+    passwordInput?: string,
+  ) => {
+    if (modalBusy) return;
+    const e = emailInput !== undefined ? emailInput : modalEmail;
+    const p = passwordInput !== undefined ? passwordInput : modalPassword;
 
     if (!e) {
-      setModalError("Silakan masukkan email Anda.")
-      return
+      setModalError("Silakan masukkan email Anda.");
+      return;
     }
 
-    setModalBusy(true)
+    setModalBusy(true);
     try {
-      const res = await clinicContext.login(e, p)
+      const res = await clinicContext.login(e, p);
       if (!res.success) {
-        setModalError(res.message || "Email atau password salah.")
-        return
+        setModalError(res.message || "Email atau password salah.");
+        return;
       }
 
       if (res.user) {
         if (res.user.role === initialRole) {
-          setModalError("")
-          notify(`Selamat datang, ${res.user.name}! Anda berhasil masuk sebagai ${res.user.role}.`)
+          setModalError("");
+          notify(
+            `Selamat datang, ${res.user.name}! Anda berhasil masuk sebagai ${res.user.role}.`,
+          );
         } else {
           const rolePaths: Record<string, string> = {
             Admin: "/admin",
             Petugas: "/petugas",
             Dokter: "/dokter-dashboard",
             Pasien: "/pasien",
-          }
-          const targetPath = rolePaths[res.user.role] || "/dashboard"
-          notify(`Akun Anda (${res.user.name}) terdaftar sebagai ${res.user.role}. Mengalihkan ke ${targetPath}...`)
+          };
+          const targetPath = rolePaths[res.user.role] || "/dashboard";
+          notify(
+            `Akun Anda (${res.user.name}) terdaftar sebagai ${res.user.role}. Mengalihkan ke ${targetPath}...`,
+          );
           setTimeout(() => {
-            window.location.href = targetPath
-          }, 600)
+            window.location.href = targetPath;
+          }, 600);
         }
       }
     } finally {
-      setModalBusy(false)
+      setModalBusy(false);
     }
-  }
+  };
 
   return (
     <>
@@ -3698,954 +4004,1002 @@ export default function ClinicWorkspace({
             : undefined
         }
       >
-      {mobile && (
-        <button
-          className="ws-mobile-shade"
-          aria-label="Tutup navigasi"
-          onClick={() => setMobile(false)}
-        />
-      )}
-      <aside className="sidebar">
-        <button
-          className="brand ws-brand"
-          aria-label="SehatKlinik dashboard"
-          onClick={() => navigate("Dashboard")}
-        >
-          <BrandArtwork />
-        </button>
-        <div className="workspace">
-          <span className="workspace-icon">
-            <Icon name="clinic" size={19} />
-          </span>
-          <div>
-            <b>{clinic.name}</b>
-            <small>Jakarta Selatan</small>
-          </div>
-        </div>
-        <span className="nav-label">RUANG {role.toUpperCase()}</span>
-        <nav aria-label="Navigasi dashboard">
-          {menus[role].map(([m, icon]) => (
-            <button
-              key={m}
-              className={m === page ? "active" : ""}
-              onClick={() => navigate(m)}
-            >
-              <Icon name={icon} size={19} />
-              <span>{m}</span>
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <div className="help-card">
-            <span className="help-symbol">
-              <Icon name="shield" size={22} />
-            </span>
-            <b>Akses sesuai peran</b>
-            <p>
-              {role === "Admin" || role === "Petugas"
-                ? "Isi pemeriksaan dan tindakan medis tidak ditampilkan di ruang ini."
-                : role === "Dokter"
-                  ? "Hanya kunjungan yang Anda tangani ditampilkan di sini."
-                  : "Hanya data kunjungan dan riwayat milik Anda."}
-            </p>
-          </div>
-          <button className="sidebar-link" onClick={logout}>
-            <Icon name="logout" size={18} />
-            Keluar / Kembali ke Website
-          </button>
-          <div className="sidebar-foot">
-            Sistem Aktif
-            <small>Sistem Informasi Klinik Kesehatan</small>
-          </div>
-        </div>
-      </aside>
-      <div className="main-wrapper">
-        <header className="topbar">
+        {mobile && (
           <button
-            className="mobile-menu square"
-            aria-label="Buka navigasi"
-            onClick={() => setMobile(!mobile)}
+            className="ws-mobile-shade"
+            aria-label="Tutup navigasi"
+            onClick={() => setMobile(false)}
+          />
+        )}
+        <aside className="sidebar">
+          <button
+            className="brand ws-brand"
+            aria-label="SehatKlinik dashboard"
+            onClick={() => navigate("Dashboard")}
           >
-            <Icon name="menu" />
+            <BrandArtwork />
           </button>
-          <div className="breadcrumb">
-            Klinik <span>/</span>
-            <b>
-              {role === "Admin"
-                ? "Administrasi"
-                : role === "Dokter"
-                  ? "Ruang Dokter"
-                  : role === "Petugas"
-                    ? "Pelayanan Pasien"
-                    : "Ruang Pasien"}
-            </b>
+          <div className="workspace">
+            <span className="workspace-icon">
+              <Icon name="clinic" size={19} />
+            </span>
+            <div>
+              <b>{clinic.name}</b>
+              <small>Jakarta Selatan</small>
+            </div>
           </div>
-          <div className="topbar-right">
-            <button
-              id="topbar-notif-bell"
-              className="notif-bell-btn"
-              onClick={() => setNotificationDrawerOpen(!notificationDrawerOpen)}
-              aria-label="Pusat Notifikasi & Web Push"
-              title="Pusat Notifikasi & Web Push (SRS 11)"
-            >
-              <Icon name="bell" size={18} />
-              {unreadCount > 0 && (
-                <span className="notif-counter-badge">{unreadCount}</span>
-              )}
+          <span className="nav-label">RUANG {role.toUpperCase()}</span>
+          <nav aria-label="Navigasi dashboard">
+            {menus[role].map(([m, icon]) => (
+              <button
+                key={m}
+                className={m === page ? "active" : ""}
+                onClick={() => navigate(m)}
+              >
+                <Icon name={icon} size={19} />
+                <span>{m}</span>
+              </button>
+            ))}
+          </nav>
+          <div className="sidebar-bottom">
+            <div className="help-card">
+              <span className="help-symbol">
+                <Icon name="shield" size={22} />
+              </span>
+              <b>Akses sesuai peran</b>
+              <p>
+                {role === "Admin" || role === "Petugas"
+                  ? "Isi pemeriksaan dan tindakan medis tidak ditampilkan di ruang ini."
+                  : role === "Dokter"
+                    ? "Hanya kunjungan yang Anda tangani ditampilkan di sini."
+                    : "Hanya data kunjungan dan riwayat milik Anda."}
+              </p>
+            </div>
+            <button className="sidebar-link" onClick={logout}>
+              <Icon name="logout" size={18} />
+              Keluar / Kembali ke Website
             </button>
-            <span className="top-divider" />
-            <div className="profile">
-              <GenderAvatar
-                gender={role === "Pasien" ? patient.gender : undefined}
-                name={
-                  currentUser?.name ||
-                  (role === "Pasien"
-                    ? patient.name
-                    : role === "Dokter"
-                      ? activeDoctor?.name || "dr. Reyhan Adhitama"
-                      : role === "Petugas"
-                        ? "Dina Wulandari"
-                        : "Rina Kusuma")
+            <div className="sidebar-foot">
+              Sistem Aktif
+              <small>Sistem Informasi Klinik Kesehatan</small>
+            </div>
+          </div>
+        </aside>
+        <div className="main-wrapper">
+          <header className="topbar">
+            <button
+              className="mobile-menu square"
+              aria-label="Buka navigasi"
+              onClick={() => setMobile(!mobile)}
+            >
+              <Icon name="menu" />
+            </button>
+            <div className="breadcrumb">
+              Klinik <span>/</span>
+              <b>
+                {role === "Admin"
+                  ? "Administrasi"
+                  : role === "Dokter"
+                    ? "Ruang Dokter"
+                    : role === "Petugas"
+                      ? "Pelayanan Pasien"
+                      : "Ruang Pasien"}
+              </b>
+            </div>
+            <div className="topbar-right">
+              <button
+                id="topbar-notif-bell"
+                className="notif-bell-btn"
+                onClick={() =>
+                  setNotificationDrawerOpen(!notificationDrawerOpen)
                 }
-              />
-              <div>
-                <b>
-                  {currentUser?.name ||
+                aria-label="Pusat Notifikasi & Web Push"
+                title="Pusat Notifikasi & Web Push (SRS 11)"
+              >
+                <Icon name="bell" size={18} />
+                {unreadCount > 0 && (
+                  <span className="notif-counter-badge">{unreadCount}</span>
+                )}
+              </button>
+              <span className="top-divider" />
+              <div className="profile">
+                <GenderAvatar
+                  gender={role === "Pasien" ? patient.gender : undefined}
+                  name={
+                    currentUser?.name ||
                     (role === "Pasien"
                       ? patient.name
                       : role === "Dokter"
-                        ? (activeDoctor?.name || "dr. Reyhan Adhitama")
+                        ? activeDoctor?.name || "dr. Reyhan Adhitama"
                         : role === "Petugas"
                           ? "Dina Wulandari"
-                          : "Rina Kusuma")}
-                </b>
-                <small>{currentUser?.role || (role === "Admin" ? "Administrator" : role)}</small>
-              </div>
-            </div>
-            <button
-              className="text-button"
-              style={{ color: "#94a3b8", fontSize: "11px", display: "inline-flex", alignItems: "center", gap: "5px", padding: "6px 8px" }}
-              onClick={logout}
-              title="Keluar dari sistem"
-            >
-              <Icon name="logout" size={14} />
-              <span>Keluar</span>
-            </button>
-          </div>
-        </header>
-        <main className="content">
-          <div className="page-heading">
-            <div className="cinema-workspace-art" aria-hidden="true">
-              <span className="cinema-workspace-orbit" />
-              <img src="/images/sehatklinik-symbol.png" alt="" />
-            </div>
-            <div>
-              <div className="page-overline">
-                SEHATKLINIK / {role.toUpperCase()}
-              </div>
-              <h1>
-                {page === "Dashboard"
-                  ? `Selamat pagi, ${
-                      role === "Dokter"
-                        ? (currentUser?.name || activeDoctor?.name || "dr. Reyhan Adhitama")
-                        : role === "Pasien"
-                          ? (currentUser?.name || patient.name).split(" ")[0]
+                          : "Rina Kusuma")
+                  }
+                />
+                <div>
+                  <b>
+                    {currentUser?.name ||
+                      (role === "Pasien"
+                        ? patient.name
+                        : role === "Dokter"
+                          ? activeDoctor?.name || "dr. Reyhan Adhitama"
                           : role === "Petugas"
-                            ? (currentUser?.name || "Dina")
-                            : (currentUser?.name || "Rina")
-                    }.`
-                  : page}
-              </h1>
-              <p>
-                {page === "Dashboard"
-                  ? role === "Admin"
-                    ? "Gambaran menyeluruh alur pelayanan dan operasional klinik."
-                    : role === "Dokter"
-                      ? "Fokus pada pasien Anda. Kami bantu merapikan alurnya."
-                      : role === "Petugas"
-                        ? "Sambut pasien dan kelola alur pelayanan hari ini."
-                        : "Kunjungan dan informasi kesehatan Anda, dalam satu ruang."
-                  : "Informasi terstruktur untuk pelayanan yang lebih baik."}
-              </p>
+                            ? "Dina Wulandari"
+                            : "Rina Kusuma")}
+                  </b>
+                  <small>
+                    {currentUser?.role ||
+                      (role === "Admin" ? "Administrator" : role)}
+                  </small>
+                </div>
+              </div>
+              <button
+                className="text-button"
+                style={{
+                  color: "#94a3b8",
+                  fontSize: "11px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  padding: "6px 8px",
+                }}
+                onClick={logout}
+                title="Keluar dari sistem"
+              >
+                <Icon name="logout" size={14} />
+                <span>Keluar</span>
+              </button>
             </div>
-            <div className="heading-actions">
-              <span className="secondary date-button" suppressHydrationWarning>
-                <Icon name="calendar" size={16} />
-                {todayFormatted || getTodayFormatted()}
-              </span>
-              {page === "Dashboard" &&
-                (role === "Petugas" || role === "Pasien") && (
-                  <button
-                    className="primary"
-                    onClick={() =>
-                      navigate(
-                        role === "Petugas"
-                          ? "Pendaftaran Walk-in"
-                          : "Pendaftaran Kunjungan",
-                      )
-                    }
-                  >
-                    <Icon name="plus" size={16} />
-                    {role === "Petugas" ? "Daftar Walk-in" : "Daftar Kunjungan"}
-                  </button>
-                )}
-            </div>
-          </div>
-          {page === "Dashboard" && role === "Pasien"
-            ? patientDashboard
-            : management()}
-          <footer className="content-footer">
-            <span>© 2026 SehatKlinik · Sistem Informasi Klinik Kesehatan</span>
-            <span>
-              <Icon name="shield" size={13} />
-              Prototipe berdasarkan PRD & ERD · Data simulasi
-            </span>
-          </footer>
-        </main>
-      </div>
-      {toast && (
-        <div className="toast" role="status">
-          <Icon name="check" size={18} />
-          {toast}
-          <button aria-label="Tutup notifikasi" onClick={() => setToast("")}>
-            ×
-          </button>
-        </div>
-      )}
-      {detail && (
-        <div className="modal-backdrop" onClick={closeVisit}>
-          <section
-            className="modal ws-detail"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="visit-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="panel-heading">
+          </header>
+          <main className="content">
+            <div className="page-heading">
+              <div className="cinema-workspace-art" aria-hidden="true">
+                <span className="cinema-workspace-orbit" />
+                <img src="/images/sehatklinik-symbol.png" alt="" />
+              </div>
               <div>
-                <span className="eyebrow">DETAIL KUNJUNGAN</span>
-                <h2 id="visit-title">{patientName(detail.patient)}</h2>
+                <div className="page-overline">
+                  SEHATKLINIK / {role.toUpperCase()}
+                </div>
+                <h1>
+                  {page === "Dashboard"
+                    ? `Selamat pagi, ${
+                        role === "Dokter"
+                          ? currentUser?.name ||
+                            activeDoctor?.name ||
+                            "dr. Reyhan Adhitama"
+                          : role === "Pasien"
+                            ? (currentUser?.name || patient.name).split(" ")[0]
+                            : role === "Petugas"
+                              ? currentUser?.name || "Dina"
+                              : currentUser?.name || "Rina"
+                      }.`
+                    : page}
+                </h1>
                 <p>
-                  {detail.patient} · {detail.id}
+                  {page === "Dashboard"
+                    ? role === "Admin"
+                      ? "Gambaran menyeluruh alur pelayanan dan operasional klinik."
+                      : role === "Dokter"
+                        ? "Fokus pada pasien Anda. Kami bantu merapikan alurnya."
+                        : role === "Petugas"
+                          ? "Sambut pasien dan kelola alur pelayanan hari ini."
+                          : "Kunjungan dan informasi kesehatan Anda, dalam satu ruang."
+                    : "Informasi terstruktur untuk pelayanan yang lebih baik."}
                 </p>
               </div>
-              <button
-                className="square"
-                aria-label="Tutup detail"
-                onClick={closeVisit}
-              >
-                <Icon name="close" size={18} />
-              </button>
-            </div>
-            <div className="ws-detail-status">
-              {page !== "Rekap Kunjungan" && (
-                <span className="queue-number">{formatQueue(detail)}</span>
-              )}
-              <span>
-                Kunjungan <Badge text={detail.status} />
-              </span>
-              <span>
-                {page === "Rekap Kunjungan" ? "Status" : "Antrean"}{" "}
-                <Badge text={detail.queue} />
-              </span>
-            </div>
-            <div className="ws-summary">
-              <div>
-                <span>Dokter & layanan</span>
-                <b>
-                  {role === "Dokter" ? (activeDoctor?.name || doctorName(detail.doctor)) : doctorName(detail.doctor)}
-                  <small>{serviceName(detail.service)}</small>
-                </b>
-              </div>
-              <div>
-                <span>Jadwal & sumber</span>
-                <b>
-                  {dateLabel(detail.date)} · {session(detail.schedule)?.start} –{" "}
-                  {session(detail.schedule)?.end}
-                  <small>{detail.source}</small>
-                </b>
-              </div>
-              {canMedical && (
-                <div>
-                  <span>Keluhan</span>
-                  <b>{detail.complaint}</b>
-                </div>
-              )}
-              {detail.reason && (
-                <div>
-                  <span>Alasan</span>
-                  <b>{detail.reason}</b>
-                </div>
-              )}
-            </div>
-            {!canMedical && (
-              <div className="notice">
-                <Icon name="shield" size={19} />
-                Anda hanya melihat informasi administratif. Pemeriksaan dan
-                tindakan medis tidak ditampilkan.
-              </div>
-            )}
-            {role === "Dokter" &&
-              detail.queue === "Sedang Diperiksa" &&
-              exam && (
-                <form onSubmit={saveExamination}>
-                  <div className="ws-subheading">
-                    <h3>Pemeriksaan medis</h3>
-                    <Badge text={savedExam ? "Tersimpan" : "Draf"} />
-                  </div>
-                  <Field label="Anamnesis">
-                    <textarea
-                      required
-                      value={exam.anamnesis}
-                      onChange={(e) => {
-                        setExam({ ...exam, anamnesis: e.target.value })
-                        setSavedExam(false)
-                      }}
-                    />
-                  </Field>
-                  <div className="ws-form-grid">
-                    <Field label="Tekanan darah (mmHg)">
-                      <input
-                        required
-                        pattern="[0-9]{2,3}/[0-9]{2,3}"
-                        placeholder="120/80"
-                        value={exam.pressure}
-                        onChange={(e) => {
-                          setExam({ ...exam, pressure: e.target.value })
-                          setSavedExam(false)
-                        }}
-                      />
-                    </Field>
-                    <Field label="Suhu (°C)">
-                      <input
-                        required
-                        type="number"
-                        min="30"
-                        max="45"
-                        step="0.1"
-                        placeholder="36.6"
-                        value={exam.temperature}
-                        onChange={(e) => {
-                          setExam({ ...exam, temperature: e.target.value })
-                          setSavedExam(false)
-                        }}
-                      />
-                    </Field>
-                    <Field label="Berat badan (kg)">
-                      <input
-                        required
-                        type="number"
-                        min="1"
-                        max="500"
-                        step="0.1"
-                        placeholder="60"
-                        value={exam.weight}
-                        onChange={(e) => {
-                          setExam({ ...exam, weight: e.target.value })
-                          setSavedExam(false)
-                        }}
-                      />
-                    </Field>
-                    <Field label="Tinggi badan (cm)">
-                      <input
-                        required
-                        type="number"
-                        min="20"
-                        max="250"
-                        step="0.1"
-                        placeholder="165"
-                        value={exam.height}
-                        onChange={(e) => {
-                          setExam({ ...exam, height: e.target.value })
-                          setSavedExam(false)
-                        }}
-                      />
-                    </Field>
-                  </div>
-                  <Field label="Diagnosis">
-                    <textarea
-                      required
-                      value={exam.diagnosis}
-                      onChange={(e) => {
-                        setExam({ ...exam, diagnosis: e.target.value })
-                        setSavedExam(false)
-                      }}
-                    />
-                  </Field>
-                  <Field label="Catatan pemeriksaan">
-                    <textarea
-                      value={exam.notes}
-                      onChange={(e) => {
-                        setExam({ ...exam, notes: e.target.value })
-                        setSavedExam(false)
-                      }}
-                    />
-                  </Field>
-                  <div className="ws-subheading">
-                    <h3>
-                      Tindakan{" "}
-                      <span className="count">
-                        Opsional · {exam.actions.length}
-                      </span>
-                    </h3>
-                    <button
-                      type="button"
-                      className="text-button"
-                      onClick={() => {
-                        setExam({
-                          ...exam,
-                          actions: [
-                            ...exam.actions,
-                            { name: "", description: "", advice: "" },
-                          ],
-                        })
-                        setSavedExam(false)
-                      }}
-                    >
-                      + Tambah Tindakan
-                    </button>
-                  </div>
-                  {exam.actions.map((action, i) => (
-                    <div className="ws-action-card" key={i}>
-                      <div className="ws-subheading">
-                        <b>Tindakan {i + 1}</b>
-                        <button
-                          type="button"
-                          className="text-button"
-                          onClick={() => {
-                            setExam({
-                              ...exam,
-                              actions: exam.actions.filter(
-                                (_, index) => index !== i,
-                              ),
-                            })
-                            setSavedExam(false)
-                          }}
-                        >
-                          Hapus
-                        </button>
-                      </div>
-                      {[
-                        ["name", "Nama tindakan"],
-                        ["description", "Keterangan"],
-                        ["advice", "Saran lanjutan"],
-                      ].map(([key, label]) => (
-                        <Field key={key} label={label}>
-                          <input
-                            required={key === "name"}
-                            value={action[(key as keyof typeof action)]}
-                            onChange={(e) => {
-                              setExam({
-                                ...exam,
-                                actions: exam.actions.map((item, index) =>
-                                  index === i
-                                    ? { ...item, [key]: e.target.value }
-                                    : item,
-                                ),
-                              })
-                              setSavedExam(false)
-                            }}
-                          />
-                        </Field>
-                      ))}
-                    </div>
-                  ))}
-                  {showError}
-                  <div className="modal-actions">
-                    <button
-                      className="secondary"
-                      type="submit"
-                      disabled={busy}
-                    >
-                      <Icon name="file" size={16} />
-                      {busy ? "Menyimpan..." : "Simpan Pemeriksaan"}
-                    </button>
+              <div className="heading-actions">
+                <span
+                  className="secondary date-button"
+                  suppressHydrationWarning
+                >
+                  <Icon name="calendar" size={16} />
+                  {todayFormatted || getTodayFormatted()}
+                </span>
+                {page === "Dashboard" &&
+                  (role === "Petugas" || role === "Pasien") && (
                     <button
                       className="primary"
-                      type="button"
-                      disabled={!savedExam || busy}
-                      onClick={() => transition(detail, "finish")}
+                      onClick={() =>
+                        navigate(
+                          role === "Petugas"
+                            ? "Pendaftaran Walk-in"
+                            : "Pendaftaran Kunjungan",
+                        )
+                      }
                     >
-                      {busy ? "Memproses..." : "Selesaikan Kunjungan"}
-                      <Icon name="check" size={16} />
+                      <Icon name="plus" size={16} />
+                      {role === "Petugas"
+                        ? "Daftar Walk-in"
+                        : "Daftar Kunjungan"}
                     </button>
-                  </div>
-                  <p className="ws-form-hint">
-                    Simpan pemeriksaan terlebih dahulu sebelum menyelesaikan
-                    kunjungan.
-                  </p>
-                </form>
-              )}
-            {canMedical &&
-              detail.examination &&
-              (role === "Pasien" || detail.queue === "Selesai") && (
-                <section className="ws-medical-summary">
-                  <div className="ws-subheading">
-                    <h3>Ringkasan pemeriksaan</h3>
-                    <Badge text="Hanya-baca" />
-                  </div>
-                  <p className="muted">
-                    Dicatat oleh {doctorName(detail.doctor)} ·{" "}
-                    {dateLabel(detail.date)}
-                  </p>
-                  <div className="ws-summary">
-                    {[
-                      ["Anamnesis", detail.examination.anamnesis],
-                      [
-                        "Tanda vital",
-                        `${detail.examination.pressure} mmHg · ${detail.examination.temperature} °C · ${detail.examination.weight} kg${detail.examination.height ? ` · ${detail.examination.height} cm` : ""}`,
-                      ],
-                      ["Diagnosis", detail.examination.diagnosis],
-                      ["Catatan", detail.examination.notes],
-                    ].map(([label, value]) => (
-                      <div key={label}>
-                        <span>{label}</span>
-                        <b>{value || "—"}</b>
-                      </div>
-                    ))}
-                  </div>
-                  <h3>Tindakan & saran</h3>
-                  {detail.examination.actions.length ? (
-                    detail.examination.actions.map((a, i) => (
-                      <div className="ws-action-card" key={i}>
-                        <b>{a.name}</b>
-                        <p>{a.description}</p>
-                        <p>{a.advice}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="muted">Tidak ada tindakan tambahan.</p>
                   )}
-                </section>
-              )}
-            {((role === "Petugas" &&
-              ["Menunggu", "Dipanggil"].includes(detail.queue)) ||
-              (role === "Pasien" && detail.queue === "Menunggu")) && (
-              <Field label="Alasan pembatalan / pelewatan (wajib untuk tindakan tersebut)">
-                <textarea
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder="Tuliskan alasan…"
-                />
-              </Field>
-            )}
-            {!(role === "Dokter" && detail.queue === "Sedang Diperiksa" && exam) &&
-              showError}
-            <div className="modal-actions">
-              {canMedical && detail.queue === "Selesai" && detail.examination && (
-                <button
-                  type="button"
-                  className="primary"
-                  onClick={() => {
-                    const sched = session(detail.schedule)
-                    printVisitSummary({
-                      visit: detail,
-                      patientName: patientName(detail.patient),
-                      doctorName: doctorName(detail.doctor),
-                      serviceName: serviceName(detail.service),
-                      dateText: dateLabel(detail.date),
-                      timeRange: sched ? `${sched.start} – ${sched.end}` : "",
-                      clinicName: clinic.name,
-                      clinicAddress: clinic.address,
-                      clinicPhone: clinic.phone,
-                      examination: detail.examination!,
-                    })
-                  }}
-                >
-                  <Icon name="printer" size={16} />
-                  Cetak Ringkasan Kunjungan
-                </button>
-              )}
-              {role === "Petugas" &&
-                detail.status === "Terdaftar" &&
-                detail.queue === "Menunggu" && (
-                  <button
-                    className="primary"
-                    disabled={busy}
-                    onClick={() => transition(detail, "checkin")}
-                  >
-                    {busy ? "Memproses..." : "Konfirmasi Kehadiran"}
-                  </button>
-                )}
-              {["Petugas", "Dokter"].includes(role) &&
-                detail.status === "Hadir" &&
-                detail.queue === "Menunggu" && (
-                  <button
-                    className="primary"
-                    disabled={busy}
-                    onClick={() => transition(detail, "call")}
-                  >
-                    {busy ? "Memanggil..." : "Panggil Pasien"}
-                  </button>
-                )}
-              {role === "Dokter" && detail.queue === "Dipanggil" && (
-                <button
-                  className="primary"
-                  disabled={busy}
-                  onClick={() => transition(detail, "start")}
-                >
-                  {busy ? "Memulai..." : "Mulai Pemeriksaan"}
-                </button>
-              )}
-              {role === "Petugas" && detail.queue === "Dipanggil" && (
-                <button
-                  className="secondary"
-                  disabled={busy || !reason.trim()}
-                  onClick={() => transition(detail, "skip")}
-                >
-                  {busy ? "Memproses..." : "Lewati Antrean"}
-                </button>
-              )}
-              {((role === "Pasien" && detail.queue === "Menunggu") ||
-                (role === "Petugas" &&
-                  ["Menunggu", "Dipanggil"].includes(detail.queue))) && (
-                <button
-                  className="destructive"
-                  disabled={busy || !reason.trim()}
-                  onClick={() => transition(detail, "cancel")}
-                >
-                  {busy ? "Membatalkan..." : "Batalkan Kunjungan"}
-                </button>
-              )}
-            </div>
-          </section>
-        </div>
-      )}
-      {editor && (
-        <div className="modal-backdrop" onClick={() => setEditor(null)}>
-          <section
-            className="modal ws-editor"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="editor-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="panel-heading">
-              <div>
-                <span className="eyebrow">
-                  DATA {editor.type.toUpperCase()}
-                </span>
-                <h2 id="editor-title">
-                  {editor.id ? "Edit" : "Tambah"} {editor.type}
-                </h2>
               </div>
-              <button
-                className="square"
-                aria-label="Tutup formulir"
-                onClick={() => setEditor(null)}
-              >
-                <Icon name="close" size={18} />
-              </button>
             </div>
-            <form onSubmit={saveEditor}>
-              {["Pasien", "Dokter", "Layanan", "Pengguna"].includes(
-                editor.type,
-              ) && (
-                <Field label="Nama">
-                  <input
-                    name="name"
-                    required
-                    defaultValue={
-                      editPatient?.name ||
-                      editRecord?.name ||
-                      editService?.name ||
-                      ""
-                    }
-                  />
-                </Field>
-              )}
-              {editor.type === "Pasien" && (
-                <>
-                  <div className="notice">
-                    <Icon name="users" size={19} />
-                    Pasien walk-in terdaftar langsung tanpa memerlukan akun.
+            {page === "Dashboard" && role === "Pasien"
+              ? patientDashboard
+              : management()}
+            <footer className="content-footer">
+              <span>
+                © 2026 SehatKlinik · Sistem Informasi Klinik Kesehatan
+              </span>
+              <span>
+                <Icon name="shield" size={13} />
+                Prototipe berdasarkan PRD & ERD · Data simulasi
+              </span>
+            </footer>
+          </main>
+        </div>
+        {toast && (
+          <div className="toast" role="status">
+            <Icon name="check" size={18} />
+            {toast}
+            <button aria-label="Tutup notifikasi" onClick={() => setToast("")}>
+              ×
+            </button>
+          </div>
+        )}
+        {detail && (
+          <div className="modal-backdrop" onClick={closeVisit}>
+            <section
+              className="modal ws-detail"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="visit-title"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="panel-heading">
+                <div>
+                  <span className="eyebrow">DETAIL KUNJUNGAN</span>
+                  <h2 id="visit-title">{patientName(detail.patient)}</h2>
+                  <p>
+                    {detail.patient} · {detail.id}
+                  </p>
+                </div>
+                <button
+                  className="square"
+                  aria-label="Tutup detail"
+                  onClick={closeVisit}
+                >
+                  <Icon name="close" size={18} />
+                </button>
+              </div>
+              <div className="ws-detail-status">
+                {page !== "Rekap Kunjungan" && (
+                  <span className="queue-number">{formatQueue(detail)}</span>
+                )}
+                <span>
+                  Kunjungan <Badge text={detail.status} />
+                </span>
+                <span>
+                  {page === "Rekap Kunjungan" ? "Status" : "Antrean"}{" "}
+                  <Badge text={detail.queue} />
+                </span>
+              </div>
+              <div className="ws-summary">
+                <div>
+                  <span>Dokter & layanan</span>
+                  <b>
+                    {role === "Dokter"
+                      ? activeDoctor?.name || doctorName(detail.doctor)
+                      : doctorName(detail.doctor)}
+                    <small>{serviceName(detail.service)}</small>
+                  </b>
+                </div>
+                <div>
+                  <span>Jadwal & sumber</span>
+                  <b>
+                    {dateLabel(detail.date)} · {session(detail.schedule)?.start}{" "}
+                    – {session(detail.schedule)?.end}
+                    <small>{detail.source}</small>
+                  </b>
+                </div>
+                {canMedical && (
+                  <div>
+                    <span>Keluhan</span>
+                    <b>{detail.complaint}</b>
                   </div>
-                  <div className="ws-form-grid">
-                    <Field label="Tanggal lahir">
-                      <input
-                        name="birth"
+                )}
+                {detail.reason && (
+                  <div>
+                    <span>Alasan</span>
+                    <b>{detail.reason}</b>
+                  </div>
+                )}
+              </div>
+              {!canMedical && (
+                <div className="notice">
+                  <Icon name="shield" size={19} />
+                  Anda hanya melihat informasi administratif. Pemeriksaan dan
+                  tindakan medis tidak ditampilkan.
+                </div>
+              )}
+              {role === "Dokter" &&
+                detail.queue === "Sedang Diperiksa" &&
+                exam && (
+                  <form onSubmit={saveExamination}>
+                    <div className="ws-subheading">
+                      <h3>Pemeriksaan medis</h3>
+                      <Badge text={savedExam ? "Tersimpan" : "Draf"} />
+                    </div>
+                    <Field label="Anamnesis">
+                      <textarea
                         required
-                        type="date"
-                        max={DEMO_DATE}
-                        defaultValue={editPatient?.birth}
+                        value={exam.anamnesis}
+                        onChange={(e) => {
+                          setExam({ ...exam, anamnesis: e.target.value });
+                          setSavedExam(false);
+                        }}
                       />
                     </Field>
-                    <Field label="Jenis kelamin">
-                      <select name="gender" defaultValue={editPatient?.gender}>
-                        <option>Laki-laki</option>
-                        <option>Perempuan</option>
-                      </select>
-                    </Field>
-                  </div>
-                  <Field label="Nomor telepon">
-                    <input
-                      name="phone"
-                      required
-                      type="tel"
-                      pattern="[0-9+() -]{8,16}"
-                      defaultValue={editPatient?.phone}
-                    />
-                  </Field>
-                  <Field label="Alamat">
-                    <textarea
-                      name="address"
-                      required
-                      defaultValue={editPatient?.address}
-                    />
-                  </Field>
-                  <Field label="Kontak darurat">
-                    <input
-                      name="emergency"
-                      type="tel"
-                      defaultValue={editPatient?.emergency}
-                    />
-                  </Field>
-                </>
-              )}
-              {editor.type === "Dokter" && (
-                <>
-                  <Field label="Spesialisasi">
-                    <input
-                      name="specialty"
-                      required
-                      defaultValue={editRecord?.specialty}
-                    />
-                  </Field>
-                  <Field label="Nomor SIP (unik)">
-                    <input name="sip" required defaultValue={editRecord?.sip} />
-                  </Field>
-                  <Field label="Foto Profil Dokter (JPG, PNG, WebP · Maks 2 MB)">
-                    <div className="ws-photo-upload">
-                      {doctorPhoto ? (
-                        <img
-                          src={doctorPhoto}
-                          alt="Pratinjau foto dokter"
-                          className="ws-photo-preview"
-                        />
-                      ) : (
-                        <GenderAvatar
-                          name={editRecord?.name || "Dokter"}
-                        />
-                      )}
-                      <div className="ws-photo-controls">
+                    <div className="ws-form-grid">
+                      <Field label="Tekanan darah (mmHg)">
                         <input
-                          type="file"
-                          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                          required
+                          pattern="[0-9]{2,3}/[0-9]{2,3}"
+                          placeholder="120/80"
+                          value={exam.pressure}
                           onChange={(e) => {
-                            const file = e.target.files?.[0]
-                            if (!file) return
-                            const extOk = /\.(jpe?g|png|webp)$/i.test(file.name)
-                            const mimeOk = [
-                              "image/jpeg",
-                              "image/png",
-                              "image/webp",
-                            ].includes(file.type)
-                            if (!extOk || !mimeOk) {
-                              setDoctorPhotoError(
-                                "Format foto harus JPG, PNG, atau WebP.",
-                              )
-                              e.target.value = ""
-                              return
-                            }
-                            if (file.size > 2 * 1024 * 1024) {
-                              setDoctorPhotoError(
-                                "Ukuran foto maksimal 2 MB.",
-                              )
-                              e.target.value = ""
-                              return
-                            }
-                            setDoctorPhotoError("")
-                            setError("")
-                            const reader = new FileReader()
-                            reader.onload = () => {
-                              if (typeof reader.result === "string") {
-                                setDoctorPhoto(reader.result)
-                              }
-                            }
-                            reader.readAsDataURL(file)
+                            setExam({ ...exam, pressure: e.target.value });
+                            setSavedExam(false);
                           }}
                         />
-                        <span>
-                          Format diizinkan: JPG, PNG, atau WebP (maks. 2 MB).
+                      </Field>
+                      <Field label="Suhu (°C)">
+                        <input
+                          required
+                          type="number"
+                          min="30"
+                          max="45"
+                          step="0.1"
+                          placeholder="36.6"
+                          value={exam.temperature}
+                          onChange={(e) => {
+                            setExam({ ...exam, temperature: e.target.value });
+                            setSavedExam(false);
+                          }}
+                        />
+                      </Field>
+                      <Field label="Berat badan (kg)">
+                        <input
+                          required
+                          type="number"
+                          min="1"
+                          max="500"
+                          step="0.1"
+                          placeholder="60"
+                          value={exam.weight}
+                          onChange={(e) => {
+                            setExam({ ...exam, weight: e.target.value });
+                            setSavedExam(false);
+                          }}
+                        />
+                      </Field>
+                      <Field label="Tinggi badan (cm)">
+                        <input
+                          required
+                          type="number"
+                          min="20"
+                          max="250"
+                          step="0.1"
+                          placeholder="165"
+                          value={exam.height}
+                          onChange={(e) => {
+                            setExam({ ...exam, height: e.target.value });
+                            setSavedExam(false);
+                          }}
+                        />
+                      </Field>
+                    </div>
+                    <Field label="Diagnosis">
+                      <textarea
+                        required
+                        value={exam.diagnosis}
+                        onChange={(e) => {
+                          setExam({ ...exam, diagnosis: e.target.value });
+                          setSavedExam(false);
+                        }}
+                      />
+                    </Field>
+                    <Field label="Catatan pemeriksaan">
+                      <textarea
+                        value={exam.notes}
+                        onChange={(e) => {
+                          setExam({ ...exam, notes: e.target.value });
+                          setSavedExam(false);
+                        }}
+                      />
+                    </Field>
+                    <div className="ws-subheading">
+                      <h3>
+                        Tindakan{" "}
+                        <span className="count">
+                          Opsional · {exam.actions.length}
                         </span>
-                        {doctorPhoto && (
+                      </h3>
+                      <button
+                        type="button"
+                        className="text-button"
+                        onClick={() => {
+                          setExam({
+                            ...exam,
+                            actions: [
+                              ...exam.actions,
+                              { name: "", description: "", advice: "" },
+                            ],
+                          });
+                          setSavedExam(false);
+                        }}
+                      >
+                        + Tambah Tindakan
+                      </button>
+                    </div>
+                    {exam.actions.map((action, i) => (
+                      <div className="ws-action-card" key={i}>
+                        <div className="ws-subheading">
+                          <b>Tindakan {i + 1}</b>
                           <button
                             type="button"
                             className="text-button"
-                            style={{ alignSelf: "flex-start" }}
                             onClick={() => {
-                              setDoctorPhoto("")
-                              setDoctorPhotoError("")
+                              setExam({
+                                ...exam,
+                                actions: exam.actions.filter(
+                                  (_, index) => index !== i,
+                                ),
+                              });
+                              setSavedExam(false);
                             }}
                           >
-                            Hapus foto
+                            Hapus
                           </button>
-                        )}
-                      </div>
-                    </div>
-                    {doctorPhotoError && (
-                      <small style={{ color: "#b91c1c", marginTop: "4px" }}>
-                        {doctorPhotoError}
-                      </small>
-                    )}
-                  </Field>
-                  <fieldset className="ws-checklist">
-                    <legend>Layanan yang ditangani</legend>
-                    {services.map((s) => (
-                      <label key={s.id}>
-                        <input
-                          name="services"
-                          type="checkbox"
-                          value={s.id}
-                          defaultChecked={editRecord?.services.includes(s.id)}
-                        />
-                        {s.name}
-                      </label>
-                    ))}
-                  </fieldset>
-                </>
-              )}
-              {editor.type === "Layanan" && (
-                <>
-                  <Field label="Deskripsi">
-                    <textarea
-                      name="description"
-                      required
-                      defaultValue={editService?.description}
-                    />
-                  </Field>
-                  <Field label="Durasi (menit)">
-                    <input
-                      name="duration"
-                      type="number"
-                      required
-                      min="1"
-                      max="480"
-                      defaultValue={editService?.duration || 30}
-                    />
-                  </Field>
-                </>
-              )}
-              {editor.type === "Jadwal" && (
-                <>
-                  <Field label="Dokter">
-                    <select name="doctor" defaultValue={editSchedule?.doctor}>
-                      {doctors
-                        .filter(
-                          (d) => d.active || d.id === editSchedule?.doctor,
-                        )
-                        .map((d) => (
-                          <option key={d.id} value={d.id}>
-                            {d.name}
-                          </option>
+                        </div>
+                        {[
+                          ["name", "Nama tindakan"],
+                          ["description", "Keterangan"],
+                          ["advice", "Saran lanjutan"],
+                        ].map(([key, label]) => (
+                          <Field key={key} label={label}>
+                            <input
+                              required={key === "name"}
+                              value={action[key as keyof typeof action]}
+                              onChange={(e) => {
+                                setExam({
+                                  ...exam,
+                                  actions: exam.actions.map((item, index) =>
+                                    index === i
+                                      ? { ...item, [key]: e.target.value }
+                                      : item,
+                                  ),
+                                });
+                                setSavedExam(false);
+                              }}
+                            />
+                          </Field>
                         ))}
-                    </select>
-                  </Field>
-                  <Field label="Hari praktik">
-                    <select name="day" defaultValue={editSchedule?.day ?? 1}>
+                      </div>
+                    ))}
+                    {showError}
+                    <div className="modal-actions">
+                      <button
+                        className="secondary"
+                        type="submit"
+                        disabled={busy}
+                      >
+                        <Icon name="file" size={16} />
+                        {busy ? "Menyimpan..." : "Simpan Pemeriksaan"}
+                      </button>
+                      <button
+                        className="primary"
+                        type="button"
+                        disabled={!savedExam || busy}
+                        onClick={() => transition(detail, "finish")}
+                      >
+                        {busy ? "Memproses..." : "Selesaikan Kunjungan"}
+                        <Icon name="check" size={16} />
+                      </button>
+                    </div>
+                    <p className="ws-form-hint">
+                      Simpan pemeriksaan terlebih dahulu sebelum menyelesaikan
+                      kunjungan.
+                    </p>
+                  </form>
+                )}
+              {canMedical &&
+                detail.examination &&
+                (role === "Pasien" || detail.queue === "Selesai") && (
+                  <section className="ws-medical-summary">
+                    <div className="ws-subheading">
+                      <h3>Ringkasan pemeriksaan</h3>
+                      <Badge text="Hanya-baca" />
+                    </div>
+                    <p className="muted">
+                      Dicatat oleh {doctorName(detail.doctor)} ·{" "}
+                      {dateLabel(detail.date)}
+                    </p>
+                    <div className="ws-summary">
                       {[
-                        "Minggu",
-                        "Senin",
-                        "Selasa",
-                        "Rabu",
-                        "Kamis",
-                        "Jumat",
-                        "Sabtu",
-                      ].map((d, i) => (
-                        <option key={d} value={i}>
-                          {d}
-                        </option>
+                        ["Anamnesis", detail.examination.anamnesis],
+                        [
+                          "Tanda vital",
+                          `${detail.examination.pressure} mmHg · ${detail.examination.temperature} °C · ${detail.examination.weight} kg${detail.examination.height ? ` · ${detail.examination.height} cm` : ""}`,
+                        ],
+                        ["Diagnosis", detail.examination.diagnosis],
+                        ["Catatan", detail.examination.notes],
+                      ].map(([label, value]) => (
+                        <div key={label}>
+                          <span>{label}</span>
+                          <b>{value || "—"}</b>
+                        </div>
                       ))}
-                    </select>
-                  </Field>
-                  <div className="ws-form-grid">
-                    <Field label="Jam mulai">
-                      <input
-                        name="start"
-                        required
-                        type="time"
-                        defaultValue={editSchedule?.start || "08:00"}
-                      />
-                    </Field>
-                    <Field label="Jam selesai">
-                      <input
-                        name="end"
-                        required
-                        type="time"
-                        defaultValue={editSchedule?.end || "12:00"}
-                      />
-                    </Field>
-                  </div>
-                  <Field label="Kuota per sesi">
-                    <input
-                      name="quota"
-                      required
-                      type="number"
-                      min="1"
-                      defaultValue={editSchedule?.quota || 5}
-                    />
-                  </Field>
-                  <div className="notice">
-                    Jadwal bentrok ditolak. Kuota harus lebih dari nol.
-                  </div>
-                </>
-              )}
-              {editor.type === "Pengguna" && (
-                <>
-                  <Field label="Email staf">
-                    <input name="email" required type="email" placeholder="nama@sehatklinik.id" />
-                  </Field>
-                  <Field label="Peran">
-                    <select name="role" defaultValue="Petugas">
-                      <option>Petugas</option>
-                      <option>Dokter</option>
-                      <option>Admin</option>
-                    </select>
-                  </Field>
-                  <Field label="Password akun">
-                    <input name="password" type="password" placeholder="Minimal 8 karakter" defaultValue="password123" />
-                  </Field>
-                  <div className="notice">
-                    Akun staf yang didaftarkan langsung aktif dan dapat digunakan untuk login ke dashboard peran masing-masing.
-                  </div>
-                </>
-              )}
-              {["Dokter", "Layanan", "Jadwal"].includes(editor.type) && (
-                <Field label="Status">
-                  <select
-                    name="active"
-                    defaultValue={
-                      (editRecord || editService || editSchedule)?.active ===
-                      false
-                        ? "Nonaktif"
-                        : "Aktif"
-                    }
-                  >
-                    <option>Aktif</option>
-                    <option>Nonaktif</option>
-                  </select>
+                    </div>
+                    <h3>Tindakan & saran</h3>
+                    {detail.examination.actions.length ? (
+                      detail.examination.actions.map((a, i) => (
+                        <div className="ws-action-card" key={i}>
+                          <b>{a.name}</b>
+                          <p>{a.description}</p>
+                          <p>{a.advice}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="muted">Tidak ada tindakan tambahan.</p>
+                    )}
+                  </section>
+                )}
+              {((role === "Petugas" &&
+                ["Menunggu", "Dipanggil"].includes(detail.queue)) ||
+                (role === "Pasien" && detail.queue === "Menunggu")) && (
+                <Field label="Alasan pembatalan / pelewatan (wajib untuk tindakan tersebut)">
+                  <textarea
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="Tuliskan alasan…"
+                  />
                 </Field>
               )}
-              {showError}
-              <div className="form-actions">
+              {!(
+                role === "Dokter" &&
+                detail.queue === "Sedang Diperiksa" &&
+                exam
+              ) && showError}
+              <div className="modal-actions">
+                {canMedical &&
+                  detail.queue === "Selesai" &&
+                  detail.examination && (
+                    <button
+                      type="button"
+                      className="primary"
+                      onClick={() => {
+                        const sched = session(detail.schedule);
+                        printVisitSummary({
+                          visit: detail,
+                          patientName: patientName(detail.patient),
+                          doctorName: doctorName(detail.doctor),
+                          serviceName: serviceName(detail.service),
+                          dateText: dateLabel(detail.date),
+                          timeRange: sched
+                            ? `${sched.start} – ${sched.end}`
+                            : "",
+                          clinicName: clinic.name,
+                          clinicAddress: clinic.address,
+                          clinicPhone: clinic.phone,
+                          examination: detail.examination!,
+                        });
+                      }}
+                    >
+                      <Icon name="printer" size={16} />
+                      Cetak Ringkasan Kunjungan
+                    </button>
+                  )}
+                {role === "Petugas" &&
+                  detail.status === "Terdaftar" &&
+                  detail.queue === "Menunggu" && (
+                    <button
+                      className="primary"
+                      disabled={busy}
+                      onClick={() => transition(detail, "checkin")}
+                    >
+                      {busy ? "Memproses..." : "Konfirmasi Kehadiran"}
+                    </button>
+                  )}
+                {["Petugas", "Dokter"].includes(role) &&
+                  detail.status === "Hadir" &&
+                  detail.queue === "Menunggu" && (
+                    <button
+                      className="primary"
+                      disabled={busy}
+                      onClick={() => transition(detail, "call")}
+                    >
+                      {busy ? "Memanggil..." : "Panggil Pasien"}
+                    </button>
+                  )}
+                {role === "Dokter" && detail.queue === "Dipanggil" && (
+                  <button
+                    className="primary"
+                    disabled={busy}
+                    onClick={() => transition(detail, "start")}
+                  >
+                    {busy ? "Memulai..." : "Mulai Pemeriksaan"}
+                  </button>
+                )}
+                {role === "Petugas" && detail.queue === "Dipanggil" && (
+                  <button
+                    className="secondary"
+                    disabled={busy || !reason.trim()}
+                    onClick={() => transition(detail, "skip")}
+                  >
+                    {busy ? "Memproses..." : "Lewati Antrean"}
+                  </button>
+                )}
+                {((role === "Pasien" && detail.queue === "Menunggu") ||
+                  (role === "Petugas" &&
+                    ["Menunggu", "Dipanggil"].includes(detail.queue))) && (
+                  <button
+                    className="destructive"
+                    disabled={busy || !reason.trim()}
+                    onClick={() => transition(detail, "cancel")}
+                  >
+                    {busy ? "Membatalkan..." : "Batalkan Kunjungan"}
+                  </button>
+                )}
+              </div>
+            </section>
+          </div>
+        )}
+        {editor && (
+          <div className="modal-backdrop" onClick={() => setEditor(null)}>
+            <section
+              className="modal ws-editor"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="editor-title"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="panel-heading">
+                <div>
+                  <span className="eyebrow">
+                    DATA {editor.type.toUpperCase()}
+                  </span>
+                  <h2 id="editor-title">
+                    {editor.id ? "Edit" : "Tambah"} {editor.type}
+                  </h2>
+                </div>
                 <button
-                  className="secondary"
-                  type="button"
-                  disabled={busy}
+                  className="square"
+                  aria-label="Tutup formulir"
                   onClick={() => setEditor(null)}
                 >
-                  Batal
-                </button>
-                <button className="primary" type="submit" disabled={busy}>
-                  {busy ? "Menyimpan..." : "Simpan Data Demo"}
-                  <Icon name="check" size={16} />
+                  <Icon name="close" size={18} />
                 </button>
               </div>
-            </form>
-          </section>
-        </div>
-      )}
-      <NotificationDrawer />
+              <form onSubmit={saveEditor}>
+                {["Pasien", "Dokter", "Layanan", "Pengguna"].includes(
+                  editor.type,
+                ) && (
+                  <Field label="Nama">
+                    <input
+                      name="name"
+                      required
+                      defaultValue={
+                        editPatient?.name ||
+                        editRecord?.name ||
+                        editService?.name ||
+                        ""
+                      }
+                    />
+                  </Field>
+                )}
+                {editor.type === "Pasien" && (
+                  <>
+                    <div className="notice">
+                      <Icon name="users" size={19} />
+                      Pasien walk-in terdaftar langsung tanpa memerlukan akun.
+                    </div>
+                    <div className="ws-form-grid">
+                      <Field label="Tanggal lahir">
+                        <input
+                          name="birth"
+                          required
+                          type="date"
+                          max={DEMO_DATE}
+                          defaultValue={editPatient?.birth}
+                        />
+                      </Field>
+                      <Field label="Jenis kelamin">
+                        <select
+                          name="gender"
+                          defaultValue={editPatient?.gender}
+                        >
+                          <option>Laki-laki</option>
+                          <option>Perempuan</option>
+                        </select>
+                      </Field>
+                    </div>
+                    <Field label="Nomor telepon">
+                      <input
+                        name="phone"
+                        required
+                        type="tel"
+                        pattern="[0-9+() -]{8,16}"
+                        defaultValue={editPatient?.phone}
+                      />
+                    </Field>
+                    <Field label="Alamat">
+                      <textarea
+                        name="address"
+                        required
+                        defaultValue={editPatient?.address}
+                      />
+                    </Field>
+                    <Field label="Kontak darurat">
+                      <input
+                        name="emergency"
+                        type="tel"
+                        defaultValue={editPatient?.emergency}
+                      />
+                    </Field>
+                  </>
+                )}
+                {editor.type === "Dokter" && (
+                  <>
+                    <Field label="Spesialisasi">
+                      <input
+                        name="specialty"
+                        required
+                        defaultValue={editRecord?.specialty}
+                      />
+                    </Field>
+                    <Field label="Nomor SIP (unik)">
+                      <input
+                        name="sip"
+                        required
+                        defaultValue={editRecord?.sip}
+                      />
+                    </Field>
+                    <Field label="Foto Profil Dokter (JPG, PNG, WebP · Maks 2 MB)">
+                      <div className="ws-photo-upload">
+                        {doctorPhoto ? (
+                          <img
+                            src={doctorPhoto}
+                            alt="Pratinjau foto dokter"
+                            className="ws-photo-preview"
+                          />
+                        ) : (
+                          <GenderAvatar name={editRecord?.name || "Dokter"} />
+                        )}
+                        <div className="ws-photo-controls">
+                          <input
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const extOk = /\.(jpe?g|png|webp)$/i.test(
+                                file.name,
+                              );
+                              const mimeOk = [
+                                "image/jpeg",
+                                "image/png",
+                                "image/webp",
+                              ].includes(file.type);
+                              if (!extOk || !mimeOk) {
+                                setDoctorPhotoError(
+                                  "Format foto harus JPG, PNG, atau WebP.",
+                                );
+                                e.target.value = "";
+                                return;
+                              }
+                              if (file.size > 2 * 1024 * 1024) {
+                                setDoctorPhotoError(
+                                  "Ukuran foto maksimal 2 MB.",
+                                );
+                                e.target.value = "";
+                                return;
+                              }
+                              setDoctorPhotoError("");
+                              setError("");
+                              const reader = new FileReader();
+                              reader.onload = () => {
+                                if (typeof reader.result === "string") {
+                                  setDoctorPhoto(reader.result);
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }}
+                          />
+                          <span>
+                            Format diizinkan: JPG, PNG, atau WebP (maks. 2 MB).
+                          </span>
+                          {doctorPhoto && (
+                            <button
+                              type="button"
+                              className="text-button"
+                              style={{ alignSelf: "flex-start" }}
+                              onClick={() => {
+                                setDoctorPhoto("");
+                                setDoctorPhotoError("");
+                              }}
+                            >
+                              Hapus foto
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {doctorPhotoError && (
+                        <small style={{ color: "#b91c1c", marginTop: "4px" }}>
+                          {doctorPhotoError}
+                        </small>
+                      )}
+                    </Field>
+                    <fieldset className="ws-checklist">
+                      <legend>Layanan yang ditangani</legend>
+                      {services.map((s) => (
+                        <label key={s.id}>
+                          <input
+                            name="services"
+                            type="checkbox"
+                            value={s.id}
+                            defaultChecked={editRecord?.services.includes(s.id)}
+                          />
+                          {s.name}
+                        </label>
+                      ))}
+                    </fieldset>
+                  </>
+                )}
+                {editor.type === "Layanan" && (
+                  <>
+                    <Field label="Deskripsi">
+                      <textarea
+                        name="description"
+                        required
+                        defaultValue={editService?.description}
+                      />
+                    </Field>
+                    <Field label="Durasi (menit)">
+                      <input
+                        name="duration"
+                        type="number"
+                        required
+                        min="1"
+                        max="480"
+                        defaultValue={editService?.duration || 30}
+                      />
+                    </Field>
+                  </>
+                )}
+                {editor.type === "Jadwal" && (
+                  <>
+                    <Field label="Dokter">
+                      <select name="doctor" defaultValue={editSchedule?.doctor}>
+                        {doctors
+                          .filter(
+                            (d) => d.active || d.id === editSchedule?.doctor,
+                          )
+                          .map((d) => (
+                            <option key={d.id} value={d.id}>
+                              {d.name}
+                            </option>
+                          ))}
+                      </select>
+                    </Field>
+                    <Field label="Hari praktik">
+                      <select name="day" defaultValue={editSchedule?.day ?? 1}>
+                        {[
+                          "Minggu",
+                          "Senin",
+                          "Selasa",
+                          "Rabu",
+                          "Kamis",
+                          "Jumat",
+                          "Sabtu",
+                        ].map((d, i) => (
+                          <option key={d} value={i}>
+                            {d}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <div className="ws-form-grid">
+                      <Field label="Jam mulai">
+                        <input
+                          name="start"
+                          required
+                          type="time"
+                          defaultValue={editSchedule?.start || "08:00"}
+                        />
+                      </Field>
+                      <Field label="Jam selesai">
+                        <input
+                          name="end"
+                          required
+                          type="time"
+                          defaultValue={editSchedule?.end || "12:00"}
+                        />
+                      </Field>
+                    </div>
+                    <Field label="Kuota per sesi">
+                      <input
+                        name="quota"
+                        required
+                        type="number"
+                        min="1"
+                        defaultValue={editSchedule?.quota || 5}
+                      />
+                    </Field>
+                    <div className="notice">
+                      Jadwal bentrok ditolak. Kuota harus lebih dari nol.
+                    </div>
+                  </>
+                )}
+                {editor.type === "Pengguna" && (
+                  <>
+                    <Field label="Email staf">
+                      <input
+                        name="email"
+                        required
+                        type="email"
+                        placeholder="nama@sehatklinik.id"
+                      />
+                    </Field>
+                    <Field label="Peran">
+                      <select name="role" defaultValue="Petugas">
+                        <option>Petugas</option>
+                        <option>Dokter</option>
+                        <option>Admin</option>
+                      </select>
+                    </Field>
+                    <Field label="Password akun">
+                      <input
+                        name="password"
+                        type="password"
+                        placeholder="Minimal 8 karakter"
+                        defaultValue="password123"
+                      />
+                    </Field>
+                    <div className="notice">
+                      Akun staf yang didaftarkan langsung aktif dan dapat
+                      digunakan untuk login ke dashboard peran masing-masing.
+                    </div>
+                  </>
+                )}
+                {["Dokter", "Layanan", "Jadwal"].includes(editor.type) && (
+                  <Field label="Status">
+                    <select
+                      name="active"
+                      defaultValue={
+                        (editRecord || editService || editSchedule)?.active ===
+                        false
+                          ? "Nonaktif"
+                          : "Aktif"
+                      }
+                    >
+                      <option>Aktif</option>
+                      <option>Nonaktif</option>
+                    </select>
+                  </Field>
+                )}
+                {showError}
+                <div className="form-actions">
+                  <button
+                    className="secondary"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setEditor(null)}
+                  >
+                    Batal
+                  </button>
+                  <button className="primary" type="submit" disabled={busy}>
+                    {busy ? "Menyimpan..." : "Simpan Data Demo"}
+                    <Icon name="check" size={16} />
+                  </button>
+                </div>
+              </form>
+            </section>
+          </div>
+        )}
+        <NotificationDrawer />
       </div>
 
       {showAuthModal && (
@@ -4681,7 +5035,7 @@ export default function ClinicWorkspace({
               aria-label="Kembali ke Beranda"
               title="Kembali ke Beranda"
               onClick={() => {
-                window.location.href = "/"
+                window.location.href = "/";
               }}
               style={{
                 position: "absolute",
@@ -4700,16 +5054,37 @@ export default function ClinicWorkspace({
 
             <span className="web-service-icon" style={{ marginBottom: "16px" }}>
               <Icon
-                name={initialRole === "Dokter" ? "heart" : initialRole === "Admin" ? "shield" : "clinic"}
+                name={
+                  initialRole === "Dokter"
+                    ? "heart"
+                    : initialRole === "Admin"
+                      ? "shield"
+                      : "clinic"
+                }
                 size={27}
               />
             </span>
 
-            <h2 style={{ fontSize: "22px", margin: "0 0 8px", color: "#1e293b", fontWeight: 700 }}>
+            <h2
+              style={{
+                fontSize: "22px",
+                margin: "0 0 8px",
+                color: "#1e293b",
+                fontWeight: 700,
+              }}
+            >
               Masuk Dashboard {staffRoleName}
             </h2>
-            <p style={{ fontSize: "12px", color: "#64748b", margin: "0 0 20px", lineHeight: 1.6 }}>
-              Halaman ini memerlukan autentikasi akun staf terdaftar. Silakan masuk untuk mengakses panel kendali {initialRole}.
+            <p
+              style={{
+                fontSize: "12px",
+                color: "#64748b",
+                margin: "0 0 20px",
+                lineHeight: 1.6,
+              }}
+            >
+              Halaman ini memerlukan autentikasi akun staf terdaftar. Silakan
+              masuk untuk mengakses panel kendali {initialRole}.
             </p>
 
             {modalError && (
@@ -4734,11 +5109,19 @@ export default function ClinicWorkspace({
 
             <form
               onSubmit={(e) => {
-                e.preventDefault()
-                handleModalLogin()
+                e.preventDefault();
+                handleModalLogin();
               }}
             >
-              <label style={{ display: "block", marginBottom: "14px", fontSize: "12px", fontWeight: 500, color: "#334155" }}>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "14px",
+                  fontSize: "12px",
+                  fontWeight: 500,
+                  color: "#334155",
+                }}
+              >
                 Email Staf
                 <input
                   type="email"
@@ -4746,33 +5129,71 @@ export default function ClinicWorkspace({
                   autoComplete="email"
                   value={modalEmail}
                   onChange={(e) => {
-                    setModalEmail(e.target.value)
-                    setModalError("")
+                    setModalEmail(e.target.value);
+                    setModalError("");
                   }}
                   placeholder="nama@sehatklinik.id"
-                  style={{ marginTop: "6px", width: "100%", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "10px 14px", fontSize: "13px", boxSizing: "border-box" }}
+                  style={{
+                    marginTop: "6px",
+                    width: "100%",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: "8px",
+                    padding: "10px 14px",
+                    fontSize: "13px",
+                    boxSizing: "border-box",
+                  }}
                 />
               </label>
 
-              <label style={{ display: "block", marginBottom: "18px", fontSize: "12px", fontWeight: 500, color: "#334155" }}>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "18px",
+                  fontSize: "12px",
+                  fontWeight: 500,
+                  color: "#334155",
+                }}
+              >
                 Password
-                <div className="web-password" style={{ marginTop: "6px", position: "relative" }}>
+                <div
+                  className="web-password"
+                  style={{ marginTop: "6px", position: "relative" }}
+                >
                   <input
                     type={modalShowPassword ? "text" : "password"}
                     required
                     value={modalPassword}
                     onChange={(e) => {
-                      setModalPassword(e.target.value)
-                      setModalError("")
+                      setModalPassword(e.target.value);
+                      setModalError("");
                     }}
                     autoComplete="current-password"
                     placeholder="Minimal 6 karakter"
-                    style={{ width: "100%", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "10px 14px", paddingRight: "80px", fontSize: "13px", boxSizing: "border-box" }}
+                    style={{
+                      width: "100%",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "8px",
+                      padding: "10px 14px",
+                      paddingRight: "80px",
+                      fontSize: "13px",
+                      boxSizing: "border-box",
+                    }}
                   />
                   <button
                     type="button"
                     onClick={() => setModalShowPassword(!modalShowPassword)}
-                    style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#64748b", fontSize: "11px", cursor: "pointer", fontWeight: 500 }}
+                    style={{
+                      position: "absolute",
+                      right: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      color: "#64748b",
+                      fontSize: "11px",
+                      cursor: "pointer",
+                      fontWeight: 500,
+                    }}
                   >
                     {modalShowPassword ? "Sembunyikan" : "Lihat"}
                   </button>
@@ -4806,20 +5227,35 @@ export default function ClinicWorkspace({
                   "Memverifikasi akun..."
                 ) : (
                   <>
-                    Masuk ke Dashboard {initialRole} <Icon name="arrow" size={18} />
+                    Masuk ke Dashboard {initialRole}{" "}
+                    <Icon name="arrow" size={18} />
                   </>
                 )}
               </button>
             </form>
 
-            <p className="web-auth-switch" style={{ marginTop: "20px", marginBottom: 0, textAlign: "center" }}>
+            <p
+              className="web-auth-switch"
+              style={{
+                marginTop: "20px",
+                marginBottom: 0,
+                textAlign: "center",
+              }}
+            >
               Bukan staf klinik?{" "}
               <button
                 type="button"
                 onClick={() => {
-                  window.location.href = "/"
+                  window.location.href = "/";
                 }}
-                style={{ background: "none", border: "none", color: "#2563eb", fontWeight: 600, cursor: "pointer", fontSize: "12px" }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#2563eb",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  fontSize: "12px",
+                }}
               >
                 Kembali ke Beranda
               </button>
@@ -4828,5 +5264,5 @@ export default function ClinicWorkspace({
         </div>
       )}
     </>
-  )
+  );
 }

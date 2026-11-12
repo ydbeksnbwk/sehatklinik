@@ -6,12 +6,14 @@ import { denganRls } from "@/lib/rls";
 
 export async function GET(request) {
   try {
-    const { profile } = await requireRole(request);
+    const { profile, user } = await requireRole(request);
+    const userId = profile?.id || user?.id;
     const { searchParams } = new URL(request.url);
     const hanyaBelumDibaca = searchParams.get("belumDibaca") === "1";
 
-    const hasil = await denganRls(profile.id, async (tx) => {
-      const conds = [eq(notifikasi.profileId, profile.id)];
+    const hasil = await denganRls(userId, async (tx) => {
+      // Isolasi ketat: hanya tampilkan notifikasi milik pengguna yang sedang login
+      const conds = [eq(notifikasi.profileId, userId)];
       if (hanyaBelumDibaca) conds.push(eq(notifikasi.isRead, false));
 
       const rows = await tx
@@ -19,6 +21,8 @@ export async function GET(request) {
           id: notifikasi.id,
           pesan: notifikasi.pesan,
           isRead: notifikasi.isRead,
+          jenisKejadian: notifikasi.jenisKejadian,
+          tautan: notifikasi.tautan,
           createdAt: notifikasi.createdAt,
         })
         .from(notifikasi)
@@ -31,7 +35,7 @@ export async function GET(request) {
         .from(notifikasi)
         .where(
           and(
-            eq(notifikasi.profileId, profile.id),
+            eq(notifikasi.profileId, userId),
             eq(notifikasi.isRead, false),
           ),
         );
@@ -50,14 +54,15 @@ export async function GET(request) {
 // Tandai semua notifikasi milik pengguna sebagai sudah dibaca.
 export async function PATCH(request) {
   try {
-    const { profile } = await requireRole(request);
-    const res = await denganRls(profile.id, (tx) =>
+    const { profile, user } = await requireRole(request);
+    const userId = profile?.id || user?.id;
+    const res = await denganRls(userId, (tx) =>
       tx
         .update(notifikasi)
         .set({ isRead: true })
         .where(
           and(
-            eq(notifikasi.profileId, profile.id),
+            eq(notifikasi.profileId, userId),
             eq(notifikasi.isRead, false),
           ),
         )

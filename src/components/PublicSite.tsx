@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, type ComponentType } from "react"
+import { useRouter } from "next/navigation"
 import BrandArtwork from "./BrandArtwork"
 import CinematicArtwork from "./CinematicArtwork"
 import ClinicMap from "./ClinicMap"
@@ -93,6 +94,7 @@ export default function PublicSite({
   clinic,
 }: Props) {
   const { login } = useClinic()
+  const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [loginEmail, setLoginEmail] = useState("")
@@ -210,7 +212,11 @@ export default function PublicSite({
       if (redirectParam && redirectParam.startsWith("/") && !redirectParam.startsWith("//")) {
         dest = redirectParam
       }
-      window.location.replace(dest)
+      try {
+        router.replace(dest)
+      } catch {
+        window.location.replace(dest)
+      }
     }
   }
 
@@ -611,7 +617,7 @@ export default function PublicSite({
                 </span>
               </div>
 
-              <p>
+              <p suppressHydrationWarning>
                 <Icon name="calendar" size={15} /> {d.day} <span>·</span> {d.time}
               </p>
               <button onClick={() => openDoctorDetail(d)}>

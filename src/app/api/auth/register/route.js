@@ -5,7 +5,7 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { pasien, profiles } from "@/db/schema";
+import { notifikasi, pasien, profiles } from "@/db/schema";
 import { handleError, HttpError } from "@/lib/auth";
 import { hariIni } from "@/lib/tanggal";
 import { supabaseAdmin } from "@/lib/supabase-admin";
@@ -164,6 +164,20 @@ export async function POST(request) {
         .returning({ id: pasien.id, noRekamMedis: pasien.noRekamMedis });
 
       p = baru;
+    }
+
+    // 6. Simpan notifikasi selamat datang ke tabel notifikasi
+    try {
+      await db.insert(notifikasi).values({
+        profileId: userId,
+        pesan: `Halo ${nama}, akun Anda aktif dan siap digunakan untuk pendaftaran serta pemantauan antrean.`,
+        jenisKejadian: "WELCOME",
+        tautan: "/pasien",
+        pushStatus: "menunggu",
+        isRead: false,
+      });
+    } catch (notifErr) {
+      console.warn("Gagal membuat notifikasi selamat datang register:", notifErr);
     }
 
     return NextResponse.json(

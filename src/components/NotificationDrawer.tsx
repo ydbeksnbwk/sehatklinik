@@ -19,16 +19,33 @@ export default function NotificationDrawer() {
     requestWebPushPermission,
     setSelected,
     navigate,
+    currentUser,
+    patient,
   } = useClinic()
 
   const [activeTab, setActiveTab] = useState<"all" | "unread">("all")
 
   if (!notificationDrawerOpen) return null
 
-  // Role-scoped notifications
-  const userNotifications = notifications.filter(
-    (n) => n.targetRole === "Semua" || n.targetRole === role
-  )
+  // Role-scoped & user-scoped notifications (isolasi ketat: setiap peran & akun hanya melihat miliknya)
+  const userNotifications = notifications.filter((n) => {
+    // 1. Setiap peran (Pasien, Petugas, Dokter, Admin) hanya melihat notifikasi perannya sendiri
+    if (n.targetRole !== role) return false
+
+    // 2. Isolasi per akun jika targetUserId ditentukan
+    if (n.targetUserId && currentUser) {
+      const target = n.targetUserId.toLowerCase()
+      const matchesUser =
+        (currentUser.id && target === currentUser.id.toLowerCase()) ||
+        (currentUser.email && target === currentUser.email.toLowerCase()) ||
+        (currentUser.name && target === currentUser.name.toLowerCase()) ||
+        (role === "Pasien" && patient?.id && target === patient.id.toLowerCase())
+
+      if (!matchesUser) return false
+    }
+
+    return true
+  })
   const unreadItems = userNotifications.filter((n) => !n.isRead)
   const displayedNotifications =
     activeTab === "unread" ? unreadItems : userNotifications
@@ -37,55 +54,25 @@ export default function NotificationDrawer() {
     markNotificationAsRead(item.id)
     setNotificationDrawerOpen(false)
 
-    // Jika notifikasi memiliki actionUrl URL eksplisit
     if (item.actionUrl && (item.actionUrl.startsWith("/") || item.actionUrl.startsWith("http"))) {
       router.push(item.actionUrl)
       return
     }
 
-    if (role === "Pasien") {
-      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/pasien")) {
-        router.push("/pasien")
-      }
-      if (item.visitId && item.visitId !== "KJ-SISTEM") {
-        setSelected(item.visitId)
-      } else {
-        navigate("Antrean Saya")
-      }
-    } else if (role === "Dokter") {
-      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/dokter")) {
-        router.push("/dokter-dashboard")
-      }
-      if (item.visitId && item.visitId !== "KJ-SISTEM") {
-        setSelected(item.visitId)
-      } else {
-        navigate("Antrean Hari Ini")
-      }
-    } else if (role === "Petugas") {
-      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/petugas")) {
-        router.push("/petugas")
-      }
-      navigate("Antrean Hari Ini")
-    } else if (role === "Admin") {
-      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/admin")) {
-        router.push("/admin")
-      }
-      navigate("Semua Kunjungan")
-    } else {
-      router.push("/pasien")
+    if (item.visitId && item.visitId !== "KJ-SISTEM") {
+      setSelected(item.visitId)
     }
+    navigate("Antrean Saya")
+    router.push("/pasien")
   }
 
-  // Format subtitle from visitId, queue, date
+  // Format subtitle from visitId, queue, date or message matching mockup
   const getSubtitle = (item: (typeof notifications)[0]) => {
     if (item.visitId && item.queueNumber && item.visitId !== "KJ-SISTEM") {
       const dateStr = formatDateIndonesian(item.timestamp)
       return `${item.visitId} • Antrean ${item.queueNumber} • ${dateStr}`
     }
-    if (item.timestamp) {
-      return formatDateIndonesian(item.timestamp)
-    }
-    return ""
+    return item.message || (item.timestamp ? formatDateIndonesian(item.timestamp) : "")
   }
 
   return (
@@ -243,13 +230,8 @@ export default function NotificationDrawer() {
                     {!item.isRead && <span className="notif-item-unread-dot" />}
                   </div>
 
-                  <p className="notif-item-message" style={{ margin: "4px 0 6px", fontSize: "12.5px", color: "#1e293b", lineHeight: "1.45" }}>
-                    {item.message}
-                  </p>
-                  {getSubtitle(item) && getSubtitle(item) !== item.message && (
-                    <p className="notif-item-subtitle" style={{ fontSize: "11px", color: "#64748b" }}>
-                      {getSubtitle(item)}
-                    </p>
+                  {getSubtitle(item) && (
+                    <p className="notif-item-subtitle">{getSubtitle(item)}</p>
                   )}
 
                   <div className="notif-item-actions">
