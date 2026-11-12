@@ -743,12 +743,13 @@ export default function PublicSite({
                   ? "Masuk ke akun pasien untuk melanjutkan."
                   : "Daftar sebagai pasien Klinik Sehat Sentosa."}
               </p>
-              <div className="web-prototype-note">
-                <Icon name="help" size={16} />
-                {page === "Login"
-                  ? "Staf (Petugas, Dokter, Admin) wajib login menggunakan akun yang didaftarkan Administrator. Pasien dapat langsung masuk."
-                  : "Daftar sebagai pasien baru untuk kemudahan reservasi antrean dan riwayat medis."}
-              </div>
+              {page !== "Login" && (
+                <div className="web-prototype-note">
+                  <Icon name="help" size={16} />
+                  Daftar sebagai pasien baru untuk kemudahan reservasi antrean
+                  dan riwayat medis.
+                </div>
+              )}
               <form onSubmit={handleAuthSubmit}>
                 {authSuccess && (
                   <div
