@@ -8,20 +8,16 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import { useClinic } from "../context/ClinicContext";
+import { useClinic, type ClinicUser } from "../context/ClinicContext";
 import PublicSite from "./PublicSite";
 import BrandArtwork from "./BrandArtwork";
 import GenderAvatar from "./GenderAvatar";
 import NotificationDrawer from "./NotificationDrawer";
 import { downloadRekapExcel } from "../utils/exportRekapExcel";
 import { printVisitSummary } from "../utils/printVisitSummary";
+import { apiUpdateProfil } from "../utils/api";
 import {
   DEMO_DATE,
-  doctorsSeed,
-  patientsSeed,
-  schedulesSeed,
-  servicesSeed,
-  visitsSeed,
   remaining,
   dateLabel,
   queueLabel,
@@ -156,6 +152,7 @@ export default function ClinicWorkspace({
     users,
     setUsers,
     currentUser,
+    setCurrentUser,
     logout,
     clinic,
     setClinic,
@@ -421,11 +418,12 @@ export default function ClinicWorkspace({
   }, [selected, editor]);
 
   const userGender =
-    (currentUser as any)?.jenisKelamin ||
+    currentUser?.jenisKelamin ||
     (currentUser as any)?.gender ||
     "Laki-laki";
   const userPatientId =
-    (currentUser as any)?.pasienId ||
+    currentUser?.pasienId ||
+    currentUser?.noRekamMedis ||
     (currentUser as any)?.patientId ||
     currentUser?.id ||
     "RM-00000";
@@ -433,18 +431,22 @@ export default function ClinicWorkspace({
   const defaultPatientFallback: Patient = {
     id: userPatientId,
     name: currentUser?.name || "Pasien",
-    phone: "-",
-    birth: "2000-01-01",
+    phone: currentUser?.telepon || "-",
+    birth: currentUser?.tanggalLahir || "2000-01-01",
     gender: userGender,
-    address: "-",
-    emergency: "-",
+    address: currentUser?.alamat || "-",
+    emergency: currentUser?.kontakDarurat || "-",
     account: true,
+    nik: currentUser?.nik || "-",
   };
   const matchedPatient =
     currentUser?.role === "Pasien"
       ? patients.find(
           (p) =>
             p.id === userPatientId ||
+            (currentUser.id && p.id === currentUser.id) ||
+            (currentUser.pasienId && p.id === currentUser.pasienId) ||
+            (currentUser.noRekamMedis && p.id === currentUser.noRekamMedis) ||
             (currentUser.name &&
               p.name.trim().toLowerCase() ===
                 currentUser.name.trim().toLowerCase()),
@@ -456,10 +458,31 @@ export default function ClinicWorkspace({
       ? matchedPatient
         ? {
             ...matchedPatient,
+            name: currentUser?.name || matchedPatient.name,
+            phone:
+              currentUser?.telepon && currentUser.telepon !== "-"
+                ? currentUser.telepon
+                : matchedPatient.phone,
+            birth:
+              currentUser?.tanggalLahir &&
+              currentUser.tanggalLahir !== "2000-01-01"
+                ? currentUser.tanggalLahir
+                : matchedPatient.birth,
             gender:
-              matchedPatient.gender && matchedPatient.gender !== "-"
+              currentUser?.jenisKelamin ||
+              (matchedPatient.gender && matchedPatient.gender !== "-"
                 ? matchedPatient.gender
-                : userGender,
+                : userGender),
+            address:
+              currentUser?.alamat && currentUser.alamat !== "-"
+                ? currentUser.alamat
+                : matchedPatient.address,
+            emergency:
+              currentUser?.kontakDarurat &&
+              currentUser.kontakDarurat !== "-"
+                ? currentUser.kontakDarurat
+                : matchedPatient.emergency,
+            nik: currentUser?.nik || matchedPatient.nik,
           }
         : defaultPatientFallback
       : patients[0] || defaultPatientFallback;
@@ -3696,11 +3719,11 @@ export default function ClinicWorkspace({
                 : "Peran akun pasien dikelola oleh sistem."}
             </p>
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 const data = new FormData(e.currentTarget);
                 const get = (key: string) => String(data.get(key) || "");
-                if (role === "Admin")
+                if (role === "Admin") {
                   setClinic({
                     name: get("name"),
                     description: get("description"),
@@ -3710,32 +3733,120 @@ export default function ClinicWorkspace({
                     longitude: get("longitude"),
                     hours: get("hours"),
                   });
-                else
-                  setPatients((p) =>
-                    p.map((item) =>
-                      item.id === patient.id
-                        ? {
-                            ...item,
-                            name: get("name"),
-                            nik: get("nik") || item.nik,
-                            phone: get("phone"),
-                            birth: get("birth"),
-                            gender: get("gender"),
-                            address: get("address"),
-                            emergency: get("emergency"),
-                          }
-                        : item,
-                    ),
-                  );
-                setEditingProfile(false);
-                notify("Profil demo berhasil diperbarui untuk sesi ini.");
+                  setEditingProfile(false);
+                  notify("Profil klinik berhasil diperbarui.");
+                } else {
+                  const updatedAddress = get("address");
+                  const updatedPhone = get("phone");
+                  const updatedEmergency = get("emergency");
+
+                  setBusy(true);
+                  try {
+                    const res = await apiUpdateProfil({
+                      alamat: updatedAddress,
+                      telepon: updatedPhone,
+                      kontakDarurat: updatedEmergency,
+                    });
+                    if (res.error) {
+                      throw new Error(
+                        res.error.message ||
+                          "Gagal memperbarui profil di database."
+                      );
+                    }
+                    const saved = res.data as
+                      | {
+                          nama?: string;
+                          telepon?: string;
+                          alamat?: string;
+                          kontakDarurat?: string;
+                        }
+                      | undefined;
+                    const updatedUser: ClinicUser = {
+                      ...(currentUser || {
+                        email: "",
+                        role: "Pasien",
+                        active: true,
+                      }),
+                      name: saved?.nama || currentUser?.name || patient.name,
+                      alamat:
+                        saved?.alamat && saved.alamat !== "-"
+                          ? saved.alamat
+                          : updatedAddress,
+                      telepon:
+                        saved?.telepon && saved.telepon !== "-"
+                          ? saved.telepon
+                          : updatedPhone,
+                      kontakDarurat:
+                        saved?.kontakDarurat && saved.kontakDarurat !== "-"
+                          ? saved.kontakDarurat
+                          : updatedEmergency,
+                    };
+                    setCurrentUser(updatedUser);
+                  } catch (err: any) {
+                    notify(
+                      err?.message || "Gagal memperbarui profil di database."
+                    );
+                    setBusy(false);
+                    return;
+                  } finally {
+                    setBusy(false);
+                  }
+
+                  setPatients((p) => {
+                    const exists = p.some(
+                      (item) =>
+                        item.id === patient.id ||
+                        (currentUser?.id && item.id === currentUser.id) ||
+                        (currentUser?.pasienId &&
+                          item.id === currentUser.pasienId)
+                    );
+                    if (exists) {
+                      return p.map((item) =>
+                        item.id === patient.id ||
+                        (currentUser?.id && item.id === currentUser.id) ||
+                        (currentUser?.pasienId &&
+                          item.id === currentUser.pasienId)
+                          ? {
+                              ...item,
+                              phone: updatedPhone,
+                              address: updatedAddress,
+                              emergency: updatedEmergency,
+                            }
+                          : item
+                      );
+                    }
+                    return [
+                      {
+                        id: patient.id,
+                        name: patient.name,
+                        nik: patient.nik,
+                        phone: updatedPhone,
+                        birth: patient.birth,
+                        gender: patient.gender,
+                        address: updatedAddress,
+                        emergency: updatedEmergency,
+                        account: true,
+                      },
+                      ...p,
+                    ];
+                  });
+
+                  setEditingProfile(false);
+                  notify("Profil Anda berhasil diperbarui.");
+                }
               }}
             >
               <Field label="Nama">
                 <input
                   name="name"
                   required
-                  defaultValue={role === "Admin" ? clinic.name : patient.name}
+                  disabled={role !== "Admin"}
+                  title="Nama hanya dapat diubah oleh petugas/admin"
+                  defaultValue={
+                    role === "Admin"
+                      ? clinic.name
+                      : currentUser?.name || patient.name
+                  }
                 />
               </Field>
               {role === "Admin" ? (
@@ -3751,14 +3862,23 @@ export default function ClinicWorkspace({
                   <Field label="Tanggal lahir">
                     <input
                       name="birth"
-                      required
+                      disabled
+                      title="Tanggal lahir hanya-baca"
                       type="date"
-                      max={DEMO_DATE}
-                      defaultValue={patient.birth}
+                      defaultValue={
+                        currentUser?.tanggalLahir || patient.birth
+                      }
                     />
                   </Field>
                   <Field label="Jenis kelamin">
-                    <select name="gender" defaultValue={patient.gender}>
+                    <select
+                      name="gender"
+                      disabled
+                      title="Jenis kelamin hanya-baca"
+                      defaultValue={
+                        currentUser?.jenisKelamin || patient.gender
+                      }
+                    >
                       <option>Laki-laki</option>
                       <option>Perempuan</option>
                     </select>
@@ -3769,10 +3889,10 @@ export default function ClinicWorkspace({
                 <Field label="NIK (Nomor Induk Kependudukan)">
                   <input
                     name="nik"
-                    pattern="[0-9]{16}"
+                    disabled
+                    title="NIK hanya-baca"
                     maxLength={16}
-                    placeholder="16 digit NIK sesuai KTP"
-                    defaultValue={patient.nik || ""}
+                    defaultValue={currentUser?.nik || patient.nik || ""}
                   />
                 </Field>
               )}
@@ -3781,7 +3901,11 @@ export default function ClinicWorkspace({
                   name="address"
                   required
                   defaultValue={
-                    role === "Admin" ? clinic.address : patient.address
+                    role === "Admin"
+                      ? clinic.address
+                      : currentUser?.alamat && currentUser.alamat !== "-"
+                        ? currentUser.alamat
+                        : patient.address
                   }
                 />
               </Field>
@@ -3790,7 +3914,13 @@ export default function ClinicWorkspace({
                   name="phone"
                   required
                   type="tel"
-                  defaultValue={role === "Admin" ? clinic.phone : patient.phone}
+                  defaultValue={
+                    role === "Admin"
+                      ? clinic.phone
+                      : currentUser?.telepon && currentUser.telepon !== "-"
+                        ? currentUser.telepon
+                        : patient.phone
+                  }
                 />
               </Field>
               {role === "Admin" ? (
@@ -3828,7 +3958,12 @@ export default function ClinicWorkspace({
                   <input
                     name="emergency"
                     type="tel"
-                    defaultValue={patient.emergency}
+                    defaultValue={
+                      currentUser?.kontakDarurat &&
+                      currentUser.kontakDarurat !== "-"
+                        ? currentUser.kontakDarurat
+                        : patient.emergency
+                    }
                   />
                 </Field>
               )}
