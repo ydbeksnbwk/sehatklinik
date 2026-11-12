@@ -90,17 +90,42 @@ export async function apiGetProfilKlinik() {
 
 // Auth
 export async function apiGetMe() {
-  return fetchApi<{ id: string; email: string; nama: string; telepon: string; role: string }>("/api/auth/me");
+  return fetchApi<{
+    id: string;
+    email: string;
+    nama: string;
+    telepon: string;
+    role: string;
+    pasienId?: string | null;
+    noRekamMedis?: string | null;
+    nik?: string;
+    tanggalLahir?: string;
+    jenisKelamin?: string;
+    alamat?: string;
+    kontakDarurat?: string;
+  }>("/api/auth/me");
 }
 
 export async function apiLogin(payload: { email: string; password: string }) {
-  return fetchApi<{ user: { id: string; email: string; nama: string; telepon: string; role: string } }>(
-    "/api/auth/login",
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }
-  );
+  return fetchApi<{
+    user: {
+      id: string;
+      email: string;
+      nama: string;
+      telepon: string;
+      role: string;
+      pasienId?: string | null;
+      noRekamMedis?: string | null;
+      nik?: string;
+      tanggalLahir?: string;
+      jenisKelamin?: string;
+      alamat?: string;
+      kontakDarurat?: string;
+    };
+  }>("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function apiLogout() {

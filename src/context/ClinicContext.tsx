@@ -394,69 +394,33 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     setWebPushPermission(supported ? Notification.permission : "unsupported")
   }, [])
 
-  // Load state from localStorage on client mount
+  // Inisialisasi awal pada client mount tanpa ketergantungan localStorage
   useEffect(() => {
     try {
-      // Invalidate old state v1/v2 cache to ensure clean seed/Supabase sync
       if (typeof window !== "undefined") {
-        localStorage.removeItem("sehatklinik_state_v1")
-        localStorage.removeItem("sehatklinik_state_v2")
-      }
-      const stored = typeof window !== "undefined" ? localStorage.getItem("sehatklinik_state_v3") : null
-      if (stored) {
-        const data = JSON.parse(stored)
-        if (data.visits?.length) setVisits(data.visits)
-        if (data.patients?.length) setPatients(data.patients)
-        if (data.doctors) setDoctors(data.doctors)
-        if (data.services) setServices(data.services)
-        if (data.schedules) setSchedules(data.schedules)
-        if (data.users) setUsers(data.users)
-        if (data.clinic) setClinic({ ...defaultClinic, ...data.clinic })
+        try {
+          localStorage.removeItem("sehatklinik_state_v1")
+          localStorage.removeItem("sehatklinik_state_v2")
+          localStorage.removeItem("sehatklinik_state_v3")
+          localStorage.removeItem("sehatklinik_current_user")
+        } catch {}
 
-        const storedUser = typeof window !== "undefined" ? localStorage.getItem("sehatklinik_current_user") : null
-        let parsedUser: ClinicUser | null = null
-        if (storedUser) {
-          try {
-            parsedUser = JSON.parse(storedUser)
-            setCurrentUser(parsedUser)
-          } catch { }
-        }
-
-        if (typeof window !== "undefined") {
-          const path = window.location.pathname
-          if (path === "/admin") setRole("Admin")
-          else if (path === "/petugas") setRole("Petugas")
-          else if (path === "/dokter-dashboard" || path === "/dokter/dashboard" || path === "/dokter") setRole("Dokter")
-          else if (path === "/pasien") setRole("Pasien")
-          else if (path === "/dashboard") {
-            setRole((parsedUser?.role as Role) || (data.role && data.role !== "Publik" ? data.role : "Pasien"))
-          } else if (path.startsWith("/riwayat/") || path.startsWith("/kunjungan/")) {
-            setRole((parsedUser?.role as Role) || (data.role && data.role !== "Publik" ? data.role : "Pasien"))
-          } else if (path === "/login" && parsedUser?.role && parsedUser.role !== "Publik") {
-            // Pengguna sudah login dan berada di /login, pertahankan perannya agar tidak flicker ke '/'
-            setRole(parsedUser.role as Role)
-          } else if (path === "/daftar" && parsedUser?.role && parsedUser.role !== "Publik") {
-            // Pengguna sudah login dan berada di /daftar, pertahankan perannya agar tidak flicker ke '/'
-            setRole(parsedUser.role as Role)
-          } else if (
-            path === "/" ||
-            ["/layanan", "/jadwal", "/lokasi", "/profil"].includes(path) ||
-            (path === "/daftar" && !parsedUser) ||
-            (path === "/login" && !parsedUser) ||
-            (path === "/dokter" && (!parsedUser || parsedUser.role !== "Dokter")) ||
-            path.startsWith("/layanan/") ||
-            (path.startsWith("/dokter/") && !path.startsWith("/dokter/dashboard"))
-          ) {
-            setRole("Publik")
-          } else if (parsedUser?.role) {
-            setRole(parsedUser.role as Role)
-          } else if (data.role) {
-            setRole(data.role)
-          }
+        const path = window.location.pathname
+        if (path === "/admin") setRole("Admin")
+        else if (path === "/petugas") setRole("Petugas")
+        else if (path === "/dokter-dashboard" || path === "/dokter/dashboard" || path === "/dokter") setRole("Dokter")
+        else if (path === "/pasien") setRole("Pasien")
+        else if (
+          path === "/" ||
+          ["/layanan", "/jadwal", "/lokasi", "/profil", "/login", "/daftar"].includes(path) ||
+          path.startsWith("/layanan/") ||
+          path.startsWith("/dokter/")
+        ) {
+          setRole("Publik")
         }
       }
     } catch {
-      // ignore parsing error
+      // ignore
     } finally {
       setInitialized(true)
     }
@@ -738,33 +702,6 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       document.removeEventListener("visibilitychange", onVisibilityChange)
     }
   }, [])
-
-  // Save to localStorage when state changes (notifikasi diisolasi di memori/backend, tidak disimpan di localStorage)
-  useEffect(() => {
-    if (!initialized) return
-    try {
-      localStorage.setItem(
-        "sehatklinik_state_v3",
-        JSON.stringify({
-          role,
-          visits,
-          patients,
-          doctors,
-          services,
-          schedules,
-          users,
-          clinic,
-        })
-      )
-      if (currentUser) {
-        localStorage.setItem("sehatklinik_current_user", JSON.stringify(currentUser))
-      } else {
-        localStorage.removeItem("sehatklinik_current_user")
-      }
-    } catch {
-      // ignore
-    }
-  }, [initialized, role, visits, patients, doctors, services, schedules, users, currentUser, clinic])
 
   // Dialog ESC listener
   useEffect(() => {
@@ -1695,7 +1632,6 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       setRole(staff.role as Role)
       setPage("Dashboard")
       if (typeof window !== "undefined") {
-        localStorage.setItem("sehatklinik_current_user", JSON.stringify(staff))
         sessionStorage.setItem("sehatklinik_welcome_sent", "1")
       }
       const welcomeTitle = "Selamat Datang di SehatKlinik"
@@ -1739,7 +1675,6 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     setRole("Pasien")
     setPage("Dashboard")
     if (typeof window !== "undefined") {
-      localStorage.setItem("sehatklinik_current_user", JSON.stringify(patientUser))
       sessionStorage.setItem("sehatklinik_welcome_sent", "1")
     }
     const welcomeTitle = "Selamat Datang di SehatKlinik"
@@ -1777,7 +1712,6 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     setNotifications([])
     setNotificationJobs([])
     if (typeof window !== "undefined") {
-      localStorage.removeItem("sehatklinik_current_user")
       sessionStorage.removeItem("sehatklinik_welcome_sent")
       window.location.href = "/"
     }
