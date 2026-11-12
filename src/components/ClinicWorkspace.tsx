@@ -110,11 +110,13 @@ function Badge({ text }: { text: string }) {
 type FieldProps = {
   label: string;
   children: ReactNode;
+  icon?: ReactNode;
 };
-function Field({ label, children }: FieldProps) {
+function Field({ label, children, icon }: FieldProps) {
   return (
     <label>
       {label}
+      {icon}
       {children}
     </label>
   );
@@ -3848,18 +3850,11 @@ export default function ClinicWorkspace({
                 }
               }}
             >
-              <Field
-                label={
-                  role === "Admin"
-                    ? "Nama"
-                    : "Nama (hanya-baca — hubungi petugas untuk koreksi)"
-                }
-              >
+              <Field label="Nama">
                 <input
                   name="name"
                   required
                   disabled={role !== "Admin"}
-                  title="Hanya-baca — hubungi petugas untuk koreksi"
                   defaultValue={
                     role === "Admin"
                       ? clinic.name
@@ -3877,26 +3872,20 @@ export default function ClinicWorkspace({
                 </Field>
               ) : (
                 <div className="ws-form-grid">
-                  <Field
-                    label="Tanggal lahir (hanya-baca — hubungi petugas untuk koreksi)"
-                  >
+                  <Field label="Tanggal lahir">
                     <input
                       name="birth"
                       disabled
-                      title="Hanya-baca — hubungi petugas untuk koreksi"
                       type="date"
                       defaultValue={
                         currentUser?.tanggalLahir || patient.birth
                       }
                     />
                   </Field>
-                  <Field
-                    label="Jenis kelamin (hanya-baca — hubungi petugas untuk koreksi)"
-                  >
+                  <Field label="Jenis kelamin">
                     <select
                       name="gender"
                       disabled
-                      title="Hanya-baca — hubungi petugas untuk koreksi"
                       defaultValue={
                         currentUser?.jenisKelamin || patient.gender
                       }
@@ -3908,17 +3897,21 @@ export default function ClinicWorkspace({
                 </div>
               )}
               {role === "Pasien" && (
-                <Field label="NIK (hanya-baca — hubungi petugas untuk koreksi)">
+                <Field label="NIK">
                   <input
                     name="nik"
                     disabled
-                    title="Hanya-baca — hubungi petugas untuk koreksi"
                     maxLength={16}
                     defaultValue={currentUser?.nik || patient.nik || ""}
                   />
                 </Field>
               )}
-              <Field label="Alamat">
+              <Field
+                label="Alamat"
+                icon={
+                  role === "Pasien" ? <Icon name="edit" size={13} /> : undefined
+                }
+              >
                 <textarea
                   name="address"
                   required
@@ -3931,7 +3924,12 @@ export default function ClinicWorkspace({
                   }
                 />
               </Field>
-              <Field label="Nomor telepon">
+              <Field
+                label="Nomor telepon"
+                icon={
+                  role === "Pasien" ? <Icon name="edit" size={13} /> : undefined
+                }
+              >
                 <input
                   name="phone"
                   required
@@ -3976,7 +3974,10 @@ export default function ClinicWorkspace({
                   </Field>
                 </>
               ) : (
-                <Field label="Kontak darurat">
+                <Field
+                  label="Kontak darurat"
+                  icon={<Icon name="edit" size={13} />}
+                >
                   <input
                     name="emergency"
                     type="tel"
