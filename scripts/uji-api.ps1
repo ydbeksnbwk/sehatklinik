@@ -57,7 +57,7 @@ Write-Host "==========================================================" -Foregro
 Write-Host "`n[0] Mengautentikasi akun uji..." -ForegroundColor Yellow
 $tokenPasien = Login "ani.wulandari@gmail.com" "Password123!"
 $tokenPetugas = Login "rina.petugas@gmail.com" "Password123!"
-$tokenDokter1 = Login "reyhan.adhitama@gmail.com" "Password123!"
+$tokenDokter1 = Login "dokter.reyhan@gmail.com" "Password123!"
 $tokenDokter2 = Login "nadira.kirana@gmail.com" "Password123!"
 $tokenAdmin   = Login "admin.klinik@gmail.com" "Password123!"
 
@@ -254,31 +254,76 @@ if ($t6_vital.StatusCode -eq 400) {
 
 # 7. BUKTI: Pasien membatalkan < 2 jam -> 409 (BR-08, K11)
 Write-Host "`n[7] BUKTI: Pasien membatalkan < 2 jam -> 409 (BR-08, K11)" -ForegroundColor Yellow
-# Pasien mendaftar kunjungan pada jadwal yang selisih jam mulainya < 2 jam dari sekarang
-# Jadwal dr. Annisa hari ini (Rabu jam 13:00-16:00)
-$tglHariIni = (Get-Date).ToString("yyyy-MM-dd")
-$daftarHariIni = Kirim "POST" "/api/kunjungan" @{
-    jadwalId = $jadwalKuota2
-    layananId = $layananKuota2
-    tanggal = $tglHariIni
-    keluhan = "Uji pembatalan mepet jam praktik"
-} $tokenPasien
+# Cari jadwal yang hari praktiknya sama dengan hari ini dan jam mulainya < 2 jam dari sekarang.
+# Tanggal uji dihitung dari kolom hari pada jadwal (0=Minggu .. 6=Sabtu), bukan hardcode.
+$now = Get-Date
+$hariIni = $now.ToString("yyyy-MM-dd")
+$jadwalPublik = (Kirim "GET" "/api/public/jadwal" $null "").Data.data
+$dokterPublik = (Kirim "GET" "/api/public/dokter" $null "").Data.data
+$kandidatMepet = @()
+foreach ($j in @($jadwalPublik)) {
+    if ([int]$j.hari -ne [int]$now.DayOfWeek) { continue }
+    $mulai = [datetime]::ParseExact("$hariIni $($j.jamMulai)", "yyyy-MM-dd HH:mm", $null)
+    $selisih = ($mulai - $now).TotalHours
+    if ($selisih -le 0 -or $selisih -ge 2) { continue }
+    $d = @($dokterPublik) | Where-Object { $_.id -eq $j.dokterId } | Select-Object -First 1
+    if ($d -and @($d.layanan).Count -gt 0) {
+        $kandidatMepet += [pscustomobject]@{ JadwalId = $j.id; LayananId = $d.layanan[0].id }
+    }
+}
 
-$kunjunganHariIniId = $daftarHariIni.Data.data.id
-if ($kunjunganHariIniId) {
-    # Pasien mencoba membatalkan kunjungan yang jam mulainya < 2 jam dari sekarang
-    $batalMepet = Kirim "POST" "/api/kunjungan/$kunjunganHariIniId/transition" @{
-        aksi = "batal"
-        alasan = "Ingin membatalkan tapi waktu sudah kurang dari 2 jam"
+$batalMepet = $null
+foreach ($k in $kandidatMepet) {
+    $daftarHariIni = Kirim "POST" "/api/kunjungan" @{
+        jadwalId = $k.JadwalId
+        layananId = $k.LayananId
+        tanggal = $hariIni
+        keluhan = "Uji pembatalan mepet jam praktik"
     } $tokenPasien
+    if ($daftarHariIni.Data -and $daftarHariIni.Data.data -and $daftarHariIni.Data.data.id) {
+        $batalMepet = Kirim "POST" "/api/kunjungan/$($daftarHariIni.Data.data.id)/transition" @{
+            aksi = "batal"
+            alasan = "Ingin membatalkan tapi waktu sudah kurang dari 2 jam"
+        } $tokenPasien
+        break
+    }
+}
 
+if ($batalMepet) {
     if ($batalMepet.StatusCode -eq 409) {
         Write-Host "    [PASS] Pasien membatalkan kunjungan < 2 jam sebelum praktik ditolak 409 (BR-08, K11)" -ForegroundColor Green
     } else {
         Write-Host "    [FAIL] Pasien membatalkan < 2 jam menghasilkan $($batalMepet.StatusCode): $($batalMepet.Error)" -ForegroundColor Red
     }
 } else {
-    Write-Host "    [SKIP/INFO] Pendaftaran hari ini tidak berhasil: $($daftarHariIni.Error)" -ForegroundColor DarkGray
+    # Tidak ada jadwal hari ini yang mulai < 2 jam. Uji tanggal terdekat yang sesuai hari jadwal;
+    # hasil yang benar ditentukan dari selisih jam ke jam mulai praktik.
+    $j = @($jadwalPublik) | Where-Object { $_.id -eq $jadwalKuota2 } | Select-Object -First 1
+    $delta = ([int]$j.hari - [int]$now.DayOfWeek + 7) % 7
+    $tglUji = $now.Date.AddDays($delta)
+    $mulai = [datetime]::ParseExact("$($tglUji.ToString('yyyy-MM-dd')) $($j.jamMulai)", "yyyy-MM-dd HH:mm", $null)
+    $selisih = ($mulai - $now).TotalHours
+    $harapan = if ($selisih -lt 2) { 409 } else { 200 }
+    $daftarHariIni = Kirim "POST" "/api/kunjungan" @{
+        jadwalId = $jadwalKuota2
+        layananId = $layananKuota2
+        tanggal = $tglUji.ToString("yyyy-MM-dd")
+        keluhan = "Uji pembatalan mepet jam praktik"
+    } $tokenPasien
+    $kunjunganHariIniId = $daftarHariIni.Data.data.id
+    if ($kunjunganHariIniId) {
+        $batalMepet = Kirim "POST" "/api/kunjungan/$kunjunganHariIniId/transition" @{
+            aksi = "batal"
+            alasan = "Ingin membatalkan tapi waktu sudah kurang dari 2 jam"
+        } $tokenPasien
+        if ($batalMepet.StatusCode -eq $harapan) {
+            Write-Host "    [PASS] Pembatalan tanggal $($tglUji.ToString('yyyy-MM-dd')) (selisih $([math]::Round($selisih,1)) jam) menghasilkan $($batalMepet.StatusCode) sesuai BR-08" -ForegroundColor Green
+        } else {
+            Write-Host "    [FAIL] Pembatalan tanggal $($tglUji.ToString('yyyy-MM-dd')) menghasilkan $($batalMepet.StatusCode), seharusnya $harapan" -ForegroundColor Red
+        }
+    } else {
+        Write-Host "    [SKIP/INFO] Pendaftaran tanggal $($tglUji.ToString('yyyy-MM-dd')) tidak berhasil: $($daftarHariIni.Error)" -ForegroundColor DarkGray
+    }
 }
 
 # Verifikasi pembatalan yang valid untuk jadwal masa depan (> 2 jam)
