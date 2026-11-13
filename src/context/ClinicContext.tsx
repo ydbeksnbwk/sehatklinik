@@ -974,65 +974,76 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   }
 
   const requestWebPushPermission = async () => {
-    if (typeof window === "undefined" || !("Notification" in window)) {
+    if (
+      typeof window === "undefined" ||
+      !("Notification" in window) ||
+      !("serviceWorker" in navigator) ||
+      !("PushManager" in window)
+    ) {
       setWebPushPermission("unsupported")
-      notify("Browser ini tidak mendukung Web Notification.")
+      notify("Browser ini tidak mendukung notifikasi Web Push atau Service Worker.")
       return
     }
     try {
       const permission = await Notification.requestPermission()
       setWebPushPermission(permission)
       if (permission === "granted") {
-        if ("serviceWorker" in navigator && "PushManager" in window) {
-          try {
-            const reg = await navigator.serviceWorker.register("/sw.js")
-            await navigator.serviceWorker.ready
+        try {
+          const reg = await navigator.serviceWorker.register("/sw.js")
+          await navigator.serviceWorker.ready
 
-            const keyRes = await apiGetPushKunci().catch(() => null)
-            const vapidKey =
-              keyRes?.data?.vapidPublicKey || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+          const keyRes = await apiGetPushKunci().catch(() => null)
+          const vapidKey =
+            keyRes?.data?.vapidPublicKey || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 
-            if (vapidKey) {
-              let sub = await reg.pushManager.getSubscription()
-              if (!sub) {
-                sub = await reg.pushManager.subscribe({
-                  userVisibleOnly: true,
-                  applicationServerKey: urlBase64ToUint8Array(vapidKey),
-                })
-              }
-
-              const subJSON = sub.toJSON()
-              if (sub.endpoint && subJSON.keys?.p256dh && subJSON.keys?.auth) {
-                await apiSimpanPushSubscription({
-                  endpoint: sub.endpoint,
-                  p256dh: subJSON.keys.p256dh,
-                  auth: subJSON.keys.auth,
-                  userAgent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
-                })
-              }
-            }
-          } catch (subErr) {
-            console.warn("Gagal meregistrasi Web Push Subscription ke server:", subErr)
+          if (!vapidKey) {
+            notify("Kunci publik VAPID belum dikonfigurasi di server.")
+            return
           }
-        }
 
-        notify("Notifikasi Web Push browser berhasil diaktifkan!")
-        const welcomeTitle = "Selamat Datang di SehatKlinik"
-        const userName = currentUser?.name || "Pengguna"
-        const welcomeRole = (currentUser?.role || (role !== "Publik" ? role : "Semua")) as Role | "Semua"
-        const welcomeMessage = `Halo ${userName}, akun Anda siap digunakan untuk pendaftaran antrean dan pemantauan kunjungan.`
-        addNotification(
-          {
-            targetRole: welcomeRole,
-            type: "INFO",
-            title: welcomeTitle,
-            message: welcomeMessage,
-          },
-          true
-        )
+          let sub = await reg.pushManager.getSubscription()
+          if (!sub) {
+            sub = await reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(vapidKey),
+            })
+          }
+
+          const subJSON = sub.toJSON()
+          if (sub.endpoint && subJSON.keys?.p256dh && subJSON.keys?.auth) {
+            await apiSimpanPushSubscription({
+              endpoint: sub.endpoint,
+              p256dh: subJSON.keys.p256dh,
+              auth: subJSON.keys.auth,
+              userAgent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+            })
+          }
+
+          notify("Notifikasi Web Push browser berhasil diaktifkan!")
+          const welcomeTitle = "Selamat Datang di SehatKlinik"
+          const userName = currentUser?.name || "Pengguna"
+          const welcomeRole = (currentUser?.role || (role !== "Publik" ? role : "Semua")) as Role | "Semua"
+          const welcomeMessage = `Halo ${userName}, akun Anda siap digunakan untuk pendaftaran antrean dan pemantauan kunjungan.`
+          addNotification(
+            {
+              targetRole: welcomeRole,
+              type: "INFO",
+              title: welcomeTitle,
+              message: welcomeMessage,
+            },
+            true
+          )
+        } catch (subErr) {
+          console.warn("Gagal meregistrasi Web Push Subscription ke server:", subErr)
+          notify("Gagal mendaftarkan langganan notifikasi push ke server.")
+        }
       } else if (permission === "denied") {
         notify("Izin notifikasi ditolak. Anda dapat mengaktifkannya di pengaturan izin situs browser.")
       }
+    } catch {
+      notify("Gagal meminta izin notifikasi browser.")
+    }
+  }
     } catch {
       notify("Gagal meminta izin notifikasi browser.")
     }

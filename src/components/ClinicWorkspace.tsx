@@ -775,7 +775,7 @@ export default function ClinicWorkspace({
       </div>
     </div>
   );
-  const webPushBanner = (audience: "Pasien" | "Petugas") => {
+  const webPushBanner = (audience: "Pasien" | "Petugas" | "Dokter") => {
     const stateClass =
       webPushPermission === "granted"
         ? "is-granted"
@@ -848,12 +848,16 @@ export default function ClinicWorkspace({
                 <h4>
                   {audience === "Petugas"
                     ? "Aktifkan Notifikasi Pendaftaran & Antrean"
-                    : "Aktifkan Notifikasi Panggilan Antrean"}
+                    : audience === "Dokter"
+                      ? "Aktifkan Notifikasi Panggilan Pasien"
+                      : "Aktifkan Notifikasi Panggilan Antrean"}
                 </h4>
                 <p>
                   {audience === "Petugas"
                     ? "Terima peringatan real-time saat pendaftaran baru masuk atau status kunjungan berubah."
-                    : "Dapatkan pemberitahuan real-time saat nomor antrean Anda dipanggil ke ruang periksa."}
+                    : audience === "Dokter"
+                      ? "Dapatkan pemberitahuan langsung saat antrean pasien Anda telah hadir atau dipanggil."
+                      : "Dapatkan pemberitahuan real-time saat nomor antrean Anda dipanggil ke ruang periksa."}
                 </p>
               </>
             )}
@@ -4061,7 +4065,7 @@ export default function ClinicWorkspace({
           </>
         ) : (
           <>
-            {role === "Petugas" && webPushBanner("Petugas")}
+            {(role === "Petugas" || role === "Dokter") && webPushBanner(role === "Dokter" ? "Dokter" : "Petugas")}
             {workflow}
             <div className="ws-overview ws-operational">
               {visitTable(
