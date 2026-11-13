@@ -1,10 +1,13 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useClinic } from "../context/ClinicContext"
 import Icon from "./Icon"
+import { formatDateIndonesian } from "@/lib/date"
 
 export default function NotificationDrawer() {
+  const router = useRouter()
   const {
     role,
     notifications,
@@ -12,51 +15,64 @@ export default function NotificationDrawer() {
     setNotificationDrawerOpen,
     markNotificationAsRead,
     markAllNotificationsAsRead,
+    webPushPermission,
+    requestWebPushPermission,
     setSelected,
     navigate,
+    currentUser,
+    patient,
   } = useClinic()
 
   const [activeTab, setActiveTab] = useState<"all" | "unread">("all")
 
   if (!notificationDrawerOpen) return null
 
-  // Role-scoped notifications
-  const userNotifications = notifications.filter(
-    (n) => n.targetRole === "Semua" || n.targetRole === role
-  )
+  // Role-scoped & user-scoped notifications (isolasi ketat: setiap peran & akun hanya melihat miliknya)
+  const userNotifications = notifications.filter((n) => {
+    // 1. Setiap peran (Pasien, Petugas, Dokter, Admin) hanya melihat notifikasi perannya sendiri
+    if (n.targetRole !== role) return false
+
+    // 2. Isolasi per akun jika targetUserId ditentukan
+    if (n.targetUserId && currentUser) {
+      const target = n.targetUserId.toLowerCase()
+      const matchesUser =
+        (currentUser.id && target === currentUser.id.toLowerCase()) ||
+        (currentUser.email && target === currentUser.email.toLowerCase()) ||
+        (currentUser.name && target === currentUser.name.toLowerCase()) ||
+        (role === "Pasien" && patient?.id && target === patient.id.toLowerCase())
+
+      if (!matchesUser) return false
+    }
+
+    return true
+  })
   const unreadItems = userNotifications.filter((n) => !n.isRead)
   const displayedNotifications =
     activeTab === "unread" ? unreadItems : userNotifications
 
   const handleNotificationClick = (item: (typeof notifications)[0]) => {
     markNotificationAsRead(item.id)
+    setNotificationDrawerOpen(false)
+
+    if (item.actionUrl && (item.actionUrl.startsWith("/") || item.actionUrl.startsWith("http"))) {
+      router.push(item.actionUrl)
+      return
+    }
+
     if (item.visitId && item.visitId !== "KJ-SISTEM") {
       setSelected(item.visitId)
-      setNotificationDrawerOpen(false)
-    } else if (item.actionUrl === "antrean") {
-      navigate("Antrean Hari Ini")
-      setNotificationDrawerOpen(false)
-    } else if (item.actionUrl === "jadwal") {
-      navigate("Jadwal Praktik")
-      setNotificationDrawerOpen(false)
     }
+    navigate("Antrean Saya")
+    router.push("/pasien")
   }
 
   // Format subtitle from visitId, queue, date or message matching mockup
   const getSubtitle = (item: (typeof notifications)[0]) => {
-    if (item.visitId && item.queueNumber) {
-      const dateStr = item.timestamp.includes("2026-10-26")
-        ? "26 Oktober 2026"
-        : item.timestamp.includes("2026-10-23")
-        ? "23 Oktober 2026"
-        : new Date(item.timestamp).toLocaleDateString("id-ID", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })
-      return `${item.visitId} - Antrean ${item.queueNumber} - ${dateStr}`
+    if (item.visitId && item.queueNumber && item.visitId !== "KJ-SISTEM") {
+      const dateStr = formatDateIndonesian(item.timestamp)
+      return `${item.visitId} • Antrean ${item.queueNumber} • ${dateStr}`
     }
-    return item.message
+    return item.message || (item.timestamp ? formatDateIndonesian(item.timestamp) : "")
   }
 
   return (
@@ -145,7 +161,7 @@ export default function NotificationDrawer() {
               className="notif-read-all-btn"
               onClick={markAllNotificationsAsRead}
             >
-              Baca semua
+              Tandai semua dibaca
             </button>
           )}
         </div>
@@ -171,7 +187,7 @@ export default function NotificationDrawer() {
                       height="18"
                       viewBox="0 0 24 24"
                       fill="none"
-                      stroke="#334155"
+                      stroke="#059669"
                       strokeWidth="1.7"
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -187,7 +203,7 @@ export default function NotificationDrawer() {
                       height="18"
                       viewBox="0 0 24 24"
                       fill="none"
-                      stroke="#334155"
+                      stroke="#059669"
                       strokeWidth="1.7"
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -198,6 +214,8 @@ export default function NotificationDrawer() {
                     </svg>
                   ) : item.type === "ANTREAN_DIPANGGIL" ? (
                     <Icon name="bell" size={17} />
+                  ) : item.type === "PENGINGAT_KUNJUNGAN" ? (
+                    <Icon name="clock" size={17} />
                   ) : item.type === "GILIRAN_MENDEKAT" ? (
                     <Icon name="clock" size={17} />
                   ) : (
@@ -212,7 +230,9 @@ export default function NotificationDrawer() {
                     {!item.isRead && <span className="notif-item-unread-dot" />}
                   </div>
 
-                  <p className="notif-item-subtitle">{getSubtitle(item)}</p>
+                  {getSubtitle(item) && (
+                    <p className="notif-item-subtitle">{getSubtitle(item)}</p>
+                  )}
 
                   <div className="notif-item-actions">
                     <button
@@ -238,12 +258,42 @@ export default function NotificationDrawer() {
           )}
         </div>
 
-        {/* Footer disclaimer matching screenshot */}
+        {/* Footer: status Web Push Notification */}
         <div className="notif-popup-footer">
-          <p>
-            Simulasi dari status kunjungan saat ini, bukan push notification. Status dibaca
-            berlaku selama sesi ini.
-          </p>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "11.5px", color: "#475569" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span
+                style={{
+                  width: "8px",
+                  height: "8px",
+                  borderRadius: "50%",
+                  background: webPushPermission === "granted" ? "#10b981" : "#f59e0b",
+                  display: "inline-block",
+                }}
+              />
+              {webPushPermission === "granted"
+                ? "Notifikasi Browser Aktif"
+                : "Notifikasi Browser Belum Aktif"}
+            </span>
+            {webPushPermission !== "granted" && typeof window !== "undefined" && "Notification" in window && (
+              <button
+                type="button"
+                onClick={requestWebPushPermission}
+                style={{
+                  background: "#eff6ff",
+                  border: "1px solid #bfdbfe",
+                  borderRadius: "6px",
+                  color: "#1d4ed8",
+                  fontWeight: 600,
+                  fontSize: "11px",
+                  cursor: "pointer",
+                  padding: "3px 8px",
+                }}
+              >
+                Aktifkan
+              </button>
+            )}
+          </div>
         </div>
       </aside>
     </>

@@ -65,7 +65,19 @@ export async function GET(request) {
           });
         }
       }
-      return rows.map((r) => ({ ...r, layanan: peta[r.id] || [] }));
+      return rows.map((r) => {
+        let fotoUrl = null;
+        if (r.fotoPath) {
+          fotoUrl = r.fotoPath.startsWith("http")
+            ? r.fotoPath
+            : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/foto-dokter/${r.fotoPath}`;
+        }
+        return {
+          ...r,
+          fotoUrl,
+          layanan: peta[r.id] || [],
+        };
+      });
     });
 
     return NextResponse.json({ data });

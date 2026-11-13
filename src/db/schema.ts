@@ -383,6 +383,12 @@ export const notifikasi = pgTable(
     profileId: uuid("profile_id").notNull(),
     pesan: text().notNull(),
     isRead: boolean("is_read").default(false).notNull(),
+    jenisKejadian: text("jenis_kejadian"),
+    tautan: text(),
+    pushStatus: text("push_status").default("menunggu").notNull(),
+    pushPercobaan: integer("push_percobaan").default(0).notNull(),
+    pushError: text("push_error"),
+    pushDiprosesAt: timestamp("push_diproses_at", { withTimezone: true, mode: "string" }),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
       .defaultNow()
       .notNull(),
@@ -393,6 +399,11 @@ export const notifikasi = pgTable(
       table.profileId.asc().nullsLast().op("timestamptz_ops"),
       table.isRead.asc().nullsLast().op("uuid_ops"),
       table.createdAt.desc().nullsFirst().op("uuid_ops"),
+    ),
+    index("idx_notifikasi_push").using(
+      "btree",
+      table.pushStatus.asc().nullsLast().op("text_ops"),
+      table.createdAt.asc().nullsLast().op("timestamptz_ops"),
     ),
     foreignKey({
       columns: [table.profileId],
@@ -408,6 +419,56 @@ export const notifikasi = pgTable(
     pgPolicy("notif_update", {
       as: "permissive",
       for: "update",
+      to: ["authenticated"],
+    }),
+  ],
+);
+
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    profileId: uuid("profile_id").notNull(),
+    endpoint: text().notNull(),
+    p256dh: text().notNull(),
+    auth: text().notNull(),
+    userAgent: text("user_agent"),
+    aktif: boolean().default(true).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    lastSuccessAt: timestamp("last_success_at", { withTimezone: true, mode: "string" }),
+  },
+  (table) => [
+    index("idx_push_sub_profile").using(
+      "btree",
+      table.profileId.asc().nullsLast().op("uuid_ops"),
+    ),
+    foreignKey({
+      columns: [table.profileId],
+      foreignColumns: [profiles.id],
+      name: "push_subscriptions_profile_id_fkey",
+    }).onDelete("cascade"),
+    unique("push_subscriptions_endpoint_key").on(table.endpoint),
+    pgPolicy("push_sub_select", {
+      as: "permissive",
+      for: "select",
+      to: ["authenticated"],
+      using: sql`(profile_id = auth.uid())`,
+    }),
+    pgPolicy("push_sub_insert", {
+      as: "permissive",
+      for: "insert",
+      to: ["authenticated"],
+    }),
+    pgPolicy("push_sub_update", {
+      as: "permissive",
+      for: "update",
+      to: ["authenticated"],
+    }),
+    pgPolicy("push_sub_delete", {
+      as: "permissive",
+      for: "delete",
       to: ["authenticated"],
     }),
   ],

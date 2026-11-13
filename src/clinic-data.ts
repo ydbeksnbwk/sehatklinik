@@ -1,4 +1,6 @@
-export const DEMO_DATE = "2026-10-26"
+import { getTodayISODate } from "./lib/date"
+
+export const DEMO_DATE = getTodayISODate()
 export type Role = "Publik" | "Pasien" | "Petugas" | "Dokter" | "Admin"
 export type QueueStatus = "Menunggu" | "Dipanggil" | "Sedang Diperiksa" | "Selesai" | "Dilewati" | "Dibatalkan"
 export type VisitStatus = "Terdaftar" | "Hadir" | "Selesai" | "Dibatalkan"
@@ -94,6 +96,7 @@ export type Visit = {
   status: VisitStatus
   queue: QueueStatus
   number: number
+  ref?: string
   reason?: string
   examination?: Examination
 }
@@ -103,6 +106,7 @@ export type NotificationType =
   | "PENDAFTARAN_BARU"
   | "ANTREAN_DIPANGGIL"
   | "GILIRAN_MENDEKAT"
+  | "PENGINGAT_KUNJUNGAN"
   | "KUNJUNGAN_DIBATALKAN"
   | "KUNJUNGAN_SELESAI"
   | "INFO"
@@ -487,34 +491,41 @@ export const servicesSeed: Service[] = [
   },
 ]
 
+export const DOC_REYHAN_ID = "b9cd5971-4e73-4f8b-b0dd-0bc2ba064092"
+export const DOC_NADIRA_ID = "c92bc40c-50f7-4801-be98-8b709d968ddd"
+export const DOC_RAKA_ID = "f9473e8b-8d4e-43b9-a54e-3ce6102b3730"
+export const DOC_ANNISA_ID = "e14e6fa1-20f3-4b69-8757-005aa071f2f6"
+export const DOC_ALEA_ID = "a08b318d-4287-4ff6-9a8a-48370b650127"
+
 export const doctorsSeed: Doctor[] = [
   {
-    id: "d1",
-    name: "dr. Nadia Putri",
+    id: DOC_REYHAN_ID,
+    name: "dr. Reyhan Adhitama",
     specialty: "Dokter Umum",
-    sip: "SIP-2026-001",
+    sip: "SIP-2026-0001",
     str: "31.2.1.100.2.21.145890",
     services: ["s1", "s5"],
     active: true,
+    photoUrl: "https://swrzfderhamcjawwkwkt.supabase.co/storage/v1/object/public/foto-dokter/reyhan.png",
     almamater: "Universitas Indonesia",
-    experienceYears: 7,
+    experienceYears: 8,
     education: [
       {
         degree: "Sarjana Kedokteran (S.Ked)",
         institution: "Fakultas Kedokteran Universitas Indonesia",
-        year: "2015 – 2019",
+        year: "2014 – 2018",
         honor: "Lulusan Terbaik Program Akademik"
       },
       {
         degree: "Profesi Dokter (dr.)",
         institution: "RSUPN Dr. Cipto Mangunkusumo / FK UI",
-        year: "2019 – 2021",
+        year: "2018 – 2020",
         honor: "Predikat Cum Laude"
       },
       {
         degree: "Continuing Medical Education (CME)",
         institution: "Ikatan Dokter Indonesia (IDI) Wilayah DKI Jakarta",
-        year: "2022 – 2025",
+        year: "2021 – 2025",
         honor: "Sertifikasi Kompetensi Kedokteran Primer Berkelanjutan"
       }
     ],
@@ -523,29 +534,30 @@ export const doctorsSeed: Doctor[] = [
       "Manajemen Terpadu Tata Laksana Balita Sakit (MTBS) – Kemenkes RI",
       "Sertifikasi Penanganan Gawat Darurat Pertama (PPGD) Standar Nasional"
     ],
-    bio: "dr. Nadia Putri memiliki dedikasi tinggi pada pelayanan kedokteran keluarga primer. Pendekatannya yang hangat, empatik, serta kemampuan mendengar yang sabar menjadikannya dokter kepercayaan bagi banyak keluarga di kawasan Kebayoran Baru dan sekitarnya."
+    bio: "dr. Reyhan Adhitama memiliki dedikasi tinggi pada pelayanan kedokteran keluarga primer. Pendekatannya yang hangat, empatik, serta kemampuan mendengar yang sabar menjadikannya dokter kepercayaan bagi banyak keluarga di Klinik Sehat Sentosa."
   },
   {
-    id: "d2",
-    name: "drg. Budi Santoso",
+    id: DOC_NADIRA_ID,
+    name: "drg. Nadira Kirana",
     specialty: "Dokter Gigi",
-    sip: "SIP-2026-002",
+    sip: "SIP-2026-0002",
     str: "33.1.2.100.1.20.129034",
     services: ["s2"],
     active: true,
+    photoUrl: "https://swrzfderhamcjawwkwkt.supabase.co/storage/v1/object/public/foto-dokter/nadira.png",
     almamater: "Universitas Gadjah Mada",
-    experienceYears: 8,
+    experienceYears: 7,
     education: [
       {
         degree: "Sarjana Kedokteran Gigi (S.KG)",
         institution: "Fakultas Kedokteran Gigi Universitas Gadjah Mada",
-        year: "2014 – 2018",
+        year: "2015 – 2019",
         honor: "Fokus Studi: Restorasi Gigi Minimal Invasif"
       },
       {
         degree: "Profesi Dokter Gigi (drg.)",
         institution: "RSGM Prof. Soedomo Yogyakarta / FKG UGM",
-        year: "2018 – 2020",
+        year: "2019 – 2021",
         honor: "Penghargaan Klinis Perawatan Konservasi Gigi"
       },
       {
@@ -560,23 +572,24 @@ export const doctorsSeed: Doctor[] = [
       "Rotary Endodontic Therapy & Root Canal Debridement – Indonesian Endodontic Association",
       "Sertifikasi Sterilisasi dan Pengendalian Infeksi Dental – Kemenkes RI"
     ],
-    bio: "drg. Budi Santoso ahli dalam perawatan konservasi dan estetika gigi. Beliau sangat berhati-hati dalam setiap prosedur untuk meminimalkan rasa cemas pasien terhadap perawatan gigi, terutama pasien dewasa muda dan anak."
+    bio: "drg. Nadira Kirana ahli dalam perawatan konservasi dan estetika gigi. Beliau sangat berhati-hati dalam setiap prosedur untuk meminimalkan rasa cemas pasien terhadap perawatan gigi, terutama pasien dewasa muda dan anak."
   },
   {
-    id: "d3",
-    name: "dr. Sarah Amelia, Sp.A",
+    id: DOC_RAKA_ID,
+    name: "dr. Raka Mahendra, Sp.A",
     specialty: "Spesialis Anak",
-    sip: "SIP-2026-003",
+    sip: "SIP-2026-0003",
     str: "31.1.2.200.3.18.098412",
     services: ["s3"],
     active: true,
+    photoUrl: "https://swrzfderhamcjawwkwkt.supabase.co/storage/v1/object/public/foto-dokter/raka.png",
     almamater: "Universitas Airlangga & UI",
-    experienceYears: 11,
+    experienceYears: 10,
     education: [
       {
         degree: "Sarjana Kedokteran & Profesi Dokter (dr.)",
         institution: "Fakultas Kedokteran Universitas Airlangga, Surabaya",
-        year: "2010 – 2016",
+        year: "2011 – 2017",
         honor: "Lulusan Berprestasi Bidang Ilmu Kesehatan Anak"
       },
       {
@@ -597,76 +610,79 @@ export const doctorsSeed: Doctor[] = [
       "Resusitasi Neonatus Lanjut (NRP) – Perinasia",
       "Sertifikasi Deteksi Dini Tumbuh Kembang (SDIDTK) Balita – Kemenkes RI"
     ],
-    bio: "dr. Sarah Amelia, Sp.A dikenal ramah, sabar, dan sangat disukai oleh anak-anak. Beliau memiliki keahlian komprehensif dalam pemantauan stunting, imunisasi modern tanpa efek samping berlebih, dan penyakit infeksi anak."
+    bio: "dr. Raka Mahendra, Sp.A dikenal ramah, sabar, dan sangat disukai oleh anak-anak. Beliau memiliki keahlian komprehensif dalam pemantauan stunting, imunisasi modern tanpa efek samping berlebih, dan penyakit infeksi anak."
   },
   {
-    id: "d4",
-    name: "dr. Fajar Ramadhan, Sp.GK",
-    specialty: "Spesialis Gizi Klinik",
-    sip: "SIP-2026-004",
+    id: DOC_ANNISA_ID,
+    name: "dr. Annisa Fadhilla, Sp.OG",
+    specialty: "Spesialis Kandungan",
+    sip: "SIP-2026-0004",
     str: "31.1.2.300.4.19.076321",
     services: ["s4"],
     active: true,
-    almamater: "Universitas Diponegoro & UI",
+    photoUrl: "https://swrzfderhamcjawwkwkt.supabase.co/storage/v1/object/public/foto-dokter/annisa.png",
+    almamater: "Universitas Padjadjaran & UI",
     experienceYears: 9,
     education: [
       {
         degree: "Sarjana Kedokteran & Profesi Dokter (dr.)",
-        institution: "Fakultas Kedokteran Universitas Diponegoro, Semarang",
+        institution: "Fakultas Kedokteran Universitas Padjadjaran, Bandung",
         year: "2012 – 2018",
-        honor: "Minat Khusus: Biokimia Nutrisi & Penyakit Degeneratif"
+        honor: "Fokus Studi: Kesehatan Reproduksi dan Antenatal Care"
+      },
+      {
+        degree: "Program Pendidikan Dokter Spesialis Obstetri & Ginekologi (Sp.OG)",
+        institution: "Fakultas Kedokteran Universitas Indonesia / RSCM",
+        year: "2018 – 2022",
+        honor: "Spesialis Kandungan Terakreditasi Kolegium Obgyn"
+      }
+    ],
+    certifications: [
+      "Pelatihan USG Obstetri & Ginekologi Tingkat Lanjut – POGI",
+      "Advanced Life Support in Obstetrics (ALSO)",
+      "Konseling Kontrasepsi Modern dan Pencegahan Komplikasi Kehamilan"
+    ],
+    bio: "dr. Annisa Fadhilla, Sp.OG berpengalaman dalam pelayanan kesehatan reproduksi wanita, antenatal care komprehensif, dan pendampingan keluarga berencana dengan pendekatan ramah pasien."
+  },
+  {
+    id: DOC_ALEA_ID,
+    name: "dr. Alea Prameswari, Sp.GK",
+    specialty: "Spesialis Gizi Klinik",
+    sip: "SIP-2026-0005",
+    str: "32.2.1.100.2.22.167234",
+    services: ["s5", "s6"],
+    active: true,
+    photoUrl: "https://swrzfderhamcjawwkwkt.supabase.co/storage/v1/object/public/foto-dokter/alea.png",
+    almamater: "Universitas Diponegoro & UI",
+    experienceYears: 6,
+    education: [
+      {
+        degree: "Sarjana Kedokteran & Profesi Dokter (dr.)",
+        institution: "Fakultas Kedokteran Universitas Diponegoro, Semarang",
+        year: "2015 – 2021",
+        honor: "Minat Khusus: Terapi Gizi Medis Penyakit Tidak Menular"
       },
       {
         degree: "Program Pendidikan Dokter Spesialis Gizi Klinik (Sp.GK)",
         institution: "Fakultas Kedokteran Universitas Indonesia / RSCM",
-        year: "2019 – 2023",
+        year: "2021 – 2024",
         honor: "Lulusan Terbaik Departemen Ilmu Gizi FK UI"
       }
     ],
     certifications: [
-      "Clinical Nutrition & Metabolism Course – ESPEN (European Society for Clinical Nutrition)",
+      "Clinical Nutrition & Metabolism Course – ESPEN",
       "Sertifikasi Terapi Nutrisi Medik Sindrom Metabolik – PDGKI",
-      "Konseling Diet Obesitas dan Bariatrik – Perhimpunan Dokter Spesialis Gizi Klinik Indonesia"
+      "Konseling Diet Penyakit Kronis & Manajemen Berat Badan Berkelanjutan"
     ],
-    bio: "dr. Fajar Ramadhan, Sp.GK percaya bahwa nutrisi adalah obat terbaik dalam mencegah dan mengontrol penyakit kronis. Beliau merancang program pola makan yang fleksibel, realistis, dan berkesinambungan bagi setiap pasien."
-  },
-  {
-    id: "d5",
-    name: "dr. Maya Lestari",
-    specialty: "Dokter Umum",
-    sip: "SIP-2026-005",
-    str: "32.2.1.100.2.22.167234",
-    services: ["s1", "s5"],
-    active: true,
-    almamater: "Universitas Padjadjaran",
-    experienceYears: 6,
-    education: [
-      {
-        degree: "Sarjana Kedokteran (S.Ked)",
-        institution: "Fakultas Kedokteran Universitas Padjadjaran, Bandung",
-        year: "2016 – 2020",
-        honor: "Fokus Studi: Epidemiologi & Pencegahan Penyakit Menular"
-      },
-      {
-        degree: "Profesi Dokter (dr.)",
-        institution: "RSUP Dr. Hasan Sadikin Bandung / FK Unpad",
-        year: "2020 – 2022",
-        honor: "Predikat Kelulusan Sangat Memuaskan"
-      }
-    ],
-    certifications: [
-      "Advanced Trauma Life Support (ATLS) – Komisi Trauma IKABI",
-      "Sertifikasi Manajemen Pelayanan Kesehatan Geriatri Primer – IDI",
-      "Pelatihan Skrining Penyakit Tidak Menular (PTM) Terintegrasi"
-    ],
-    bio: "dr. Maya Lestari memiliki keahlian dalam pemeriksaan kesehatan preventif dan skrining berkala. Beliau berfokus pada deteksi dini hipertensi, diabetes, serta edukasi gaya hidup sehat bagi masyarakat usia produktif dan lansia."
+    bio: "dr. Alea Prameswari, Sp.GK berfokus pada terapi nutrisi medis klinis, manajemen obesitas, penanganan diabetes serta hipertensi melalui pola makan berbasis bukti ilmiah."
   },
 ]
 
+const todayDayIndex = typeof window !== "undefined" ? (new Date().getDay() || 1) : 1
 export const schedulesSeed: Schedule[] = doctorsSeed.map((d, i) => ({
   id: `j${i + 1}`,
   doctor: d.id,
-  day: 1,
+  day: todayDayIndex,
   start: i === 2 ? "09:00" : "08:00",
   end: "12:00",
   quota: i === 0 ? 10 : i === 1 ? 8 : 5,
@@ -746,7 +762,7 @@ export const visitsSeed: Visit[] = [
   {
     id: "KJ-20261026-001",
     patient: "RM-00128",
-    doctor: "d1",
+    doctor: DOC_REYHAN_ID,
     service: "s1",
     schedule: "j1",
     date: DEMO_DATE,
@@ -759,7 +775,7 @@ export const visitsSeed: Visit[] = [
   {
     id: "KJ-20261026-002",
     patient: "RM-00129",
-    doctor: "d1",
+    doctor: DOC_REYHAN_ID,
     service: "s1",
     schedule: "j1",
     date: DEMO_DATE,
@@ -772,7 +788,7 @@ export const visitsSeed: Visit[] = [
   {
     id: "KJ-20261026-003",
     patient: "RM-00130",
-    doctor: "d1",
+    doctor: DOC_REYHAN_ID,
     service: "s1",
     schedule: "j1",
     date: DEMO_DATE,
@@ -785,7 +801,7 @@ export const visitsSeed: Visit[] = [
   {
     id: "KJ-20261026-004",
     patient: "RM-00131",
-    doctor: "d1",
+    doctor: DOC_REYHAN_ID,
     service: "s1",
     schedule: "j1",
     date: DEMO_DATE,
@@ -798,7 +814,7 @@ export const visitsSeed: Visit[] = [
   {
     id: "KJ-20261026-005",
     patient: "RM-00132",
-    doctor: "d1",
+    doctor: DOC_REYHAN_ID,
     service: "s1",
     schedule: "j1",
     date: DEMO_DATE,
@@ -828,7 +844,7 @@ export const visitsSeed: Visit[] = [
   {
     id: "KJ-20261024-001",
     patient: "RM-00133",
-    doctor: "d1",
+    doctor: DOC_REYHAN_ID,
     service: "s1",
     schedule: "j1",
     date: "2026-10-24",
@@ -870,12 +886,22 @@ export const queueLabel = (v: Visit, doctorIndex?: number) => {
   return `${rawPrefix.padStart(2, "0")}-${String(v.number).padStart(3, "0")}`
 }
 
-export const dateLabel = (date: string) =>
-  new Date(`${date}T12:00:00`).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  })
+export const dateLabel = (date: string) => {
+  if (!date) return ""
+  try {
+    const d = date.includes("T") ? new Date(date) : new Date(`${date}T12:00:00+07:00`)
+    return !Number.isNaN(d.getTime())
+      ? d.toLocaleDateString("id-ID", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+          timeZone: "Asia/Jakarta",
+        })
+      : date
+  } catch {
+    return date
+  }
+}
 
 export const remaining = (schedule: Schedule, date: string, visits: Visit[]) =>
   Math.max(

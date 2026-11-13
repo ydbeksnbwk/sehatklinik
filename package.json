@@ -8,18 +8,23 @@
     "start": "node ./node_modules/next/dist/bin/next start",
     "lint": "node ./node_modules/next/dist/bin/next lint",
     "db:pull": "node --env-file=.env.local ./node_modules/drizzle-kit/bin.cjs pull",
-    "db:migrate": "node --env-file=.env.local scripts/migrate.mjs"
+    "db:migrate": "node --env-file=.env.local scripts/migrate.mjs",
+    "worker": "node --env-file=.env.local worker/index.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.119.0",
+    "bullmq": "^6.7.4",
     "drizzle-orm": "^0.45.4",
     "exceljs": "^4.4.0",
+    "ioredis": "^6.0.0",
     "leaflet": "^1.9.4",
     "next": "^15.1.0",
     "pg": "^8.23.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "web-push": "^4.0.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",

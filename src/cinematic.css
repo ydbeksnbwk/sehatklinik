@@ -241,7 +241,6 @@
 .ws-app .ws-sessions,.ws-app .ws-workflow { background: #ffffffba; backdrop-filter: blur(15px); }
 .ws-app .ws-workflow-steps > div > span { background: #eff5fb; border: 1px solid #e4eef7; border-radius: 50%; color: #54779d; }
 .ws-app .icon-tile { border-radius: 50%; }
-.ws-app .help-card { background: #ffffff60; border-color: #ffffffc0; border-radius: 18px; }
 .ws-app .ws-detail-status,.ws-app .ws-action-card { background: #f1f6fb; border-color: #e5edf5; }
 .ws-app .patient-welcome { position: relative; background: linear-gradient(110deg, #e4f1fad9, #f3f8fcc4), url('/images/soft-clouds.jpg') center / cover; border-color: var(--cinema-edge); border-radius: var(--cinema-curve); box-shadow: var(--cinema-shadow); overflow: hidden; }
 .ws-app .patient-welcome::after { content: ""; position: absolute; right: -15px; top: -85px; width: 330px; height: 330px; border: 1px solid #ffffffa1; border-radius: 50%; pointer-events: none; }

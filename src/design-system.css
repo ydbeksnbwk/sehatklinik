@@ -196,10 +196,6 @@ body { font-family: var(--sk-font); color: var(--sk-ink); background: var(--sk-c
 .sky-site .web-footer h3 { font-size: 13px; color: var(--sk-ink); font-weight: 500; }
 .sky-site .web-footer-column button,.sky-site .web-footer-contact > a,.sky-site .web-footer-about > p { color: var(--sk-text); font-size: 13px; }
 .sky-site .web-footer-bottom,.ws-app .content-footer { font-size: 10px; color: var(--sk-muted); border-color: var(--sk-line); }
-.ws-app .help-card { border-color: var(--sk-line); border-radius: var(--sk-radius); background: var(--sk-canvas); }
-.ws-app .help-symbol { color: var(--sk-brand); }
-.ws-app .help-card b { font-size: 12px; font-weight: 500; }
-.ws-app .help-card p { font-size: 11px; line-height: 1.8; color: var(--sk-muted); }
 .ws-app .sidebar-link { color: var(--sk-text); font-size: 12px; }
 
 /* Forms, tables and semantic states use the same palette everywhere. */

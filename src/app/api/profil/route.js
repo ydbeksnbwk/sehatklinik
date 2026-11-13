@@ -1,8 +1,10 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { db } from "@/db";
 import { dokter, pasien, profiles } from "@/db/schema";
 import { HttpError, handleError, requireRole } from "@/lib/auth";
 import { denganRls } from "@/lib/rls";
+import { skemaProfilPasien } from "@/lib/validasi/pasien";
 
 const TELEPON = /^\+?[0-9]{8,15}$/;
 
@@ -23,6 +25,8 @@ export async function GET(request) {
           .select({
             id: pasien.id,
             noRekamMedis: pasien.noRekamMedis,
+            nama: pasien.nama,
+            telepon: pasien.telepon,
             nik: pasien.nik,
             tanggalLahir: pasien.tanggalLahir,
             jenisKelamin: pasien.jenisKelamin,
@@ -55,49 +59,105 @@ export async function GET(request) {
   }
 }
 
-// Pasien: alamat, telepon, kontakDarurat. Admin: nama dan telepon.
-// Dokter dan petugas tidak punya hak ubah profil (aturan RLS di database).
+// Pasien: hanya alamat, telepon, kontakDarurat (nama, NIK, tanggal lahir,
+// jenis kelamin hanya-baca). Admin: nama dan telepon. Dokter/petugas: 403.
 export async function PATCH(request) {
   try {
     const { profile } = await requireRole(request);
+
+    if (profile.role === "pasien") {
+      const b = await request.json().catch(() => ({}));
+      const parsed = skemaProfilPasien.safeParse(b);
+      if (!parsed.success) {
+        // Galat per field: path [] berarti field asing (nama, nik, role, dll.)
+        const fields = {};
+        for (const e of parsed.error.issues) {
+          const key = String(e.path[0] ?? "profil");
+          fields[key] = fields[key] ? `${fields[key]}; ${e.message}` : e.message;
+        }
+        const asing = Object.keys(
+          b && typeof b === "object" ? b : {}
+        ).filter((k) => !["alamat", "telepon", "kontakDarurat"].includes(k));
+        if (asing.length > 0) {
+          fields.hanyaBaca = `Field hanya-baca tidak dapat diubah: ${asing.join(", ")} (hubungi petugas untuk koreksi)`;
+        }
+        throw new HttpError(
+          400,
+          "Pasien hanya dapat mengubah alamat, telepon, dan kontak darurat",
+          "VALIDATION",
+          fields
+        );
+      }
+
+      const alamat = parsed.data.alamat;
+      const telepon = parsed.data.telepon;
+      const kontakDarurat = parsed.data.kontakDarurat;
+      if (
+        alamat === undefined &&
+        telepon === undefined &&
+        kontakDarurat === undefined
+      ) {
+        throw new HttpError(400, "Tidak ada data yang diubah");
+      }
+
+      // Update pasien + profiles dalam satu transaksi (rule #4).
+      const p = await db.transaction(async (tx) => {
+        const [row] = await tx
+          .update(pasien)
+          .set({
+            ...(alamat !== undefined ? { alamat: alamat || null } : {}),
+            ...(telepon !== undefined ? { telepon: telepon || null } : {}),
+            ...(kontakDarurat !== undefined
+              ? { kontakDarurat: kontakDarurat || null }
+              : {}),
+          })
+          .where(eq(pasien.profileId, profile.id))
+          .returning();
+
+        if (!row) {
+          throw new HttpError(404, "Data pasien tidak ditemukan");
+        }
+
+        if (telepon !== undefined) {
+          await tx
+            .update(profiles)
+            .set({ telepon: telepon || null })
+            .where(eq(profiles.id, profile.id));
+        }
+
+        return row;
+      });
+
+      return NextResponse.json({
+        data: {
+          id: profile.id,
+          nama: p.nama,
+          telepon: p.telepon,
+          role: profile.role,
+          pasienId: p.id,
+          noRekamMedis: p.noRekamMedis,
+          nik: p.nik ?? "",
+          tanggalLahir: p.tanggalLahir ?? "",
+          jenisKelamin: p.jenisKelamin === "P" ? "Perempuan" : "Laki-laki",
+          alamat: p.alamat ?? "-",
+          kontakDarurat: p.kontakDarurat ?? "-",
+        },
+      });
+    }
+
+    if (profile.role !== "admin") {
+      throw new HttpError(
+        403,
+        "Peran Anda tidak dapat mengubah data ini"
+      );
+    }
+
     const b = await request.json().catch(() => ({}));
     const bersih = (v) => (typeof v === "string" ? v.trim() : undefined);
 
     const telepon = bersih(b.telepon);
     if (telepon && !TELEPON.test(telepon)) {
       throw new HttpError(400, "Telepon 8-15 digit, boleh diawali +");
-    }
-
-    if (profile.role === "pasien") {
-      if (b.nama !== undefined) {
-        throw new HttpError(400, "Nama pasien hanya dapat diubah oleh petugas");
-      }
-      const alamat = bersih(b.alamat);
-      const kontak = bersih(b.kontakDarurat);
-      if (kontak && kontak.length > 100)
-        throw new HttpError(400, "Kontak darurat terlalu panjang");
-
-      const set = {};
-      if (alamat !== undefined) set.alamat = alamat || null;
-      if (telepon !== undefined) set.telepon = telepon || null;
-      if (kontak !== undefined) set.kontakDarurat = kontak || null;
-      if (Object.keys(set).length === 0)
-        throw new HttpError(400, "Tidak ada data yang diubah");
-
-      const res = await denganRls(profile.id, (tx) =>
-        tx
-          .update(pasien)
-          .set(set)
-          .where(eq(pasien.profileId, profile.id))
-          .returning({
-            alamat: pasien.alamat,
-            telepon: pasien.telepon,
-            kontakDarurat: pasien.kontakDarurat,
-          }),
-      );
-      if (res.length === 0)
-        throw new HttpError(404, "Data pasien tidak ditemukan");
-      return NextResponse.json({ data: res[0] });
     }
 
     const nama = bersih(b.nama);
@@ -124,3 +184,5 @@ export async function PATCH(request) {
     return handleError(err, "PATCH /api/profil");
   }
 }
+
+export const PUT = PATCH;
