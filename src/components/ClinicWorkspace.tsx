@@ -4200,19 +4200,6 @@ export default function ClinicWorkspace({
             ))}
           </nav>
           <div className="sidebar-bottom">
-            <div className="help-card">
-              <span className="help-symbol">
-                <Icon name="shield" size={22} />
-              </span>
-              <b>Akses sesuai peran</b>
-              {role !== "Pasien" && (
-                <p>
-                  {role === "Dokter"
-                    ? "Hanya kunjungan yang Anda tangani ditampilkan di sini."
-                    : "Isi pemeriksaan dan tindakan medis tidak ditampilkan di ruang ini."}
-                </p>
-              )}
-            </div>
             <button className="sidebar-link" onClick={logout}>
               <Icon name="logout" size={18} />
               Keluar / Kembali ke Website
