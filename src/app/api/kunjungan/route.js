@@ -162,6 +162,15 @@ export async function POST(request) {
       dibuatOleh: profile.id,
     });
 
+    // Enqueue ke BullMQ setelah commit transaksi bisnis, dibungkus try/catch (PRD §7.1)
+    try {
+      const { enqueuePendingNotificationsForProfile } = await import("@/lib/push-queue");
+      await enqueuePendingNotificationsForProfile(profile.id);
+    } catch (pushErr) {
+      // Redis mati / galat push tidak membatalkan pendaftaran
+      console.warn("Enqueue push gagal setelah daftar kunjungan (non-fatal):", pushErr?.message);
+    }
+
     return NextResponse.json({ data: result }, { status: 201 });
   } catch (err) {
     if (err instanceof HttpError && err.kode === "DUPLIKAT") {

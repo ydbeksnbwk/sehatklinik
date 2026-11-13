@@ -96,15 +96,29 @@ export async function DELETE(request) {
 
     const { endpoint } = parsed.data;
 
+    // Cek keberadaan langganan; data milik orang lain atau tidak ada -> 404
+    const [sub] = await db
+      .select({ id: pushSubscriptions.id, profileId: pushSubscriptions.profileId })
+      .from(pushSubscriptions)
+      .where(eq(pushSubscriptions.endpoint, endpoint))
+      .limit(1);
+
+    if (!sub || sub.profileId !== profile.id) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "NOT_FOUND",
+            message: "Langganan push tidak ditemukan",
+          },
+        },
+        { status: 404 }
+      );
+    }
+
     await db
       .update(pushSubscriptions)
       .set({ aktif: false })
-      .where(
-        and(
-          eq(pushSubscriptions.endpoint, endpoint),
-          eq(pushSubscriptions.profileId, profile.id)
-        )
-      );
+      .where(eq(pushSubscriptions.id, sub.id));
 
     return NextResponse.json({
       data: { success: true },
