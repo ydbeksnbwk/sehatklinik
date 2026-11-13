@@ -195,6 +195,7 @@ export default function ClinicWorkspace({
     busy,
     setBusy,
     loadingData,
+    authChecked,
     editingProfile,
     setEditingProfile,
     unreadCount,
@@ -4075,6 +4076,27 @@ export default function ClinicWorkspace({
       </>
     );
   };
+  if (!authChecked) {
+    return (
+      <div className="app ws-app">
+        <div className="content">
+          <div
+            className="ws-skeleton-grid"
+            aria-busy="true"
+            aria-label="Memuat sesi pengguna"
+          >
+            {[0, 1, 2, 3].map((idx) => (
+              <div className="ws-skeleton-card" key={idx}>
+                <div className="ws-skeleton ws-skeleton-line short" />
+                <div className="ws-skeleton ws-skeleton-line tall" />
+                <div className="ws-skeleton ws-skeleton-line" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
   if (role === "Publik")
     return (
       <PublicSite
