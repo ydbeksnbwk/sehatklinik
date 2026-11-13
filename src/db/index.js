@@ -8,7 +8,7 @@ export const pool =
   new pg.Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false },
-    max: 5,
+    max: 3,
   });
 if (process.env.NODE_ENV !== "production") g.__pgPool = pool;
 
