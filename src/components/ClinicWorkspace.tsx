@@ -15,7 +15,7 @@ import GenderAvatar from "./GenderAvatar";
 import NotificationDrawer from "./NotificationDrawer";
 import { downloadRekapExcel } from "../utils/exportRekapExcel";
 import { printVisitSummary } from "../utils/printVisitSummary";
-import { apiUpdateProfil } from "../utils/api";
+import { apiUpdateProfil, apiGetPekerjaanNotifikasi, type PekerjaanNotifikasiItem } from "../utils/api";
 import {
   DEMO_DATE,
   remaining,
@@ -229,6 +229,11 @@ export default function ClinicWorkspace({
   );
   const [todayFormatted, setTodayFormatted] = useState("");
   const lastAutoOpenedVisitId = useRef<string | null>(null);
+  const [jobsLive, setJobsLive] = useState<PekerjaanNotifikasiItem[]>([]);
+  const [jobsLiveMeta, setJobsLiveMeta] = useState({ page: 1, pageSize: 10, total: 0, totalPages: 1 });
+  const [jobsLiveLoading, setJobsLiveLoading] = useState(false);
+  const [jobsLiveError, setJobsLiveError] = useState<string | null>(null);
+  const [jobsLiveStatus, setJobsLiveStatus] = useState("semua");
 
   useEffect(() => {
     setMounted(true);
@@ -3353,231 +3358,171 @@ export default function ClinicWorkspace({
         </div>
       );
     if (page === "Pekerjaan Notifikasi") {
-      const statusFilter = filter || "";
-      const roleFilter = subFilter || "";
-      const filteredJobs = notificationJobs.filter(
-        (j) =>
-          (!statusFilter || j.status === statusFilter) &&
-          (!roleFilter || j.recipientRole === roleFilter) &&
-          `${j.id} ${j.recipientName} ${j.eventType} ${j.visitId}`
-            .toLowerCase()
-            .includes(search.toLowerCase()),
-      );
-      const {
-        paged: pagedJobs,
-        current,
-        maxPage,
-      } = paginateList(filteredJobs, 6);
       return (
         <section className="panel queue-panel">
           <div className="panel-heading">
             <div>
-              <span className="eyebrow">POLA OUTBOX BULLMQ & REDIS</span>
-              <h3>
-                Pelacak Antrean Pekerjaan Notifikasi (Tabel notifikasi_job)
-              </h3>
+              <span className="eyebrow">MONITORING WEB PUSH & WORKER (PRD §7.5)</span>
+              <h3>Pekerjaan Notifikasi Web Push</h3>
               <p>
-                Status pengiriman push notification ke browser secara asinkron
-                sesuai spesifikasi SRS Bab III & IV.
+                Daftar antrean pengiriman push notification outbox, status percobaan, dan log kegagalan.
               </p>
             </div>
             <div style={{ display: "flex", gap: "8px" }}>
               <button
+                type="button"
                 className="secondary"
-                onClick={() => sendDemoPushNotification("ANTREAN_DIPANGGIL")}
+                disabled={jobsLiveLoading}
+                onClick={() => {
+                  setJobsLiveLoading(true);
+                  setJobsLiveError(null);
+                  apiGetPekerjaanNotifikasi({
+                    page: pagination,
+                    pageSize: 10,
+                    status: jobsLiveStatus,
+                  }).then((res) => {
+                    if (res.error) setJobsLiveError(res.error.message || "Gagal memuat pekerjaan notifikasi.");
+                    else {
+                      setJobsLive(res.data || []);
+                      if (res.meta) setJobsLiveMeta({
+                        page: res.meta.page || pagination,
+                        pageSize: res.meta.pageSize || 10,
+                        total: res.meta.total || 0,
+                        totalPages: res.meta.totalPages || 1,
+                      });
+                    }
+                  }).finally(() => setJobsLiveLoading(false));
+                }}
               >
-                <Icon name="bell" size={14} />
-                Uji Panggilan Antrean
-              </button>
-              <button
-                className="secondary"
-                onClick={() => sendDemoPushNotification("GILIRAN_MENDEKAT")}
-              >
-                <Icon name="clock" size={14} />
-                Uji Giliran Mendekat
+                <Icon name="refresh" size={14} />
+                Segarkan
               </button>
             </div>
           </div>
+
+          {jobsLiveError && (
+            <div style={{ padding: "12px 16px", margin: "12px 0", background: "#fef2f2", color: "#b91c1c", borderRadius: "8px", fontSize: "13px" }}>
+              <b>Gagal memuat data:</b> {jobsLiveError}
+            </div>
+          )}
+
           <div className="table-tools">
-            <div className="search">
-              <Icon name="search" size={18} />
-              <input
-                aria-label="Cari pekerjaan notifikasi"
-                placeholder="Cari ID job, penerima, atau event…"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPagination(1);
-                }}
-              />
-            </div>
-            <div className="filters">
-              <select
-                aria-label="Filter status notifikasi"
-                value={filter}
-                onChange={(e) => {
-                  setFilter(e.target.value);
-                  setPagination(1);
-                }}
-              >
-                <option value="">
-                  Semua status ({notificationJobs.length})
-                </option>
-                <option value="berhasil">
-                  Berhasil (
-                  {
-                    notificationJobs.filter((j) => j.status === "berhasil")
-                      .length
-                  }
-                  )
-                </option>
-                <option value="menunggu">
-                  Menunggu (
-                  {
-                    notificationJobs.filter((j) => j.status === "menunggu")
-                      .length
-                  }
-                  )
-                </option>
-                <option value="gagal">
-                  Gagal (
-                  {notificationJobs.filter((j) => j.status === "gagal").length})
-                </option>
-              </select>
-              <select
-                aria-label="Filter peran penerima notifikasi"
-                value={subFilter}
-                onChange={(e) => {
-                  setSubFilter(e.target.value);
-                  setPagination(1);
-                }}
-              >
-                <option value="">Semua peran</option>
-                <option value="Pasien">Pasien</option>
-                <option value="Petugas">Petugas</option>
-                <option value="Dokter">Dokter</option>
-                <option value="Admin">Admin</option>
-                <option value="Semua">Semua</option>
-              </select>
+            <div className="filters" style={{ width: "100%", display: "flex", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                <label style={{ fontSize: "13px", fontWeight: 500 }}>Filter Status:</label>
+                <select
+                  aria-label="Filter status notifikasi"
+                  value={jobsLiveStatus}
+                  onChange={(e) => {
+                    setJobsLiveStatus(e.target.value);
+                    setPagination(1);
+                  }}
+                >
+                  <option value="semua">Semua Status</option>
+                  <option value="menunggu">Menunggu</option>
+                  <option value="berhasil">Berhasil</option>
+                  <option value="gagal">Gagal</option>
+                </select>
+              </div>
+              <span style={{ fontSize: "13px", color: "var(--text-muted, #64748b)" }}>
+                Total: {jobsLiveMeta.total} pekerjaan
+              </span>
             </div>
           </div>
+
           <div className="table-scroll">
             <table>
               <thead>
                 <tr>
-                  <th>ID Job</th>
+                  <th>Waktu Dibuat</th>
                   <th>Penerima</th>
-                  <th>Peran</th>
                   <th>Jenis Kejadian</th>
-                  <th>No. Antrean</th>
-                  <th>Kunjungan ID</th>
-                  <th>Status Outbox</th>
+                  <th>Pesan</th>
+                  <th>Status Push</th>
                   <th>Percobaan</th>
+                  <th>Diproses Pada</th>
                   <th>Keterangan / Error</th>
-                  <th>Aksi</th>
                 </tr>
               </thead>
               <tbody>
-                {loadingData
-                  ? Array.from({ length: 4 }, (_, idx) => (
-                      <tr key={`job-skel-${idx}`}>
-                        <td colSpan={10}>
-                          <div className="ws-skeleton ws-skeleton-line" />
-                        </td>
-                      </tr>
-                    ))
-                  : pagedJobs.map((j) => (
-                      <tr key={j.id}>
-                        <td>
-                          <code>{j.id}</code>
-                        </td>
-                        <td>
-                          <b>{j.recipientName}</b>
-                        </td>
-                        <td>
-                          <span className="tiny-tag">{j.recipientRole}</span>
-                        </td>
-                        <td>
-                          <code>{j.eventType}</code>
-                        </td>
-                        <td>
-                          {j.queueNumber ? (
-                            <span className="queue-number">
-                              {j.queueNumber}
-                            </span>
-                          ) : (
-                            "-"
-                          )}
-                        </td>
-                        <td>
-                          <small>{j.visitId}</small>
-                        </td>
-                        <td>
-                          <span
-                            className={`job-status-badge ${
-                              j.status === "berhasil"
-                                ? "status-success"
-                                : j.status === "gagal"
-                                  ? "status-failed"
-                                  : "status-queued"
-                            }`}
-                          >
-                            {j.status === "berhasil"
-                              ? "Berhasil"
-                              : j.status === "gagal"
-                                ? "Gagal"
-                                : "Menunggu"}
-                          </span>
-                        </td>
-                        <td>{j.attempts}x</td>
-                        <td>
-                          {j.error ? (
-                            <span
-                              style={{ color: "#dc2626", fontSize: "10.5px" }}
-                            >
-                              {getErrorMessage(j.error)}
-                            </span>
-                          ) : (
-                            <span
-                              style={{ color: "#16a34a", fontSize: "10.5px" }}
-                            >
-                              Diproses worker
-                            </span>
-                          )}
-                        </td>
-                        <td>
-                          {j.status === "gagal" ? (
-                            <button
-                              className="notif-retry-btn"
-                              onClick={() => retryNotificationJob(j.id)}
-                            >
-                              <Icon name="refresh" size={12} />
-                              Retry
-                            </button>
-                          ) : (
-                            <span
-                              style={{ color: "#94a3b8", fontSize: "10px" }}
-                            >
-                              Tuntas
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                {jobsLiveLoading ? (
+                  Array.from({ length: 4 }, (_, idx) => (
+                    <tr key={`job-skel-${idx}`}>
+                      <td colSpan={8}>
+                        <div className="ws-skeleton ws-skeleton-line" />
+                      </td>
+                    </tr>
+                  ))
+                ) : jobsLive.map((j) => (
+                  <tr key={j.id}>
+                    <td>
+                      <small style={{ color: "var(--text-muted, #64748b)" }}>
+                        {j.createdAt ? new Date(j.createdAt).toLocaleString("id-ID") : "-"}
+                      </small>
+                    </td>
+                    <td>
+                      <b>{j.namaPenerima}</b>
+                    </td>
+                    <td>
+                      <code>{j.jenisKejadian || "-"}</code>
+                    </td>
+                    <td style={{ maxWidth: "260px" }}>
+                      <span style={{ fontSize: "12.5px" }}>{j.pesan}</span>
+                    </td>
+                    <td>
+                      <span
+                        className={`job-status-badge ${
+                          j.pushStatus === "berhasil"
+                            ? "status-success"
+                            : j.pushStatus === "gagal"
+                              ? "status-failed"
+                              : "status-queued"
+                        }`}
+                      >
+                        {j.pushStatus === "berhasil"
+                          ? "Berhasil"
+                          : j.pushStatus === "gagal"
+                            ? "Gagal"
+                            : "Menunggu"}
+                      </span>
+                    </td>
+                    <td>{j.pushPercobaan}x</td>
+                    <td>
+                      <small style={{ color: "var(--text-muted, #64748b)" }}>
+                        {j.pushDiprosesAt ? new Date(j.pushDiprosesAt).toLocaleTimeString("id-ID") : "-"}
+                      </small>
+                    </td>
+                    <td>
+                      {j.pushError ? (
+                        <span style={{ color: "#dc2626", fontSize: "11px" }}>
+                          {j.pushError}
+                        </span>
+                      ) : j.pushStatus === "berhasil" ? (
+                        <span style={{ color: "#16a34a", fontSize: "11px" }}>
+                          Sukses terkirim
+                        </span>
+                      ) : (
+                        <span style={{ color: "#94a3b8", fontSize: "11px" }}>
+                          Menunggu antrean worker
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
-            {!loadingData && !filteredJobs.length && (
+            {!jobsLiveLoading && !jobsLive.length && !jobsLiveError && (
               <div className="empty">
-                Tidak ada pekerjaan notifikasi yang cocok.
+                Tidak ada data pekerjaan notifikasi.
               </div>
             )}
           </div>
           {renderPaginationBar(
-            filteredJobs.length,
-            pagedJobs.length,
+            jobsLiveMeta.total,
+            jobsLive.length,
             "pekerjaan",
-            maxPage,
-            current,
+            jobsLiveMeta.totalPages,
+            jobsLiveMeta.page,
           )}
         </section>
       );

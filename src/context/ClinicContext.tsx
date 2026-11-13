@@ -1044,10 +1044,6 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       notify("Gagal meminta izin notifikasi browser.")
     }
   }
-    } catch {
-      notify("Gagal meminta izin notifikasi browser.")
-    }
-  }
 
   const sendDemoPushNotification = (customType?: NotificationType) => {
     const type = customType || "ANTREAN_DIPANGGIL"

@@ -288,3 +288,33 @@ export async function apiTandaiNotifikasiDibaca(id: string) {
   });
 }
 
+// Pekerjaan Web Push Notifikasi (Admin & Petugas)
+export type PekerjaanNotifikasiItem = {
+  id: string;
+  jenisKejadian: string | null;
+  pesan: string;
+  pushStatus: "menunggu" | "berhasil" | "gagal";
+  pushPercobaan: number;
+  pushError: string | null;
+  pushDiprosesAt: string | null;
+  createdAt: string;
+  tautan: string | null;
+  namaPenerima: string;
+};
+
+export async function apiGetPekerjaanNotifikasi(params?: {
+  page?: number;
+  pageSize?: number;
+  status?: string;
+}) {
+  const query = new URLSearchParams();
+  if (params?.page) query.set("page", String(params.page));
+  if (params?.pageSize) query.set("pageSize", String(params.pageSize));
+  if (params?.status && params.status !== "semua") query.set("status", params.status);
+  const qStr = query.toString();
+  return fetchApi<PekerjaanNotifikasiItem[]>(
+    `/api/admin/pekerjaan-notifikasi${qStr ? `?${qStr}` : ""}`
+  );
+}
+
+
