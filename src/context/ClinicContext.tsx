@@ -23,6 +23,8 @@ import {
   apiGetPushKunci,
   apiSimpanPushSubscription,
   apiHapusPushSubscription,
+  apiTandaiSemuaNotifikasiDibaca,
+  apiTandaiNotifikasiDibaca,
 } from "@/utils/api"
 import {
   DEMO_DATE,
@@ -922,13 +924,31 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     notify(`🔔 ${notif.title}: ${notif.message.slice(0, 60)}...`)
   }
 
-  const markNotificationAsRead = (id: string) => {
+  const POLA_UUID =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+  const markNotificationAsRead = async (id: string) => {
+    // Notifikasi lokal (welcome/pengingat) tidak ada di tabel; cukup state lokal.
+    if (POLA_UUID.test(id)) {
+      const res = await apiTandaiNotifikasiDibaca(id)
+      if (res.error) {
+        notify(res.error.message || "Gagal menandai notifikasi sebagai dibaca.")
+        return
+      }
+    }
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
     )
   }
 
-  const markAllNotificationsAsRead = () => {
+  const markAllNotificationsAsRead = async () => {
+    const res = await apiTandaiSemuaNotifikasiDibaca()
+    if (res.error) {
+      notify(
+        res.error.message || "Gagal menandai semua notifikasi sebagai dibaca."
+      )
+      return
+    }
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
     notify("Semua notifikasi telah ditandai sebagai dibaca.")
   }

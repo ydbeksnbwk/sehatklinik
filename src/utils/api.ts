@@ -275,3 +275,16 @@ export async function apiHapusPushSubscription(payload: { endpoint: string }) {
   });
 }
 
+// Notifikasi
+export async function apiTandaiSemuaNotifikasiDibaca() {
+  return fetchApi<{ diperbarui: number }>("/api/notifikasi", {
+    method: "PATCH",
+  });
+}
+
+export async function apiTandaiNotifikasiDibaca(id: string) {
+  return fetchApi<{ id: string; isRead: boolean }>(`/api/notifikasi/${id}`, {
+    method: "PATCH",
+  });
+}
+
