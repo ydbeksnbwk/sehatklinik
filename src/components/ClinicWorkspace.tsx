@@ -1239,13 +1239,13 @@ export default function ClinicWorkspace({
                       <tr key={v.id}>
                         <td>
                           {report ? (
-                            <b>{v.id}</b>
+                            <b>{v.ref || dateLabel(v.date)}</b>
                           ) : (
                             <>
                               <span className="queue-number">
                                 {formatQueue(v)}
                               </span>
-                              <small>{v.id}</small>
+                              {v.ref && <small>{v.ref}</small>}
                             </>
                           )}
                         </td>
@@ -1463,7 +1463,7 @@ export default function ClinicWorkspace({
       <div className="panel-heading">
         <div>
           <h3>Nomor antrean Anda</h3>
-          <p>{v.id}</p>
+          {v.ref && <p>Ref. {v.ref}</p>}
         </div>
         <Badge text={v.queue} />
       </div>
@@ -1622,7 +1622,8 @@ export default function ClinicWorkspace({
                   </div>
                   <h2>{doctorName(next.doctor)}</h2>
                   <p className="muted">
-                    {serviceName(next.service)} · {next.id}
+                    {serviceName(next.service)}
+                    {next.ref ? ` · Ref. ${next.ref}` : ""}
                   </p>
                   <div className="notice">
                     <Icon name="help" size={19} />

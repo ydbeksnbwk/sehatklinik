@@ -1431,6 +1431,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           savedVisit = {
             ...next,
             id: res.data.id,
+            ref: res.data.noReferensi || next.ref,
             number: res.data.nomorAntrean || next.number,
           }
         }
