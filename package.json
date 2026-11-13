@@ -9,7 +9,7 @@
     "lint": "node ./node_modules/next/dist/bin/next lint",
     "db:pull": "node --env-file=.env.local ./node_modules/drizzle-kit/bin.cjs pull",
     "db:migrate": "node --env-file=.env.local scripts/migrate.mjs",
-    "worker": "node --env-file=.env.local worker/index.js"
+    "worker": "node --env-file=.env.local worker/index.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -21,6 +21,7 @@
     "leaflet": "^1.9.4",
     "next": "^15.1.0",
     "pg": "^8.23.1",
+    "pino": "^10.4.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "web-push": "^4.0.0",
