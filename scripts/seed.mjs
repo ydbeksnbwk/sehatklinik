@@ -55,6 +55,9 @@ async function main() {
 
   await client.connect();
   await client.query("BEGIN");
+  // Bungkam trigger sementara selama transaksi seed agar data kunjungan/antrean
+  // seed tidak memicu ratusan notifikasi liar berulang (menjamin idempotensi sejati)
+  await client.query("SET LOCAL session_replication_role = 'replica'");
 
   try {
     // -------------------------------------------------------------------------
@@ -887,21 +890,29 @@ async function main() {
     // -------------------------------------------------------------------------
     // I. PUSH SUBSCRIPTIONS & NOTIFIKASI
     // -------------------------------------------------------------------------
-    console.log("[9] Menambahkan contoh push_subscriptions dan notifikasi...");
+    console.log("[9] Menambahkan contoh push_subscriptions dan notifikasi (idempoten)...");
 
-    await client.query("DELETE FROM push_subscriptions WHERE endpoint LIKE 'https://fcm.googleapis.com/fcm/send/seed-%'");
+    // Kembalikan session_replication_role ke origin
+    await client.query("SET LOCAL session_replication_role = 'origin'");
+
+    // Hapus subscription lama milik seed (ditandai dengan prefix domain mock atau mock user_agent)
+    await client.query("DELETE FROM push_subscriptions WHERE endpoint LIKE '%seed-%' OR endpoint LIKE '%push.example.com%' OR user_agent LIKE '%MOCK_SEED%'");
     const dummySubs = [
       {
         profileId: "b0000000-0000-0000-0000-000000000001", // Ani
-        endpoint: "https://fcm.googleapis.com/fcm/send/seed-sub-ani-01",
+        endpoint: "https://push.example.com/mock-fcm/seed-sub-ani-inaktif",
         p256dh: "BMh39r8mZJ+qV3oK/4L9p7hR1qA1sK3pT7yU8iO9p0a=",
         auth: "aB1cD2eF3gH4iJ5kL6mN7o==",
+        userAgent: "MOCK_SEED_SIMULATION (Endpoint Simulasi Demo - Tidak Aktif)",
+        aktif: false, // TIDAK AKTIF agar background worker tidak salah mengirim push ke endpoint simulasi
       },
       {
         profileId: "a0000000-0000-0000-0000-000000000002", // Rina
-        endpoint: "https://fcm.googleapis.com/fcm/send/seed-sub-rina-01",
+        endpoint: "https://push.example.com/mock-fcm/seed-sub-rina-inaktif",
         p256dh: "CLk40s9naK+rW4pL/5M0q8iS2rB2tL4qU8zV9jP0q1b=",
         auth: "bC2dE3fG4hI5jK6lM7nO8p==",
+        userAgent: "MOCK_SEED_SIMULATION (Endpoint Simulasi Demo - Tidak Aktif)",
+        aktif: false, // TIDAK AKTIF agar background worker tidak salah mengirim push ke endpoint simulasi
       },
     ];
 
@@ -909,18 +920,34 @@ async function main() {
       await client.query(
         `
         INSERT INTO push_subscriptions (profile_id, endpoint, p256dh, auth, user_agent, aktif)
-        VALUES ($1, $2, $3, $4, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) SehatKlinik/1.0', true)
-        ON CONFLICT (endpoint) DO NOTHING
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (endpoint) DO UPDATE SET
+          aktif = EXCLUDED.aktif,
+          user_agent = EXCLUDED.user_agent
         `,
-        [s.profileId, s.endpoint, s.p256dh, s.auth]
+        [s.profileId, s.endpoint, s.p256dh, s.auth, s.userAgent, s.aktif]
       );
     }
 
-    // Notifikasi terstandar (hanya nomor antrean, nama dokter, tanggal; dilarang keluhan/diagnosis - PRD §7.3)
-    await client.query("DELETE FROM notifikasi WHERE pesan LIKE '%[SEED]%'");
+    // Notifikasi terstandar dengan KUNCI DETERMINISTIK (UUID Tetap)
+    // Hapus hanya notifikasi milik seed (berdasarkan ID deterministik atau tag [SEED])
+    const seedNotifIds = [
+      "c0000000-0000-0000-0000-000000000001",
+      "c0000000-0000-0000-0000-000000000002",
+      "c0000000-0000-0000-0000-000000000003",
+      "c0000000-0000-0000-0000-000000000004",
+    ];
+
+    await client.query(
+      `DELETE FROM notifikasi WHERE id = ANY($1::uuid[]) OR pesan LIKE '%[SEED]%'`,
+      [seedNotifIds]
+    );
+
+    // Komposisi Notifikasi Seed: 2 berstatus menunggu, 1 berhasil, 1 gagal (PRD §6.3 & Tahap 5B)
     const notifDataset = [
       {
-        profileId: "b0000000-0000-0000-0000-000000000001",
+        id: "c0000000-0000-0000-0000-000000000001",
+        profileId: "b0000000-0000-0000-0000-000000000001", // Ani
         pesan: "[SEED] Nomor antrean #1 untuk pemeriksaan dr. Reyhan Adhitama pada tanggal " + tglJadwal1 + " berhasil didaftarkan.",
         isRead: false,
         jenisKejadian: "KUNJUNGAN_TERDAFTAR",
@@ -931,7 +958,20 @@ async function main() {
         pushDiprosesAt: null,
       },
       {
-        profileId: "b0000000-0000-0000-0000-000000000001",
+        id: "c0000000-0000-0000-0000-000000000002",
+        profileId: "a0000000-0000-0000-0000-000000000002", // Rina Petugas
+        pesan: "[SEED] Pendaftaran online baru untuk dr. Reyhan Adhitama pada tanggal " + tglJadwal1 + " membutuhkan penanganan.",
+        isRead: false,
+        jenisKejadian: "PENDAFTARAN_BARU",
+        tautan: "/petugas",
+        pushStatus: "menunggu",
+        pushPercobaan: 0,
+        pushError: null,
+        pushDiprosesAt: null,
+      },
+      {
+        id: "c0000000-0000-0000-0000-000000000003",
+        profileId: "b0000000-0000-0000-0000-000000000001", // Ani
         pesan: "[SEED] Nomor antrean #1 untuk pemeriksaan drg. Nadira Kirana pada tanggal " + tglJadwal3 + " sedang dipanggil ke ruang praktik.",
         isRead: true,
         jenisKejadian: "ANTREAN_DIPANGGIL",
@@ -942,7 +982,8 @@ async function main() {
         pushDiprosesAt: new Date().toISOString(),
       },
       {
-        profileId: "b0000000-0000-0000-0000-000000000001",
+        id: "c0000000-0000-0000-0000-000000000004",
+        profileId: "b0000000-0000-0000-0000-000000000001", // Ani
         pesan: "[SEED] Nomor antrean #4 untuk pemeriksaan dr. Alea Prameswari, Sp.GK pada tanggal " + tglJadwal5 + " telah dibatalkan.",
         isRead: true,
         jenisKejadian: "KUNJUNGAN_DIBATALKAN",
@@ -958,11 +999,22 @@ async function main() {
       await client.query(
         `
         INSERT INTO notifikasi (
-          profile_id, pesan, is_read, jenis_kejadian, tautan, push_status, push_percobaan, push_error, push_diproses_at
+          id, profile_id, pesan, is_read, jenis_kejadian, tautan, push_status, push_percobaan, push_error, push_diproses_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ON CONFLICT (id) DO UPDATE SET
+          profile_id = EXCLUDED.profile_id,
+          pesan = EXCLUDED.pesan,
+          is_read = EXCLUDED.is_read,
+          jenis_kejadian = EXCLUDED.jenis_kejadian,
+          tautan = EXCLUDED.tautan,
+          push_status = EXCLUDED.push_status,
+          push_percobaan = EXCLUDED.push_percobaan,
+          push_error = EXCLUDED.push_error,
+          push_diproses_at = EXCLUDED.push_diproses_at
         `,
         [
+          n.id,
           n.profileId,
           n.pesan,
           n.isRead,
