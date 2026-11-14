@@ -1,6 +1,4 @@
-// src/lib/push-queue.js
-// BullMQ queue producer untuk notifikasi Web Push
-// Dibungkus aman agar jika Redis offline/mati, transaksi bisnis tetap berjalan sukses
+// BullMQ queue producer untuk notifikasi Web Push (fail-open bila Redis offline).
 
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";

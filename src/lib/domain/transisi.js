@@ -1,6 +1,4 @@
-// src/lib/domain/transisi.js
-// Logika bisnis state machine antrean dan kunjungan
-// BR-05, 06, 07, 08, 09, 15, K11, K12, K14
+// Logika bisnis state machine antrean dan kunjungan (BR-05..09, 15, K11, K12, K14)
 
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";

@@ -1,6 +1,4 @@
-// src/lib/rate-limit.js
-// Rate limiting untuk endpoint sensitif (login, register, kunjungan, push)
-// Redis bila REDIS_URL tersedia, memori bila tidak, fail-open bila Redis galat (PRD §9)
+// Rate limiting endpoint sensitif dengan Redis (fail-open ke memory store).
 
 import Redis from "ioredis";
 import { NextResponse } from "next/server";

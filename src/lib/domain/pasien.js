@@ -1,12 +1,7 @@
-// src/lib/domain/pasien.js
-// Logika bisnis pengelolaan data pasien
-// Akses data murni via Drizzle ORM.
-
-import { and, count, eq, ilike, or } from "drizzle-orm";
+import { and, count, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { pasien, profiles } from "@/db/schema";
 import { HttpError } from "@/lib/auth";
-import { sql } from "drizzle-orm";
 
 /**
  * Daftar pasien dengan paginasi dan pencarian.

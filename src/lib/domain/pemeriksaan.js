@@ -1,6 +1,4 @@
-// src/lib/domain/pemeriksaan.js
-// Logika bisnis penyimpanan pemeriksaan dan tindakan (BR-09, BR-10, BR-18)
-// Akses data murni via Drizzle ORM.
+// Logika bisnis penyimpanan pemeriksaan dan tindakan (BR-09, BR-10, BR-18) via Drizzle ORM.
 
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";

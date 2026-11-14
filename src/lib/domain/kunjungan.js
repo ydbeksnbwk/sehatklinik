@@ -1,6 +1,4 @@
-// src/lib/domain/kunjungan.js
-// Logika bisnis pendaftaran kunjungan (BR-01, 02, 03, 04, 13, 14)
-// Akses data murni via Drizzle ORM. Dilarang createAdminClient.
+// Logika bisnis pendaftaran kunjungan (BR-01, 02, 03, 04, 13, 14) via Drizzle ORM.
 
 import { and, count, eq, max, ne, sql } from "drizzle-orm";
 import { db } from "@/db";

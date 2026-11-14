@@ -1,7 +1,5 @@
-// src/lib/api-handler.js
-// Pembungkus Route Handler Next.js terpadu (K7, PRD §8, PRD §9)
-// Menangani ZodError (400 dengan error.fields), HttpError (sesuai status),
-// galat database (409/400), dan galat tak terduga (500 generik tanpa bocor SQL/stack ke client).
+// Pembungkus Route Handler Next.js terpadu (K7, BR-04)
+// Menangani ZodError (400 fields), HttpError, galat DB, dan 500 generik tanpa bocor SQL/stack.
 
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
