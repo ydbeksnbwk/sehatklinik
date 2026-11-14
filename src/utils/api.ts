@@ -515,4 +515,18 @@ export async function apiAdminGetRekap(params?: {
   return fetchApi<any[]>(`/api/admin/rekap${qStr ? `?${qStr}` : ""}`);
 }
 
+// Admin: Upload Foto Dokter
+export async function apiAdminUploadFotoDokter(dokterId: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return fetchApi<{ id: string; nama: string; fotoPath: string; fotoUrl: string }>(
+    `/api/admin/dokter/${dokterId}/foto`,
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
+}
+
+
 
