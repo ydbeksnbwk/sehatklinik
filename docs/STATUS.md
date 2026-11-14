@@ -460,5 +460,43 @@ Tahap 1E mengokohkan ketahanan, standarisasi error handling, keamanan data, dan 
    - Konfigurasi `experimental: { workerThreads: false, cpus: 1 }` (yang berasal dari commit `c97d29e`) dipertahankan untuk menjamin stabilitas build lokal di lingkungan Windows.
    - *Alasan Teknis*: Lingkungan Windows pengembang lokal rentan mengalami lonjakan konsumsi memori (OOM), IPC deadlock antar-worker Next.js, dan transient file-locking pada direktori `.next` ketika worker threads dijalankan secara multi-threaded paralel. Menetapkan `workerThreads: false` dan `cpus: 1` membatasi proses kompilasi Next.js menjadi sekuensial pada thread utama Node.js, menjaga penggunaan RAM tetap stabil, mencegah heap exhaustion, dan memastikan perintah `npm run build` berhasil 100% secara deterministik.
 
+---
+
+### 12.1 Bukti Nyata Pengujian Tahap 1E & Pengujian Regresi (per 14 November 2026)
+
+Pengujian dilakukan pada build produksi Next.js 15 (`npm run start` di port 3000):
+
+1. **Hasil Eksekusi `scripts/uji-1e.ps1` (18 Kasus LULUS, 0 GAGAL)**:
+   - **Rate Limiting 20 Login Salah Berturut-turut**:
+     - Percobaan 1–5 menghasilkan HTTP 401 UNAUTHENTICATED.
+     - Percobaan ke-6 pertama kali diblokir oleh rate limiter dengan HTTP 429 (TOO_MANY_REQUESTS) dan header `Retry-After: 58` detik.
+     - Sebanyak 15 dari 20 percobaan berhasil diblokir secara konsisten.
+   - **Galat DB Buatan (`GET /api/test-db-error`)**:
+     - Merespons HTTP 500 generik `{ "error": { "code": "INTERNAL", "message": "Terjadi kesalahan server" } }`.
+     - Bersih dari bocoran query SQL (`kolom_tidak_ada...`, `SELECT`, dsb.) maupun internal stack trace.
+     - Setelah bukti diperoleh, rute sementara dihapus total dari repo dan build ulang diverifikasi menghasilkan HTTP 404 (Not Found).
+   - **Validasi Zod Utang K7**:
+     - Login tanpa email ditolak HTTP 400 dengan error code `VALIDATION_ERROR` dan field `email`: "Format email tidak valid".
+     - `POST /api/admin/jadwal` dengan `jam_selesai <= jam_mulai` ditolak HTTP 400 dengan field `jamSelesai`: "Jam selesai harus setelah jam mulai".
+   - **Observabilitas Logger Pino & Redaksi Sensitif**:
+     - Log terstruktur satu request mencatat `requestId`, `status`, dan `durasi` tanpa mencetak nilai `password`, `token`, `cookie`, maupun string koneksi `DATABASE_URL` (tersensor menjadi `[REDACTED]`).
+   - **Ketahanan Fail-Open Redis**:
+     - Saat koneksi Redis mengalami error/offline, mekanisme rate limiting otomatis beralih ke fail-open dengan pencatatan peringatan level `warn` pada Pino logger dan melayani request bisnis tanpa crash.
+
+2. **Pengujian Regresi Keseluruhan**:
+   - `scripts/uji-api.ps1` : **LULUS** (100% skenario inti Tahap 1A lolos: auth, transaksi kuota, nomor antrean unik, isolasi peran, transisi status).
+   - `scripts/uji-verifikasi-1c.ps1` : **LULUS** (14 skenario lolos: pembatasan akses data, otorisasi peran, proteksi ID orang lain).
+   - `scripts/uji-1d.ps1` : **LULUS** (40 skenario lolos: CRUD admin layanan, manajemen staf BR-11, rekap agregasi DB, validasi biner magic bytes foto dokter, koreksi pasien oleh petugas).
+   - `scripts/uji-1e.ps1` : **LULUS** (18 skenario hardening lolos).
+
+3. **Verifikasi Statis & Keterbatasan yang Diketahui**:
+   - `npx tsc --noEmit` : **LULUS** (0 kesalahan tipe TypeScript).
+   - `npm run lint` : **LULUS** (exit code 0).
+   - *Keterbatasan yang Diketahui (Known Limitations)*: Terdapat 6 peringatan `react-hooks/exhaustive-deps` pada `ClinicContext.tsx` serta beberapa komponen antarmuka yang dipertahankan apa adanya demi menjaga stabilitas fungsional komponen dan menghindari siklus pemanggilan ulang hook yang tidak diinginkan.
+
+4. **Pemeriksaan Kode Penentuan IP Klien**:
+   - Fungsi `ambilClientIp(request)` pada `src/lib/rate-limit.js` (baris 9–19) membaca header `x-forwarded-for` secara prioritas (`xff.split(",")[0].trim()`), dengan fallback bertingkat ke `x-real-ip`, `cf-connecting-ip`, dan default `"127.0.0.1"`.
+
+
 
 
