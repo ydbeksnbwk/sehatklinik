@@ -1,6 +1,6 @@
 # Status Proyek Sistem Informasi Klinik Kesehatan (Tim 7)
 
-Terakhir diperbarui: 14 November 2026 (Tahap 5 Bagian A: Seed & Test Suite Selesai)
+Terakhir diperbarui: 14 November 2026 (Tahap 5 Selesai: Seed Idempoten, Suite Uji, & Dokumentasi Lengkap)
 
 ---
 
@@ -17,7 +17,7 @@ Terakhir diperbarui: 14 November 2026 (Tahap 5 Bagian A: Seed & Test Suite Seles
 | **Tahap 4** | Background Worker BullMQ + Redis | **SELESAI** | Sesuai PRD §9, pipeline antrean `notifikasi` outbox dan background processor |
 | **Tahap 1D** | Endpoint admin & upload foto dokter Supabase Storage | **SELESAI** | CRUD `/api/admin/layanan`, `/api/admin/pengguna` (BR-11), profil klinik, rekap DB, foto dokter (magic bytes), `/api/petugas/pasien/[id]` terhubung UI |
 | **Tahap 1E** | Rate limiting, Pino logger, format galat global | **SELESAI** | Pembungkus apiHandler global, Zod utang K7, rate limit Redis/memori fail-open, Pino redaksi rahasia, audit rahasia & ESLint non-interaktif |
-| **Tahap 5** | Seed database, verifikasi demo, dokumentasi | **SEBAGIAN (5A SELESAI)** | Bagian A (Seed PRD §6.3 idempoten, skrip verifikasi DB constraint SQL, & master test suite 25/25 kasus lolos 100%) selesai |
+| **Tahap 5** | Seed database, verifikasi demo, dokumentasi | **SELESAI** | Seed PRD §6.3 idempoten sejati, verifikasi SQL constraint, suite API 25/25 lulus, README, ARSITEKTUR, ERD, BUKTI_VERIFIKASI, FITUR |
 | **Tahap 6** | Deployment & pengujian produksi | **BELUM** | - |
 
 ---
@@ -569,6 +569,67 @@ Pengujian dilakukan pada build produksi Next.js 15 (`npm run start` di port 3000
     - Masukan Data Ekstrem / Tidak Valid Ditolak 400 (NIK & Vital) (LULUS)
     - Registrasi & Penanganan Push Subscription VAPID (LULUS)
 - **Ringkasan Master Suite**: **25 dari 25 Kasus LULUS (100% PASSED, 0 FAILED)**.
+
+---
+
+## 14. Pelaksanaan Tahap 5 BAGIAN B: Perbaikan Seed & Dokumentasi Komprehensif (per 14 November 2026)
+
+### 14.1 Butir 0: Perbaikan Idempotensi Sejati Notifikasi & Push Subscription
+- **Bungkam Trigger Transaksi Seed**: Mengaktifkan `SET LOCAL session_replication_role = 'replica'` selama transaksi seed berjalan agar mutasi kunjungan/antrean demo tidak memicu firing trigger `notif_antrean_baru` dan `notif_antrean_status` yang menyebabkan penumpukan baris notifikasi liar antar eksekusi.
+- **Kunci Deterministik Notifikasi Seed**: Baris notifikasi contoh seed menggunakan UUID tetap (`c0000000-0000-0000-0000-000000000001` s.d. `...004`), dengan penghapusan terarah (`id = ANY(...) OR pesan LIKE '%[SEED]%'`).
+- **Komposisi Notifikasi Seed**: 2 berstatus `menunggu`, 1 berstatus `berhasil`, dan 1 berstatus `gagal` (sesuai arahan Tahap 5B).
+- **Isolasi Mock Push Subscription**: Langganan simulasi seed menggunakan domain penanda `https://push.example.com/mock-fcm/...` dan disetel `aktif = false` (`user_agent = 'MOCK_SEED_SIMULATION (Endpoint Simulasi Demo - Tidak Aktif)'`) agar background worker BullMQ tidak salah mengirim notifikasi ke server eksternal saat membaca baris tersebut.
+- **Pembuktian Eksekusi Seed Dua Kali Berturut-turut**:
+  - Run 1: Total notifikasi = 134 baris.
+  - Run 2: Total notifikasi = 134 baris (100% identik dan konstan).
+- **Laporan Faktual Baris Pasien (39) & Jadwal Praktik (35)**:
+  - *Pasien (39 baris)*: Terdiri dari 5 pasien master awal (`RM-000001` s.d. `RM-000005`) ditambah 34 pasien yang didaftarkan secara sah melalui alur pendaftaran walk-in loket petugas (`POST /api/pasien`) dan skrip pengujian API sebelumnya. Seluruh baris dipertahankan dan tidak dihapus demi menjaga integritas data riwayat.
+  - *Jadwal Praktik (35 baris)*: Bukan merupakan sisa pengujian kotor, melainkan konfigurasi jadwal reguler klinik lengkap untuk 5 dokter selama 7 hari dalam seminggu (5 dokter × 7 hari [Minggu sampai Sabtu, hari 0–6] = 35 baris jadwal praktik) dengan kuota terstandar.
+
+### 14.2 Butir 1: Penyusunan Panduan Repositori (`README.md`)
+- Mendokumentasikan prasyarat sistem (Node.js 20+, npm 10+, PostgreSQL, Redis).
+- Panduan instalasi dari `git clone`, tabel environment variables (hanya nama variabel, tanpa membocorkan secret).
+- Prosedur migrasi (`npm run db:migrate`) dan seed (`npm run db:seed` dengan guard `SEED_ALLOW=1`).
+- Perintah menjalankan server web Next.js (`npm run dev` / `npm run start`) dan background worker (`npm run worker`).
+- Prosedur pembuatan kunci Web Push VAPID (`npx web-push generate-vapid-keys`).
+- Tiga opsi konfigurasi Redis (Docker, Memurai/Windows Native, Upstash Serverless) beserta arsitektur *fail-open*.
+- Tabel akun uji coba 6 peran (Admin, Petugas, Dokter 1, Dokter 2, Pasien 1, Pasien 2) beserta kata sandi demo.
+- Ringkasan deployment multi-platform (Vercel, Railway/Render, Supabase, Upstash).
+
+### 14.3 Butir 2: Dokumen Arsitektur & Keputusan Desain (`docs/ARSITEKTUR.md`)
+- Pemisahan lapisan arsitektur (Three-tier Architecture: Peramban, Route Handlers Next.js, PostgreSQL).
+- Penjelasan transparan keputusan RLS: string koneksi `DATABASE_URL` menggunakan role `postgres` (melewati RLS secara bawaan) untuk menjamin keandalan transaksi atomik multi-tabel (`FOR UPDATE`), dengan otorisasi ketat di lapisan server dan pembuktian RLS via helper `denganRls`.
+- Pola Outbox Web Push: transaksi bisnis terpisah dari pengiriman push, pemindai periodik 30 detik, dan kebijakan retry exponential backoff.
+- Keamanan sesi: Cookie HttpOnly, SameSite=Lax, proteksi CSRF Origin header, dan middleware redirect 307.
+- Keterbatasan jujur: Pembacaan IP dari `x-forwarded-for`, 6 warning `react-hooks/exhaustive-deps` yang dipertahankan, dan pengujian push yang belum mencakup seluruh variasi perangkat fisik.
+
+### 14.4 Butir 3: Diagram Hubungan Entitas (`docs/ERD.md`)
+- Diagram Mermaid `erDiagram` lengkap yang diekstrak langsung dan divalidasi terhadap `src/db/schema.ts` (14 entitas: `auth.users`, `profiles`, `pasien`, `dokter`, `layanan`, `dokter_layanan`, `jadwal_praktik`, `kunjungan`, `antrean`, `pemeriksaan`, `tindakan`, `notifikasi`, `push_subscriptions`, `profil_klinik`).
+- Tabel rincian batasan integritas database (CHECK, UNIQUE, Exclusion, Partial Index).
+
+### 14.5 Butir 4: Dokumen Pembuktian Sembilan Butir Evaluasi PRD §11 (`docs/BUKTI_VERIFIKASI.md`)
+- Mendokumentasikan sembilan butir bukti evaluasi PRD §11 dengan perintah eksekusi dan keluaran nyata:
+  1. Validasi frontend (NIK 16 digit, nomor telepon, tanggal lahir, proteksi tombol submit).
+  2. Validasi backend Zod lewat request langsung (400 `VALIDATION_ERROR` dengan pemetaan fields).
+  3. Constraint database (10 notice PostgreSQL lulus dari `scripts/verifikasi-db.sql`).
+  4. Autentikasi, otorisasi, & isolasi kepemilikan data (401 unauthenticated, 403 unauthorized).
+  5. Operasi CRUD persisten pada seluruh entitas transaksi klinik.
+  6. Migrasi skema (12 migrasi Drizzle diaplikasikan berurutan).
+  7. Web Push notification via BullMQ worker.
+  8. Penanganan kegagalan subscription kadaluarsa (HTTP 410 Gone dinonaktifkan otomatis).
+  9. Konsistensi rekapitulasi data admin dan penanganan galat global (500 tanpa bocoran SQL).
+
+### 14.6 Butir 5: Daftar Fitur, Keterbatasan, & Panduan Uji Manual (`docs/FITUR.md`)
+- Rincian fitur selesai per peran (Publik, Pasien, Petugas, Dokter, Admin, Infrastruktur).
+- Panduan checklist pengujian manual untuk evaluator/pengguna:
+  - Checklist responsivitas mobile pada viewport 375 px (iPhone SE).
+  - Checklist aksesibilitas navigasi keyboard (Focus Ring, Tab/Enter/Escape, Dialog Modal).
+
+### 14.7 Verifikasi Statis & Integritas Dokumen
+- `npx tsc --noEmit` : **LULUS** (0 kesalahan tipe).
+- `npm run lint` : **LULUS** (exit code 0).
+- `Test-Path` seluruh berkas dokumentasi yang direferensikan : **12/12 BERKAS TERSEDIA (100% TRUE)**.
+
 
 
 
