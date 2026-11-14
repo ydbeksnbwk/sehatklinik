@@ -1890,7 +1890,7 @@ export default function ClinicWorkspace({
               <Icon name="check" size={42} />
             </span>
             <h2>Pendaftaran berhasil</h2>
-            <p>{receipt.id}</p>
+            <p>{receipt.ref ? `Ref. ${receipt.ref}` : (receipt.id ? (receipt.id.length > 8 ? receipt.id.slice(0, 8) : receipt.id) : "")}</p>
             <div className="ticket">{formatQueue(receipt)}</div>
             <h3>{patientName(receipt.patient)}</h3>
             <p>
@@ -3579,6 +3579,7 @@ export default function ClinicWorkspace({
             <table>
               <thead>
                 <tr>
+                  <th>ID</th>
                   <th>Waktu Dibuat</th>
                   <th>Penerima</th>
                   <th>Jenis Kejadian</th>
@@ -3593,13 +3594,18 @@ export default function ClinicWorkspace({
                 {jobsLiveLoading ? (
                   Array.from({ length: 4 }, (_, idx) => (
                     <tr key={`job-skel-${idx}`}>
-                      <td colSpan={8}>
+                      <td colSpan={9}>
                         <div className="ws-skeleton ws-skeleton-line" />
                       </td>
                     </tr>
                   ))
                 ) : jobsLive.map((j) => (
                   <tr key={j.id}>
+                    <td>
+                      <code title={j.id} style={{ fontSize: "11px" }}>
+                        {j.id ? j.id.slice(0, 8) : "-"}
+                      </code>
+                    </td>
                     <td>
                       <small style={{ color: "var(--text-muted, #64748b)" }}>
                         {j.createdAt ? new Date(j.createdAt).toLocaleString("id-ID") : "-"}
