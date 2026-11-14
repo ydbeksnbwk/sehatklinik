@@ -101,11 +101,13 @@ async function runTest() {
   const startTime = Date.now();
   console.log("\n--- Menjalankan pemrosesan notifikasi (klaim atomik & pengiriman) ---");
 
-  // Klaim atomik anti-ganda
+  // Klaim atomik anti-ganda dengan lease 2 menit
   const claimRes = await pool.query(
     `UPDATE notifikasi
      SET push_diproses_at = NOW()
-     WHERE id = $1 AND push_status = 'menunggu'
+     WHERE id = $1
+       AND push_status = 'menunggu'
+       AND (push_diproses_at IS NULL OR push_diproses_at < NOW() - INTERVAL '2 minutes')
      RETURNING id, profile_id, pesan, jenis_kejadian, tautan, push_status, push_percobaan`,
     [notif.id]
   );
@@ -161,6 +163,7 @@ async function runTest() {
     await pool.query(
       `UPDATE notifikasi
        SET push_status = 'gagal',
+           push_percobaan = push_percobaan + 1,
            push_error = 'Semua langganan push browser telah kedaluwarsa (404/410)',
            push_diproses_at = NOW()
        WHERE id = $1`,
