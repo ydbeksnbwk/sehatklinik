@@ -60,18 +60,25 @@ const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:admin@sehatklinik.local";
 
 if (!DATABASE_URL) {
-  logger.fatal({ message: "DATABASE_URL tidak ditemukan di environment. Worker berhenti." });
+  logger.fatal({
+    variabel: "DATABASE_URL",
+    message: "DATABASE_URL tidak ditemukan di environment. Pastikan variabel ini telah dikonfigurasi pada platform hosting (Railway/Render) atau .env.local. Worker berhenti.",
+  });
   process.exit(1);
 }
 
 if (!REDIS_URL) {
-  logger.fatal({ message: "REDIS_URL tidak ditemukan di environment. Worker berhenti." });
+  logger.fatal({
+    variabel: "REDIS_URL",
+    message: "REDIS_URL tidak ditemukan di environment. Pastikan koneksi Redis (Upstash/Docker) telah dikonfigurasi. Worker berhenti.",
+  });
   process.exit(1);
 }
 
 if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
   logger.fatal({
-    message: "Kunci VAPID tidak lengkap (VAPID_PUBLIC_KEY atau VAPID_PRIVATE_KEY kosong). Worker berhenti.",
+    variabel: "VAPID_KEYS",
+    message: "Kunci VAPID tidak lengkap (NEXT_PUBLIC_VAPID_PUBLIC_KEY atau VAPID_PRIVATE_KEY kosong). Jalankan 'npx web-push generate-vapid-keys' dan setel ke environment. Worker berhenti.",
   });
   process.exit(1);
 }
