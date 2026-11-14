@@ -25,6 +25,8 @@ import {
   apiAdminGetPengguna,
   apiAdminTambahPengguna,
   apiAdminUpdatePengguna,
+  apiAdminGetProfilKlinik,
+  apiAdminUpdateProfilKlinik,
   type PekerjaanNotifikasiItem
 } from "../utils/api";
 import {
@@ -3791,7 +3793,7 @@ export default function ClinicWorkspace({
                 const data = new FormData(e.currentTarget);
                 const get = (key: string) => String(data.get(key) || "");
                 if (role === "Admin") {
-                  setClinic({
+                  const newClinic = {
                     name: get("name"),
                     description: get("description"),
                     address: get("address"),
@@ -3799,9 +3801,30 @@ export default function ClinicWorkspace({
                     latitude: get("latitude"),
                     longitude: get("longitude"),
                     hours: get("hours"),
-                  });
-                  setEditingProfile(false);
-                  notify("Profil klinik berhasil diperbarui.");
+                  };
+                  setBusy(true);
+                  try {
+                    const res = await apiAdminUpdateProfilKlinik({
+                      nama: newClinic.name,
+                      deskripsi: newClinic.description,
+                      alamat: newClinic.address,
+                      kontak: newClinic.phone,
+                      latitude: newClinic.latitude ? Number(newClinic.latitude) : undefined,
+                      longitude: newClinic.longitude ? Number(newClinic.longitude) : undefined,
+                      jamOperasional: newClinic.hours,
+                    });
+                    if (res.error) {
+                      throw new Error(res.error.message || "Gagal memperbarui profil klinik.");
+                    }
+                    setClinic(newClinic);
+                    setEditingProfile(false);
+                    notify("Profil klinik berhasil diperbarui.");
+                  } catch (err: unknown) {
+                    const msg = err instanceof Error ? err.message : "Gagal memperbarui profil klinik.";
+                    notify(msg);
+                  } finally {
+                    setBusy(false);
+                  }
                 } else {
                   const updatedAddress = get("address");
                   const updatedPhone = get("phone");

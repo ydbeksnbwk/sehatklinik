@@ -473,4 +473,46 @@ export async function apiAdminNonaktifkanPengguna(id: string) {
   );
 }
 
+// Admin: Profil Klinik
+export async function apiAdminGetProfilKlinik() {
+  return fetchApi<any>("/api/admin/profil-klinik");
+}
+
+export async function apiAdminUpdateProfilKlinik(payload: {
+  nama: string;
+  deskripsi?: string;
+  alamat?: string;
+  latitude?: number;
+  longitude?: number;
+  kontak?: string;
+  jamOperasional?: any;
+}) {
+  return fetchApi<any>("/api/admin/profil-klinik", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+// Admin: Rekap
+export async function apiAdminGetRekap(params?: {
+  dariTanggal?: string;
+  sampaiTanggal?: string;
+  dokterId?: string;
+  layananId?: string;
+  status?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const query = new URLSearchParams();
+  if (params?.dariTanggal) query.set("dariTanggal", params.dariTanggal);
+  if (params?.sampaiTanggal) query.set("sampaiTanggal", params.sampaiTanggal);
+  if (params?.dokterId) query.set("dokterId", params.dokterId);
+  if (params?.layananId) query.set("layananId", params.layananId);
+  if (params?.status && params.status !== "semua") query.set("status", params.status);
+  if (params?.page) query.set("page", String(params.page));
+  if (params?.pageSize) query.set("pageSize", String(params.pageSize));
+  const qStr = query.toString();
+  return fetchApi<any[]>(`/api/admin/rekap${qStr ? `?${qStr}` : ""}`);
+}
+
 
