@@ -22,6 +22,9 @@ import {
   apiAdminTambahLayanan,
   apiAdminUpdateLayanan,
   apiAdminHapusLayanan,
+  apiAdminGetPengguna,
+  apiAdminTambahPengguna,
+  apiAdminUpdatePengguna,
   type PekerjaanNotifikasiItem
 } from "../utils/api";
 import {
@@ -2323,27 +2326,39 @@ export default function ClinicWorkspace({
             : [...s, value],
         );
       } else if (editor.type === "Pengguna") {
-        if (users.some((u) => u.email === get("email"))) {
-          setError("Email sudah digunakan.");
-          return;
-        }
-        const newStaffName = get("name");
-        const newStaffRole = get("role");
-        setUsers((u) => [
-          ...u,
-          {
-            name: newStaffName,
-            email: get("email"),
-            role: newStaffRole,
-            active: true,
-            password: get("password") || "password123",
-          },
-        ]);
-        setEditor(null);
-        setError("");
-        notify(
-          `Akun staf ${newStaffName} (${newStaffRole}) berhasil didaftarkan. Pengguna kini dapat login ke dashboard ${newStaffRole}.`,
-        );
+        const staffPayload = {
+          email: get("email"),
+          password: get("password") || "Password123!",
+          nama: get("name"),
+          role: get("role").toLowerCase(),
+          telepon: get("phone") || undefined,
+        };
+        (async () => {
+          try {
+            const res = await apiAdminTambahPengguna(staffPayload);
+            if (res.error) throw new Error(res.error.message);
+            const refUsers = await apiAdminGetPengguna({ pageSize: 100 });
+            if (refUsers.data) {
+              setUsers(
+                refUsers.data.map((r: any) => ({
+                  id: r.id,
+                  name: r.nama,
+                  email: r.email || staffPayload.email,
+                  role: r.role.charAt(0).toUpperCase() + r.role.slice(1),
+                  active: r.statusAktif,
+                  telepon: r.telepon,
+                }))
+              );
+            }
+            setEditor(null);
+            setError("");
+            notify(`Akun staf ${staffPayload.nama} (${staffPayload.role}) berhasil didaftarkan di sistem.`);
+          } catch (err: any) {
+            setError(err.message || "Gagal membuat akun staf.");
+          } finally {
+            setBusy(false);
+          }
+        })();
         return;
       }
       setEditor(null);
@@ -3301,15 +3316,34 @@ export default function ClinicWorkspace({
                             <button
                               className="text-button"
                               disabled={Boolean(isProtected)}
-                              onClick={() => {
-                                setUsers((previous) =>
-                                  previous.map((item) =>
-                                    item.email === u.email
-                                      ? { ...item, active: !item.active }
-                                      : item,
-                                  ),
-                                );
-                                notify("Status akun demo diperbarui.");
+                              onClick={async () => {
+                                if (u.id) {
+                                  try {
+                                    const res = await apiAdminUpdatePengguna(u.id, {
+                                      statusAktif: !u.active,
+                                    });
+                                    if (res.error) throw new Error(res.error.message);
+                                    setUsers((previous) =>
+                                      previous.map((item) =>
+                                        item.id === u.id
+                                          ? { ...item, active: !item.active }
+                                          : item,
+                                      ),
+                                    );
+                                    notify(`Status akun ${u.name} berhasil diperbarui.`);
+                                  } catch (err: any) {
+                                    notify(err.message || "Gagal mengubah status akun.");
+                                  }
+                                } else {
+                                  setUsers((previous) =>
+                                    previous.map((item) =>
+                                      item.email === u.email
+                                        ? { ...item, active: !item.active }
+                                        : item,
+                                    ),
+                                  );
+                                  notify("Status akun diperbarui.");
+                                }
                               }}
                             >
                               {isProtected

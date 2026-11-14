@@ -418,4 +418,59 @@ export async function apiAdminHapusLayanan(id: string) {
   );
 }
 
+// Admin: Pengguna
+export async function apiAdminGetPengguna(params?: {
+  q?: string;
+  role?: string;
+  statusAktif?: boolean | string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const query = new URLSearchParams();
+  if (params?.q) query.set("q", params.q);
+  if (params?.role) query.set("role", params.role);
+  if (params?.statusAktif !== undefined) query.set("statusAktif", String(params.statusAktif));
+  if (params?.page) query.set("page", String(params.page));
+  if (params?.pageSize) query.set("pageSize", String(params.pageSize));
+  const qStr = query.toString();
+  return fetchApi<any[]>(`/api/admin/pengguna${qStr ? `?${qStr}` : ""}`);
+}
+
+export async function apiAdminTambahPengguna(payload: {
+  email: string;
+  password?: string;
+  nama: string;
+  role: string;
+  telepon?: string;
+}) {
+  return fetchApi<any>("/api/admin/pengguna", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiAdminUpdatePengguna(
+  id: string,
+  payload: {
+    nama?: string;
+    role?: string;
+    statusAktif?: boolean;
+    telepon?: string;
+  }
+) {
+  return fetchApi<any>(`/api/admin/pengguna/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiAdminNonaktifkanPengguna(id: string) {
+  return fetchApi<{ id: string; nama?: string; statusAktif: boolean; message: string }>(
+    `/api/admin/pengguna/${id}`,
+    {
+      method: "DELETE",
+    }
+  );
+}
+
 
