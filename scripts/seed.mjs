@@ -1,6 +1,4 @@
-// scripts/seed.mjs
-// Seed Database Idempoten Sesuai PRD §6.3 untuk Klinik Tim 7
-// Menjamin dataset awal terstandar untuk demonstrasi & pengujian
+// Seed database idempoten terstandar untuk demonstrasi & pengujian klinis.
 
 import pg from "pg";
 
