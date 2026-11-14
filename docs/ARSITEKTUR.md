@@ -30,7 +30,7 @@ Arsitektur aplikasi dibangun dengan pemisahan tanggung jawab yang tegas antar-la
                     │ Pooler SQL (TCP)               │ Enqueue Job (Redis)
 ┌───────────────────▼────────────────┐   ┌───────────▼───────────────────┐
 │     LAPISAN DATABASE (POSTGRESQL)  │   │  BACKGROUND WORKER (BULLMQ)   │
-│  - Schema & Constraints (Lapisan 3)│   │  - worker/index.js            │
+│  - Schema & Constraints (Lapisan 3)│   │  - worker/index.mjs           │
 │  - CHECK (NIK, Vital BR-18, Jam)   │   │  - Outbox Poller (30 detik)   │
 │  - UNIQUE Partial Index            │   │  - web-push VAPID Dispatcher  │
 │  - Exclusion Constraints           │   │  - Retry Backoff & 410 Cleanup│

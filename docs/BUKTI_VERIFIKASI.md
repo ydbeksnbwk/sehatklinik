@@ -169,7 +169,7 @@ npm run db:migrate
 ```bash
 npm run worker
 ```
-- **Keluaran Log Nyata Worker (`scripts/uji-worker.mjs` / `worker/index.js`)**:
+- **Keluaran Log Nyata Worker (`scripts/uji-worker.mjs` / `worker/index.mjs`)**:
 ```text
 [BullMQ] Worker aktif dan mendengarkan antrean 'notifikasi-push'...
 [Outbox] Menemukan 1 notifikasi menunggu: ID c0000000-0000-0000-0000-000000000001

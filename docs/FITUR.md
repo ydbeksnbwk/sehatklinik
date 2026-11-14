@@ -45,7 +45,7 @@
 
 ### F. Infrastruktur, Keamanan, & Background Worker
 - **Notifikasi Web Push VAPID**: Pengiriman push notification berbasis outbox pattern via Service Worker `sw.js` dan pustaka `web-push`.
-- **Background Worker BullMQ**: Pemrosesan antrean tugas terpisah (`worker/index.js`) dengan penanganan retry exponential backoff dan pembersihan otomatis langganan 404/410.
+- **Background Worker BullMQ**: Pemrosesan antrean tugas terpisah (`worker/index.mjs`) dengan penanganan retry exponential backoff dan pembersihan otomatis langganan 404/410.
 - **Validasi Tiga Lapis**: Frontend (React) -> Backend (Zod di semua endpoint) -> Database (PostgreSQL constraints & partial index).
 - **Keamanan Sesi**: Cookie HttpOnly, SameSite=Lax, proteksi CSRF Origin header, dan middleware redirect 307.
 - **Sliding-Window Rate Limiting**: Proteksi endpoint kritis (login, register, pendaftaran kunjungan, push) dengan mekanisme fail-open saat Redis offline.
