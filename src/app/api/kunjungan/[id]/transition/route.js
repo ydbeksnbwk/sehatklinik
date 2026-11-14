@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import { HttpError, handleError, requireRole } from "@/lib/auth";
 import { skemaTransisi } from "@/lib/validasi/kunjungan";
 import { jalankanTransisi } from "@/lib/domain/transisi";
+import { logger } from "@/lib/logger";
 
 function galat(code, message, fields, status) {
   return NextResponse.json(
@@ -59,7 +60,7 @@ async function _POST(request, { params }) {
       await enqueuePendingNotificationsForProfile(profile.id);
     } catch (pushErr) {
       // Redis mati / galat push tidak membatalkan transisi
-      console.warn("Enqueue push gagal setelah transisi (non-fatal):", pushErr?.message);
+      logger.warn({ msg: "Enqueue push gagal setelah transisi (non-fatal)", error: pushErr?.message });
     }
 
     return NextResponse.json({ data: result });

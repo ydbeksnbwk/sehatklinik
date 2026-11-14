@@ -7,6 +7,7 @@ import { profiles } from "@/db/schema";
 import { HttpError, handleError, requireRole } from "@/lib/auth";
 import { UUID } from "@/lib/akses";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { logger } from "@/lib/logger";
 
 const PenggunaUpdateSchema = z.object({
   role: z.enum(["admin", "petugas", "dokter", "pasien"]).optional(),
@@ -114,7 +115,7 @@ async function _PATCH(request, { params }) {
           user_metadata: nama ? { nama, display_name: nama } : undefined,
         });
       } catch (authErr) {
-        console.warn("Gagal memperbarui app_metadata di Supabase Auth:", authErr);
+        logger.warn({ msg: "Gagal memperbarui app_metadata di Supabase Auth", err: authErr?.message });
       }
     }
 
