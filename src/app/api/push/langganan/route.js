@@ -6,14 +6,14 @@ import { pushSubscriptions } from "@/db/schema";
 import { handleError, requireRole } from "@/lib/auth";
 
 const LanggananSchema = z.object({
-  endpoint: z.string().url("Format endpoint subscription tidak valid"),
-  p256dh: z.string().min(1, "Kunci p256dh wajib diisi"),
-  auth: z.string().min(1, "Kunci auth wajib diisi"),
+  endpoint: z.string().trim().url("Format endpoint subscription tidak valid"),
+  p256dh: z.string().trim().min(1, "Kunci p256dh wajib diisi"),
+  auth: z.string().trim().min(1, "Kunci auth wajib diisi"),
   userAgent: z.string().optional().nullable(),
 });
 
 const BatalLanggananSchema = z.object({
-  endpoint: z.string().url("Format endpoint subscription tidak valid"),
+  endpoint: z.string().trim().url("Format endpoint subscription tidak valid"),
 });
 
 export async function POST(request) {
