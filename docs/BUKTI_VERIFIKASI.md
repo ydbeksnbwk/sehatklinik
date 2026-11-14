@@ -208,8 +208,9 @@ node --env-file=.env.local scripts/uji-worker.mjs
   2. Format galat terstandar tanpa bocoran SQL / stack trace ke client.
   3. Ketahanan fail-open rate limiting saat Redis offline.
 - **Perintah Eksekusi**:
+*(Catatan: Keluaran di bawah dicatat saat pengujian verifikasi Tahap 1E; skrip pengujian per tahap internal tidak disertakan di repositori publik)*
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/uji-1e.ps1
+powershell -ExecutionPolicy Bypass -File scripts/uji-suite.ps1
 ```
 - **Keluaran Nyata**:
 ```text

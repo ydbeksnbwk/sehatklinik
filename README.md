@@ -197,4 +197,4 @@ npm run lint
 - [Diagram Hubungan Entitas (ERD)](file:///D:/Materi%20Kuliah%20S.5/Pemrograman%20Web/sehatklinik/docs/ERD.md)
 - [Daftar Fitur & Panduan Uji Manual](file:///D:/Materi%20Kuliah%20S.5/Pemrograman%20Web/sehatklinik/docs/FITUR.md)
 - [Bukti Verifikasi Sembilan Butir Evaluasi](file:///D:/Materi%20Kuliah%20S.5/Pemrograman%20Web/sehatklinik/docs/BUKTI_VERIFIKASI.md)
-- [Status Kemajuan & Audit Kebutuhan](file:///D:/Materi%20Kuliah%20S.5/Pemrograman%20Web/sehatklinik/docs/STATUS.md)
+- [Panduan Deployment & Konfigurasi Cloud](file:///D:/Materi%20Kuliah%20S.5/Pemrograman%20Web/sehatklinik/docs/DEPLOYMENT.md)

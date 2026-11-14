@@ -459,7 +459,7 @@ async function main() {
     // -------------------------------------------------------------------------
     console.log("[6] Memeriksa jadwal praktik dan menetapkan kuota terstandar...");
 
-    // Jadwal 1: dr. Reyhan (kuota 3, terisi 2) - Hari Rabu (3), dipakai juga oleh uji-api
+    // Jadwal 1: dr. Reyhan (kuota 3, terisi 2) - Hari Rabu (3), dipakai juga oleh uji-suite
     const jadwal1Id = "b5563fa3-0a3a-4c96-a780-54b136d53056";
     await client.query(
       `

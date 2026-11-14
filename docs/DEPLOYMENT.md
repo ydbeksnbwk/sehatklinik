@@ -83,11 +83,10 @@ Sistem dirancang untuk beroperasi secara terdistribusi pada platform cloud moder
    # 1. Jalankan 12 file migrasi database
    npm run db:migrate
 
-   # 2. Jalankan seed data terstandar PRD §6.3
+   # 2. Jalankan seed data terstandar
    $env:SEED_ALLOW="1"; npm run db:seed
 
-   # 3. Bersihkan outbox data uji sebelum deploy
-   node --env-file=.env.local scripts/bersihkan-outbox.mjs
+   # (Catatan: Pembersihan outbox data uji pra-deploy telah diselesaikan pada inisialisasi awal)
    ```
 
 ### Langkah 2: Pembuatan Kunci VAPID & Konfigurasi Upstash Redis
@@ -139,11 +138,30 @@ Setelah kedua platform (Vercel dan Worker) berstatus aktif:
    powershell -ExecutionPolicy Bypass -File scripts/uji-deploy.ps1 -BaseUrl "https://sehatklinik-tim7.vercel.app"
    ```
 5. **Verifikasi Alur End-to-End Manual**:
-   Ikuti checklist 10 langkah pada panduan [UJI_DEPLOY.md](file:///D:/Materi%20Kuliah%20S.5/Pemrograman%20Web/sehatklinik/docs/UJI_DEPLOY.md).
+   Lakukan pengujian fungsional interaktif menggunakan tabel "Uji Alur di URL Deploy" pada Bagian 5 di bawah.
 
 ---
 
-## 5. Pemecahan Masalah (Troubleshooting Guide)
+## 5. Uji Alur di URL Deploy (Checklist Manual 10 Langkah)
+
+Berikut adalah panduan pengujian alur fungsional end-to-end pada URL deployment produksi dengan dua peramban berbeda (Peramban A untuk Pasien, Peramban B untuk Petugas/Dokter):
+
+| No | Langkah | Aktor & Akun | Tindakan yang Dilakukan | Hasil yang Diharapkan | Status | Catatan Penguji |
+|:---:|---|---|---|---|:---:|---|
+| **1** | **Aktivasi Notifikasi** | Pasien (`ani.wulandari@gmail.com`) di Peramban A | Klik tombol **"Aktifkan Notifikasi"**, lalu pilih **Allow/Izinkan** pada dialog izin browser | Dialog sukses muncul; tombol berubah status menjadi "Notifikasi Aktif"; langganan tersimpan di database | | |
+| **2** | **Pendaftaran Kunjungan** | Pasien di Peramban A | Masuk menu Pendaftaran Kunjungan: pilih Layanan (Poli Umum), Dokter (dr. Reyhan), Tanggal, Sesi Jadwal, masukkan keluhan, klik **Kirim** | Kunjungan berhasil terdaftar dengan nomor referensi unik dan nomor antrean; notifikasi push pendaftaran muncul di layar | | |
+| **3** | **Pemantauan Dasbor Pasien** | Pasien di Peramban A | Buka halaman Dasbor Pasien (`/dashboard` atau `/pasien`) | Kartu antrean aktif menampilkan nomor antrean (#1) dengan status **Menunggu** | | |
+| **4** | **Check-in Kedatangan** | Petugas (`rina.petugas@gmail.com`) di Peramban B | Login sebagai Petugas, buka Dasbor Antrean (`/petugas`), cari antrean pasien tadi, klik tombol **Check-in** | Status kunjungan berubah menjadi **Hadir**; tombol "Panggil" menjadi aktif | | |
+| **5** | **Pemanggilan Antrean** | Petugas di Peramban B | Klik tombol **Panggil** pada antrean pasien yang telah Hadir | Status berubah menjadi **Dipanggil**; notifikasi Web Push berbunyi/muncul di Peramban A; klik notifikasi membuka tab dasbor pasien | | |
+| **6** | **Mulai Pemeriksaan Dokter** | Dokter (`dokter.reyhan@gmail.com`) di Peramban B | Login sebagai Dokter, buka antrean pribadi (`/dokter-dashboard`), temukan pasien, klik **Mulai Periksa** | Status antrean berubah menjadi **Sedang Diperiksa**; hanya pasien dr. Reyhan yang terlihat di daftar | | |
+| **7** | **Pencatatan Rekam Medis & Selesai** | Dokter di Peramban B | Masukkan Anamnesis, Tanda Vital valid (TD: 120/80, Suhu: 36.5, BB: 65, TB: 170), Diagnosis, Tindakan medis, klik **Simpan & Selesaikan Kunjungan** | Kunjungan dan nomor antrean berubah status menjadi **Selesai**; data rekam medis tersimpan persisten | | |
+| **8** | **Isolasi Riwayat Medis** | Pasien di Peramban A | Buka halaman Riwayat (`/riwayat` atau `/dashboard`) | Kunjungan yang baru saja selesai muncul lengkap dengan ringkasan medis; login akun Pasien 2 membuktikan kunjungan ini terisolasi total | | |
+| **9** | **Rekapitulasi Konsisten** | Admin (`admin.klinik@gmail.com`) | Login sebagai Admin, buka menu Rekapitulasi Kunjungan (`/admin`) | Angka ringkasan total kunjungan sama persis dengan penjumlahan status (Terdaftar + Hadir + Selesai + Batal) | | |
+| **10** | **Audit Outbox & Worker** | Admin / Petugas | Buka menu Pekerjaan Notifikasi (`/admin` atau `/api/admin/pekerjaan-notifikasi`) | Daftar pekerjaan outbox push notification menampilkan status riwayat pengiriman (`berhasil`, `gagal`) dengan jumlah percobaan | | |
+
+---
+
+## 6. Pemecahan Masalah (Troubleshooting Guide)
 
 ### 1. Perbedaan Pooler Supabase: Port 6543 vs Port 5432
 - **Port 6543 (Transaction Mode)**:
