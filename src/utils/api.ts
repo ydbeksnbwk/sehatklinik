@@ -528,5 +528,25 @@ export async function apiAdminUploadFotoDokter(dokterId: string, file: File) {
   );
 }
 
+// Petugas: Koreksi Data Pasien
+export async function apiPetugasKoreksiPasien(
+  id: string,
+  payload: {
+    nama?: string;
+    nik?: string | null;
+    tanggalLahir?: string;
+    jenisKelamin?: string;
+    telepon?: string | null;
+    alamat?: string | null;
+    kontakDarurat?: string | null;
+  }
+) {
+  return fetchApi<any>(`/api/petugas/pasien/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+
 
 

@@ -27,6 +27,7 @@ import {
   apiAdminUpdatePengguna,
   apiAdminGetProfilKlinik,
   apiAdminUpdateProfilKlinik,
+  apiPetugasKoreksiPasien,
   type PekerjaanNotifikasiItem
 } from "../utils/api";
 import {
@@ -2185,8 +2186,46 @@ export default function ClinicWorkspace({
           gender: get("gender"),
           address: get("address"),
           emergency: get("emergency"),
+          nik: get("nik") || undefined,
           account: false,
         };
+        if (role === "Petugas" && editor.id) {
+          (async () => {
+            try {
+              const res = await apiPetugasKoreksiPasien(editor.id!, {
+                nama: value.name,
+                nik: value.nik || null,
+                tanggalLahir: value.birth,
+                jenisKelamin: value.gender,
+                telepon: value.phone || null,
+                alamat: value.address || null,
+                kontakDarurat: value.emergency || null,
+              });
+              if (res.error) {
+                const fieldMsg = (res.error as any).fields
+                  ? Object.values((res.error as any).fields).join(", ")
+                  : null;
+                throw new Error(fieldMsg || res.error.message || "Gagal mengoreksi data pasien.");
+              }
+              setPatients((p) =>
+                p.map((item) =>
+                  item.id === editor.id
+                    ? { ...value, account: item.account }
+                    : item,
+                ),
+              );
+              setEditor(null);
+              setError("");
+              notify("Data identitas pasien berhasil dikoreksi.");
+            } catch (err: unknown) {
+              const msg = err instanceof Error ? err.message : "Gagal mengoreksi data pasien.";
+              setError(msg);
+            } finally {
+              setBusy(false);
+            }
+          })();
+          return;
+        }
         setPatients((p) =>
           editor.id
             ? p.map((item) =>
@@ -4940,8 +4979,18 @@ export default function ClinicWorkspace({
                   <>
                     <div className="notice">
                       <Icon name="users" size={19} />
-                      Pasien walk-in terdaftar langsung tanpa memerlukan akun.
+                      {role === "Petugas"
+                        ? "Koreksi administrasi data identitas pasien (Nama, NIK 16 digit, Tanggal Lahir, Jenis Kelamin)."
+                        : "Pasien walk-in terdaftar langsung tanpa memerlukan akun."}
                     </div>
+                    <Field label="NIK (16 Digit Angka)">
+                      <input
+                        name="nik"
+                        maxLength={16}
+                        placeholder="16 digit angka NIK"
+                        defaultValue={editPatient?.nik || ""}
+                      />
+                    </Field>
                     <div className="ws-form-grid">
                       <Field label="Tanggal lahir">
                         <input
