@@ -1,6 +1,6 @@
 # Status Proyek Sistem Informasi Klinik Kesehatan (Tim 7)
 
-Terakhir diperbarui: 13 November 2026 (Verifikasi Backend Tahap 1C)
+Terakhir diperbarui: 14 November 2026 (Tahap 5 Bagian A: Seed & Test Suite Selesai)
 
 ---
 
@@ -17,7 +17,7 @@ Terakhir diperbarui: 13 November 2026 (Verifikasi Backend Tahap 1C)
 | **Tahap 4** | Background Worker BullMQ + Redis | **SELESAI** | Sesuai PRD §9, pipeline antrean `notifikasi` outbox dan background processor |
 | **Tahap 1D** | Endpoint admin & upload foto dokter Supabase Storage | **SELESAI** | CRUD `/api/admin/layanan`, `/api/admin/pengguna` (BR-11), profil klinik, rekap DB, foto dokter (magic bytes), `/api/petugas/pasien/[id]` terhubung UI |
 | **Tahap 1E** | Rate limiting, Pino logger, format galat global | **SELESAI** | Pembungkus apiHandler global, Zod utang K7, rate limit Redis/memori fail-open, Pino redaksi rahasia, audit rahasia & ESLint non-interaktif |
-| **Tahap 5** | Seed database, verifikasi demo, dokumentasi | **BELUM** | - |
+| **Tahap 5** | Seed database, verifikasi demo, dokumentasi | **SEBAGIAN (5A SELESAI)** | Bagian A (Seed PRD §6.3 idempoten, skrip verifikasi DB constraint SQL, & master test suite 25/25 kasus lolos 100%) selesai |
 | **Tahap 6** | Deployment & pengujian produksi | **BELUM** | - |
 
 ---
@@ -496,6 +496,80 @@ Pengujian dilakukan pada build produksi Next.js 15 (`npm run start` di port 3000
 
 4. **Pemeriksaan Kode Penentuan IP Klien**:
    - Fungsi `ambilClientIp(request)` pada `src/lib/rate-limit.js` (baris 9–19) membaca header `x-forwarded-for` secara prioritas (`xff.split(",")[0].trim()`), dengan fallback bertingkat ke `x-real-ip`, `cf-connecting-ip`, dan default `"127.0.0.1"`.
+
+---
+
+## 13. Pelaksanaan Tahap 5 BAGIAN A: Seed Idempoten & Master Test Suite API (per 14 November 2026)
+
+### 13.1 Butir 1: Seed Database Idempoten (`scripts/seed.mjs` & `npm run db:seed`)
+- **Fitur Guard Produksi**: Wajib menyertakan environment variable `SEED_ALLOW=1`. Jika variabel tidak ada atau bernilai lain, eksekusi dibatalkan dengan kode keluar 1 demi mencegah ketidaksengajaan di server produksi.
+- **Pembersihan Data Terkelola**: Script idempoten membersihkan baris-baris terkelola (kunjungan demo, pemeriksaan, tindakan medis, push subscriptions uji, dan notifikasi terkait) tanpa menghapus data master pasien/dokter asli di luar cakupan demo.
+- **Penanganan Duplikat Dokter**: Secara otomatis mendeteksi dan menggabungkan duplikat dr. Reyhan Adhitama via script (`scripts/seed.mjs`) tanpa memerlukan intervensi manual di SQL Editor Supabase.
+- **Akun Uji Terautentikasi (Auth Admin & `app_metadata.role`)**:
+  - `admin.klinik@gmail.com` (role: `admin`)
+  - `rina.petugas@gmail.com` (role: `petugas`)
+  - `dokter.reyhan@gmail.com` (role: `dokter`)
+  - `nadira.kirana@gmail.com` (role: `dokter`)
+  - `ani.wulandari@gmail.com` (role: `pasien`, RM-000001)
+  - `bagas.saputra@gmail.com` (role: `pasien`, RM-000002)
+- **Komposisi Data Realita Sesuai PRD §6.3**:
+  - Pasien: 39 baris (termasuk 2 pasien berakun Supabase Auth dan 4 pasien walk-in tanpa akun).
+  - Dokter: 5 baris (dr. Reyhan, dr. Sarah, dr. Budi, dr. Siti, dr. Nadira).
+  - Layanan: 6 layanan terdaftar lengkap dengan relasi `dokter_layanan`.
+  - Jadwal Praktik: 35 slot jadwal; mencakup 1 jadwal berkuota 3 terisi 2 (tersisa 1) dan 1 jadwal berkuota 2 terisi 2 (penuh).
+  - Kunjungan: 12 kunjungan terdaftar.
+  - Antrean: 12 antrean dengan komposisi persis tabel PRD §6.3:
+    * `menunggu`: 3
+    * `dipanggil`: 1
+    * `diperiksa`: 1
+    * `selesai`: 5
+    * `dilewati`: 1
+    * `batal`: 1
+  - Rekam Medis & Tindakan: 5 pemeriksaan dan 5 tindakan medis dengan tanda vital fisiologis valid (BR-18).
+  - Push Subscription & Notifikasi: Contoh langganan uji dan notifikasi status menunggu, berhasil, dan gagal (outbox pattern).
+
+### 13.2 Butir 3: Skrip SQL Verifikasi Integritas Constraint Database (`scripts/verifikasi-db.sql`)
+- Skrip SQL dibungkus transaksi `BEGIN ... ROLLBACK` penuh untuk menguji ketahanan lapisan validasi ketiga database tanpa mengotori data.
+- **Hasil Pengujian Constraint (10/10 Lolos)**:
+  - `BUKTI 1A LULUS`: NIK 15 digit ditolak CHECK constraint `pasien_nik_check`.
+  - `BUKTI 1B LULUS`: NIK dengan huruf ditolak CHECK constraint `pasien_nik_check`.
+  - `BUKTI 2 LULUS`: No SIP duplikat ditolak UNIQUE constraint `dokter_no_sip_key`.
+  - `BUKTI 3A LULUS`: Jam selesai <= jam mulai ditolak CHECK constraint `ck_jadwal_jam`.
+  - `BUKTI 3B LULUS`: Kuota <= 0 ditolak CHECK constraint `jadwal_praktik_kuota_check`.
+  - `BUKTI 4A LULUS`: Status antrean dilewati/batal tanpa alasan ditolak CHECK constraint `ck_antrean_alasan`.
+  - `BUKTI 4B LULUS`: Nomor antrean <= 0 ditolak CHECK constraint `antrean_nomor_antrean_check`.
+  - `BUKTI 5A LULUS`: Tanda vital sistolik di bawah batas fisiologis ditolak constraint `fn_valid_tanda_vital` (BR-18).
+  - `BUKTI 5B LULUS`: Suhu tubuh di atas 45°C ditolak constraint `fn_valid_tanda_vital` (BR-18).
+  - `BUKTI 6 LULUS`: Pendaftaran aktif ganda pada jadwal & tanggal sama ditolak UNIQUE PARTIAL INDEX `uq_kunjungan_aktif` (BR-02).
+- **Hasil Query Rekapitulasi Antrean**:
+  - Seluruh status (`menunggu`, `dipanggil`, `diperiksa`, `selesai`, `dilewati`, `batal`) terverifikasi `COCOK (LULUS)` terhadap target PRD §6.3.
+
+### 13.3 Butir 2: Master Test Suite Otomatis API (`scripts/uji-suite.ps1`)
+- Menguji alur utama PRD §5 (Langkah 2–10) dan seluruh pengujian keamanan tambahan di sisi API:
+  - **Login 6 Peran**: Pasien 1, Pasien 2, Petugas, Dokter 1, Dokter 2, Admin (Semua LULUS).
+  - **Alur PRD §5**:
+    - Langkah 2: Pendaftaran Pasien (LULUS)
+    - Langkah 3: Dasbor Pasien & Status Menunggu (LULUS)
+    - Langkah 4: Petugas Check-in menjadi Hadir (BR-05) (LULUS)
+    - Langkah 5: Petugas Memanggil Antrean (LULUS)
+    - Langkah 6: Dokter Mulai Periksa (BR-06, K14) (LULUS)
+    - Langkah 7a: Dokter Simpan Rekam Medis & Tindakan (BR-18) (LULUS)
+    - Langkah 7b: Dokter Selesaikan Kunjungan (BR-07, BR-09) (LULUS)
+    - Langkah 8: Isolasi Riwayat Medis Pribadi (Pasien lain terblokir) (LULUS)
+    - Langkah 9: Rekapitulasi Konsistensi Data Admin (LULUS)
+    - Langkah 10: Pekerjaan & Outbox Notifikasi (LULUS)
+  - **Pengujian Tambahan Keamanan & Integritas**:
+    - Pendaftaran Ganda Ditolak 409 (BR-02) (LULUS)
+    - Kirim Ulang Form Anti-Ganda Idempoten (LULUS)
+    - Pendaftaran Jadwal Kuota Penuh Ditolak 409 (BR-01) (LULUS)
+    - Akses Endpoint Terlindung Tanpa Login Ditolak 401 (LULUS)
+    - Manipulasi / Akses ID Pasien Lain Ditolak 403/404 (LULUS)
+    - Perubahan Role Pasien Sendiri Lewat Profil Ditolak 400 (LULUS)
+    - Direct Request Malformed Tanpa Frontend Ditolak 400 Zod (LULUS)
+    - Masukan Data Ekstrem / Tidak Valid Ditolak 400 (NIK & Vital) (LULUS)
+    - Registrasi & Penanganan Push Subscription VAPID (LULUS)
+- **Ringkasan Master Suite**: **25 dari 25 Kasus LULUS (100% PASSED, 0 FAILED)**.
+
 
 
 
