@@ -81,7 +81,7 @@ function ambilTokenDariRequest(request) {
   return "";
 }
 
-function ambilRefreshTokenDariRequest(request) {
+export function ambilRefreshTokenDariRequest(request) {
   if (request.cookies?.get) {
     return request.cookies.get(COOKIE_REFRESH_NAME)?.value || "";
   } else if (typeof request.headers?.get === "function") {

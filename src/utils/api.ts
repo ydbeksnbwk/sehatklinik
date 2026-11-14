@@ -31,11 +31,39 @@ export async function fetchApi<T>(
   }
 
   try {
-    const res = await fetch(url, {
+    let res = await fetch(url, {
       ...options,
       credentials: "same-origin",
       headers,
     });
+
+    // Jika 401 pada endpoint terproteksi (bukan endpoint autentikasi), coba refresh sesi 1x
+    const isAuthWhitelist =
+      path.includes("/api/auth/login") ||
+      path.includes("/api/auth/register") ||
+      path.includes("/api/auth/refresh") ||
+      path.includes("/login") ||
+      path.includes("/register");
+
+    if (res.status === 401 && !isAuthWhitelist && typeof window !== "undefined") {
+      try {
+        const refreshRes = await fetch("/api/auth/refresh", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (refreshRes.ok) {
+          // Ulangi request asli dengan cookie baru
+          res = await fetch(url, {
+            ...options,
+            credentials: "same-origin",
+            headers,
+          });
+        }
+      } catch {
+        // Biarkan fallback ke penanganan 401 reguler
+      }
+    }
 
     const json = await res.json().catch(() => ({}));
 
@@ -46,12 +74,6 @@ export async function fetchApi<T>(
       };
 
       if (res.status === 401) {
-        const isAuthWhitelist =
-          path.includes("/api/auth/login") ||
-          path.includes("/api/auth/register") ||
-          path.includes("/login") ||
-          path.includes("/register");
-
         if (!isAuthWhitelist && typeof window !== "undefined") {
           window.dispatchEvent(
             new CustomEvent("auth:unauthorized", {
@@ -150,6 +172,15 @@ export async function apiLogout(payload?: { endpoint?: string }) {
     method: "POST",
     body: payload ? JSON.stringify(payload) : undefined,
   });
+}
+
+export async function apiRefreshSession() {
+  return fetchApi<{ user: { id: string; email: string }; expiresIn: number }>(
+    "/api/auth/refresh",
+    {
+      method: "POST",
+    }
+  );
 }
 
 export async function apiUpdateProfil(payload: {

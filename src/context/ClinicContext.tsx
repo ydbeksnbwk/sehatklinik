@@ -20,6 +20,7 @@ import {
   apiTransisiKunjungan,
   apiSimpanPemeriksaan,
   apiLogout,
+  apiRefreshSession,
   apiGetPushKunci,
   apiSimpanPushSubscription,
   apiHapusPushSubscription,
@@ -502,6 +503,26 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [])
+
+  // Refresh otomatis sesi berkala (setiap 15 menit) saat pengguna aktif agar sesi tidak mati (PRD §8 & Butir 5)
+  useEffect(() => {
+    if (!currentUser?.id) return
+
+    const refreshInterval = setInterval(async () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        try {
+          const res = await apiRefreshSession()
+          if (res.error?.code === "HTTP_401" || (res as any).status === 401) {
+            handleSessionExpired()
+          }
+        } catch {
+          // Abaikan kegagalan refresh berkala sementara
+        }
+      }
+    }, 15 * 60 * 1000)
+
+    return () => clearInterval(refreshInterval)
+  }, [currentUser?.id])
 
   // Check browser Notification permission on mount
   useEffect(() => {
