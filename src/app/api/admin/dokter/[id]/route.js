@@ -4,7 +4,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { dokter, dokterLayanan, profiles } from "@/db/schema";
 import { HttpError, handleError, requireRole } from "@/lib/auth";
-import { UUID, str } from "@/lib/akses";
+import { UUID } from "@/lib/akses";
+import { skemaDokterUpdate } from "@/lib/validasi/dokter";
 
 async function _PATCH(request, { params }) {
   try {
@@ -13,48 +14,21 @@ async function _PATCH(request, { params }) {
     if (!UUID.test(id)) throw new HttpError(400, "id tidak valid");
 
     const b = await request.json().catch(() => ({}));
-    const set = {};
-    if (b.nama !== undefined) {
-      const nama = str(b.nama);
-      if (nama.length < 1 || nama.length > 150)
-        throw new HttpError(400, "Nama wajib diisi (maks 150 karakter)");
-      set.nama = nama;
-    }
-    if (b.spesialisasi !== undefined) {
-      if (!str(b.spesialisasi))
-        throw new HttpError(400, "Spesialisasi tidak boleh kosong");
-      set.spesialisasi = str(b.spesialisasi);
-    }
-    if (b.noSip !== undefined) {
-      if (!str(b.noSip))
-        throw new HttpError(400, "Nomor SIP tidak boleh kosong");
-      set.noSip = str(b.noSip);
-    }
-    if (b.deskripsi !== undefined) set.deskripsi = str(b.deskripsi) || null;
-    if (b.fotoPath !== undefined) set.fotoPath = str(b.fotoPath) || null;
-    if (b.aktif !== undefined) {
-      if (typeof b.aktif !== "boolean")
-        throw new HttpError(400, "aktif harus true atau false");
-      set.aktif = b.aktif;
-    }
+    const validated = skemaDokterUpdate.parse(b);
 
-    let layananIds = null;
-    if (b.layananIds !== undefined) {
-      layananIds = Array.isArray(b.layananIds)
-        ? [...new Set(b.layananIds)]
-        : [];
-      if (
-        layananIds.length === 0 ||
-        !layananIds.every((x) => typeof x === "string" && UUID.test(x))
-      ) {
-        throw new HttpError(
-          400,
-          "layananIds wajib berisi minimal satu id layanan yang valid",
-        );
-      }
-    }
-    if (Object.keys(set).length === 0 && !layananIds)
+    const set = {};
+    if (validated.nama !== undefined) set.nama = validated.nama;
+    if (validated.spesialisasi !== undefined) set.spesialisasi = validated.spesialisasi;
+    if (validated.noSip !== undefined) set.noSip = validated.noSip;
+    if (validated.deskripsi !== undefined) set.deskripsi = validated.deskripsi;
+    if (validated.fotoPath !== undefined) set.fotoPath = validated.fotoPath;
+    if (validated.aktif !== undefined) set.aktif = validated.aktif;
+
+    const layananIds = validated.layananIds;
+
+    if (Object.keys(set).length === 0 && !layananIds) {
       throw new HttpError(400, "Tidak ada data yang diubah");
+    }
 
     await db.transaction(async (tx) => {
       let d;

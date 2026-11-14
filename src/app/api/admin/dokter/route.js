@@ -4,10 +4,9 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { dokter, dokterLayanan, layanan } from "@/db/schema";
 import { HttpError, handleError, requireRole } from "@/lib/auth";
-import { UUID, str } from "@/lib/akses";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { skemaDokterCreate } from "@/lib/validasi/dokter";
+import { logger } from "@/lib/logger";
 
 // Semua dokter, termasuk yang nonaktif, beserta layanannya.
 async function _GET(request) {
@@ -50,33 +49,8 @@ async function _POST(request) {
   try {
     await requireRole(request, ["admin"]);
     const b = await request.json().catch(() => ({}));
-    const email = str(b.email).toLowerCase();
-    const password = typeof b.password === "string" ? b.password : "";
-    const nama = str(b.nama);
-    const spesialisasi = str(b.spesialisasi);
-    const noSip = str(b.noSip);
-    const deskripsi = str(b.deskripsi) || null;
-    const layananIds = Array.isArray(b.layananIds)
-      ? [...new Set(b.layananIds)]
-      : [];
-
-    if (!EMAIL.test(email))
-      throw new HttpError(400, "Format email tidak valid");
-    if (password.length < 8)
-      throw new HttpError(400, "Password minimal 8 karakter");
-    if (nama.length < 1 || nama.length > 150)
-      throw new HttpError(400, "Nama wajib diisi (maks 150 karakter)");
-    if (!spesialisasi) throw new HttpError(400, "Spesialisasi wajib diisi");
-    if (!noSip) throw new HttpError(400, "Nomor SIP wajib diisi");
-    if (
-      layananIds.length === 0 ||
-      !layananIds.every((x) => typeof x === "string" && UUID.test(x))
-    ) {
-      throw new HttpError(
-        400,
-        "layananIds wajib berisi minimal satu id layanan yang valid",
-      );
-    }
+    const validated = skemaDokterCreate.parse(b);
+    const { email, password, nama, spesialisasi, noSip, deskripsi, layananIds } = validated;
 
     // Trigger handle_new_user membaca app_metadata.role dan membuat baris profiles.
     const { data, error } = await admin.auth.admin.createUser({
@@ -87,12 +61,12 @@ async function _POST(request) {
       user_metadata: { display_name: nama, nama },
     });
     if (error) {
-      console.error(
-        "POST /api/admin/dokter createUser",
-        error.status,
-        error.code,
-        error.message,
-      );
+      logger.error({
+        msg: "POST /api/admin/dokter createUser error",
+        status: error.status,
+        code: error.code,
+        error: error.message,
+      });
       const dup = /already|registered|exists/i.test(error.message || "");
       const rincian =
         process.env.NODE_ENV !== "production" ? `: ${error.message}` : "";
@@ -106,7 +80,7 @@ async function _POST(request) {
     const hasil = await db.transaction(async (tx) => {
       const [d] = await tx
         .insert(dokter)
-        .values({ profileId: userId, nama, spesialisasi, noSip, deskripsi })
+        .values({ profileId: userId, nama, spesialisasi, noSip, deskripsi: deskripsi || null })
         .returning({
           id: dokter.id,
           nama: dokter.nama,

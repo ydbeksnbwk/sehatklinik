@@ -6,8 +6,7 @@ import { dokter, pasien, profiles } from "@/db/schema";
 import { HttpError, handleError, requireRole } from "@/lib/auth";
 import { denganRls } from "@/lib/rls";
 import { skemaProfilPasien } from "@/lib/validasi/pasien";
-
-const TELEPON = /^\+?[0-9]{8,15}$/;
+import { skemaProfilAdmin } from "@/lib/validasi/profil";
 
 async function _GET(request) {
   try {
@@ -60,8 +59,8 @@ async function _GET(request) {
   }
 }
 
-// Pasien: hanya alamat, telepon, kontakDarurat (nama, NIK, tanggal lahir,
-// jenis kelamin hanya-baca). Admin: nama dan telepon. Dokter/petugas: 403.
+// Hanya pasien dan admin yang boleh update lewat sini.
+// Dokter tidak punya profil yang diubah mandiri di tahap ini (perubahan via admin).
 async function _PATCH(request) {
   try {
     const { profile } = await requireRole(request);
@@ -70,12 +69,11 @@ async function _PATCH(request) {
       const b = await request.json().catch(() => ({}));
       const parsed = skemaProfilPasien.safeParse(b);
       if (!parsed.success) {
-        // Galat per field: path [] berarti field asing (nama, nik, role, dll.)
         const fields = {};
-        for (const e of parsed.error.issues) {
-          const key = String(e.path[0] ?? "profil");
-          fields[key] = fields[key] ? `${fields[key]}; ${e.message}` : e.message;
+        for (const issue of parsed.error.issues) {
+          fields[issue.path[0]] = issue.message;
         }
+        // Tambahkan peringatan jika pasien mencoba mengubah data identitas
         const asing = Object.keys(
           b && typeof b === "object" ? b : {}
         ).filter((k) => !["alamat", "telepon", "kontakDarurat"].includes(k));
@@ -154,22 +152,14 @@ async function _PATCH(request) {
     }
 
     const b = await request.json().catch(() => ({}));
-    const bersih = (v) => (typeof v === "string" ? v.trim() : undefined);
+    const validated = skemaProfilAdmin.parse(b);
 
-    const telepon = bersih(b.telepon);
-    if (telepon && !TELEPON.test(telepon)) {
-      throw new HttpError(400, "Telepon 8-15 digit, boleh diawali +");
-    }
-
-    const nama = bersih(b.nama);
-    if (nama !== undefined && (nama.length < 1 || nama.length > 150)) {
-      throw new HttpError(400, "Nama wajib diisi (maks 150 karakter)");
-    }
     const set = {};
-    if (nama !== undefined) set.nama = nama;
-    if (telepon !== undefined) set.telepon = telepon || null;
-    if (Object.keys(set).length === 0)
+    if (validated.nama !== undefined) set.nama = validated.nama;
+    if (validated.telepon !== undefined) set.telepon = validated.telepon || null;
+    if (Object.keys(set).length === 0) {
       throw new HttpError(400, "Tidak ada data yang diubah");
+    }
 
     const res = await denganRls(profile.id, (tx) =>
       tx
@@ -178,8 +168,9 @@ async function _PATCH(request) {
         .where(eq(profiles.id, profile.id))
         .returning({ nama: profiles.nama, telepon: profiles.telepon }),
     );
-    if (res.length === 0)
+    if (res.length === 0) {
       throw new HttpError(403, "Peran Anda tidak dapat mengubah data ini");
+    }
     return NextResponse.json({ data: res[0] });
   } catch (err) {
     return handleError(err, "PATCH /api/profil");

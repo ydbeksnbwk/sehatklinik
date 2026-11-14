@@ -4,29 +4,14 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { dokter, jadwalPraktik } from "@/db/schema";
 import { HttpError, handleError, requireRole } from "@/lib/auth";
-import { UUID, str } from "@/lib/akses";
-
-const JAM = /^([01]\d|2[0-3]):[0-5]\d$/;
+import { skemaJadwalCreate } from "@/lib/validasi/jadwal";
 
 async function _POST(request) {
   try {
     await requireRole(request, ["admin"]);
     const b = await request.json().catch(() => ({}));
-    const dokterId = str(b.dokterId);
-    const hari = Number(b.hari);
-    const jamMulai = str(b.jamMulai);
-    const jamSelesai = str(b.jamSelesai);
-    const kuota = Number(b.kuota);
-
-    if (!UUID.test(dokterId)) throw new HttpError(400, "dokterId tidak valid");
-    if (!Number.isInteger(hari) || hari < 0 || hari > 6)
-      throw new HttpError(400, "hari harus 0 (Minggu) sampai 6 (Sabtu)");
-    if (!JAM.test(jamMulai) || !JAM.test(jamSelesai))
-      throw new HttpError(400, "Format jam harus HH:MM");
-    if (jamSelesai <= jamMulai)
-      throw new HttpError(400, "Jam selesai harus setelah jam mulai");
-    if (!Number.isInteger(kuota) || kuota < 1)
-      throw new HttpError(400, "kuota harus bilangan bulat minimal 1");
+    const validated = skemaJadwalCreate.parse(b);
+    const { dokterId, hari, jamMulai, jamSelesai, kuota } = validated;
 
     const [d] = await db
       .select({ id: dokter.id })
@@ -48,11 +33,12 @@ async function _POST(request) {
         ),
       )
       .limit(1);
-    if (bentrok)
+    if (bentrok) {
       throw new HttpError(
         409,
         "Jam praktik bertabrakan dengan jadwal lain dokter ini",
       );
+    }
 
     const [j] = await db
       .insert(jadwalPraktik)

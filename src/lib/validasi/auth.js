@@ -16,6 +16,17 @@ const skemaPassword = z
   .regex(/[a-zA-Z]/, "Password harus mengandung huruf")
   .regex(/[0-9]/, "Password harus mengandung angka");
 
+export const skemaLogin = z.object({
+  email: z
+    .string({ required_error: "Email wajib diisi" })
+    .trim()
+    .min(1, "Email wajib diisi")
+    .regex(REGEX_EMAIL, "Format email tidak valid"),
+  password: z
+    .string({ required_error: "Password wajib diisi" })
+    .min(1, "Password wajib diisi"),
+});
+
 export const skemaRegistrasi = z.object({
   email: z
     .string({ required_error: "Email wajib diisi" })

@@ -5,8 +5,8 @@ import { db } from "@/db";
 import { jadwalPraktik } from "@/db/schema";
 import { HttpError, handleError, requireRole } from "@/lib/auth";
 import { UUID } from "@/lib/akses";
+import { skemaJadwalUpdate } from "@/lib/validasi/jadwal";
 
-const JAM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const jam = (t) => String(t).slice(0, 5);
 
 async function _PATCH(request, { params }) {
@@ -23,30 +23,25 @@ async function _PATCH(request, { params }) {
     if (!lama) throw new HttpError(404, "Jadwal tidak ditemukan");
 
     const b = await request.json().catch(() => ({}));
+    const validated = skemaJadwalUpdate.parse(b);
+
     const baru = {
-      hari: b.hari !== undefined ? Number(b.hari) : lama.hari,
+      hari: validated.hari !== undefined ? validated.hari : lama.hari,
       jamMulai:
-        b.jamMulai !== undefined
-          ? String(b.jamMulai).trim()
+        validated.jamMulai !== undefined
+          ? validated.jamMulai
           : jam(lama.jamMulai),
       jamSelesai:
-        b.jamSelesai !== undefined
-          ? String(b.jamSelesai).trim()
+        validated.jamSelesai !== undefined
+          ? validated.jamSelesai
           : jam(lama.jamSelesai),
-      kuota: b.kuota !== undefined ? Number(b.kuota) : lama.kuota,
-      aktif: b.aktif !== undefined ? b.aktif : lama.aktif,
+      kuota: validated.kuota !== undefined ? validated.kuota : lama.kuota,
+      aktif: validated.aktif !== undefined ? validated.aktif : lama.aktif,
     };
 
-    if (!Number.isInteger(baru.hari) || baru.hari < 0 || baru.hari > 6)
-      throw new HttpError(400, "hari harus 0 sampai 6");
-    if (!JAM.test(baru.jamMulai) || !JAM.test(baru.jamSelesai))
-      throw new HttpError(400, "Format jam harus HH:MM");
-    if (baru.jamSelesai <= baru.jamMulai)
+    if (baru.jamSelesai <= baru.jamMulai) {
       throw new HttpError(400, "Jam selesai harus setelah jam mulai");
-    if (!Number.isInteger(baru.kuota) || baru.kuota < 1)
-      throw new HttpError(400, "kuota harus bilangan bulat minimal 1");
-    if (typeof baru.aktif !== "boolean")
-      throw new HttpError(400, "aktif harus true atau false");
+    }
 
     if (baru.aktif) {
       const [bentrok] = await db
@@ -63,11 +58,12 @@ async function _PATCH(request, { params }) {
           ),
         )
         .limit(1);
-      if (bentrok)
+      if (bentrok) {
         throw new HttpError(
           409,
           "Jam praktik bertabrakan dengan jadwal lain dokter ini",
         );
+      }
     }
 
     const [j] = await db

@@ -5,23 +5,30 @@ import { db } from "@/db";
 import { notifikasi, pasien, profiles } from "@/db/schema";
 import { supabaseServer } from "@/lib/supabase";
 import { handleError, pasangCookieSesi } from "@/lib/auth";
+import { skemaLogin } from "@/lib/validasi/auth";
+import { logger } from "@/lib/logger";
 
 async function _POST(request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const email = typeof body.email === "string" ? body.email.trim() : "";
-    const password = typeof body.password === "string" ? body.password : "";
-    if (!email || !password) {
+    const parsed = skemaLogin.safeParse(body);
+    if (!parsed.success) {
+      const fields = {};
+      for (const issue of parsed.error.issues) {
+        fields[issue.path[0]] = issue.message;
+      }
       return NextResponse.json(
         {
           error: {
             code: "VALIDATION_ERROR",
             message: "Email dan password wajib diisi",
+            fields,
           },
         },
         { status: 400 }
       );
     }
+    const { email, password } = parsed.data;
 
     const { data, error } = await supabaseServer().auth.signInWithPassword({
       email,
@@ -133,7 +140,7 @@ async function _POST(request) {
         });
       }
     } catch (notifErr) {
-      console.warn("Gagal membuat notifikasi selamat datang login:", notifErr);
+      logger.warn({ msg: "Gagal membuat notifikasi selamat datang login", err: notifErr?.message });
     }
 
     // Pasang cookie httpOnly (tanpa mengekspos token mentah di body respons)
