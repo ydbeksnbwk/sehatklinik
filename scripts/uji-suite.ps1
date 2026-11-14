@@ -2,8 +2,12 @@
 # Master Suite Pengujian Otomatis Seluruh Alur API PRD §5 & Pengujian Tambahan
 # Sistem Informasi Klinik Kesehatan (Tim 7)
 
+param(
+    [string]$BaseUrl = "http://localhost:3000",
+    [int]$JedaMs = 0
+)
+
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-$BaseUrl = "http://localhost:3000"
 
 $global:totalLulus = 0
 $global:totalGagal = 0
@@ -42,6 +46,7 @@ function Login([string]$Email, [string]$Password, [string]$Ip = "10.99.1.1") {
 }
 
 function Kirim([string]$Method, [string]$Path, $Body = $null, [string]$Token = $null, [string]$Ip = "10.99.1.1") {
+    if ($JedaMs -gt 0) { Start-Sleep -Milliseconds $JedaMs }
     $headers = @{ "X-Forwarded-For" = $Ip }
     if ($Token) {
         $headers["Authorization"] = "Bearer $Token"
