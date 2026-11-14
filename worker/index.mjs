@@ -343,7 +343,9 @@ export const worker = new Worker(
   },
   {
     connection: redisConnection,
-    concurrency: 5,
+    concurrency: 2,
+    drainDelay: 10000, // Menunggu 10s saat antrean kosong untuk menghemat perintah Redis Upstash
+    stalledInterval: 60000, // Memeriksa stalled job tiap 60s
   }
 );
 

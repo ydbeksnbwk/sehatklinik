@@ -25,11 +25,12 @@ export async function middleware(request: NextRequest) {
     const method = request.method.toUpperCase();
     if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
       const origin = request.headers.get("origin");
-      const host = request.headers.get("host");
-      if (origin && host) {
+      const rawHost = request.headers.get("x-forwarded-host") || request.headers.get("host");
+      if (origin && rawHost) {
         try {
           const originHost = new URL(origin).host;
-          if (originHost !== host) {
+          const expectedHost = rawHost.split(",")[0].trim();
+          if (originHost !== expectedHost) {
             return NextResponse.json(
               { error: { code: "FORBIDDEN", message: "Akses CSRF ditolak: Origin tidak cocok" } },
               { status: 403 }

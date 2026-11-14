@@ -28,7 +28,11 @@ function getQueue() {
     const redis = new Redis(redisUrl, {
       maxRetriesPerRequest: 1, // Cepat fail-open bila Redis offline
       connectTimeout: 2000,
-      enableReadyCheck: false,
+      enableOfflineQueue: false,
+      lazyConnect: true,
+      retryStrategy() {
+        return null; // Jangan retry berkepanjangan pada request serverless
+      },
     });
 
     redis.on("error", (err) => {
