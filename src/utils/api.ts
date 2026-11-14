@@ -366,4 +366,56 @@ export async function apiGetPekerjaanNotifikasi(params?: {
   );
 }
 
+// Admin: Layanan
+export async function apiAdminGetLayanan(params?: {
+  q?: string;
+  aktif?: boolean | string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const query = new URLSearchParams();
+  if (params?.q) query.set("q", params.q);
+  if (params?.aktif !== undefined) query.set("aktif", String(params.aktif));
+  if (params?.page) query.set("page", String(params.page));
+  if (params?.pageSize) query.set("pageSize", String(params.pageSize));
+  const qStr = query.toString();
+  return fetchApi<any[]>(`/api/admin/layanan${qStr ? `?${qStr}` : ""}`);
+}
+
+export async function apiAdminTambahLayanan(payload: {
+  namaLayanan: string;
+  deskripsi?: string;
+  durasiMenit: number;
+  aktif?: boolean;
+}) {
+  return fetchApi<any>("/api/admin/layanan", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiAdminUpdateLayanan(
+  id: string,
+  payload: {
+    namaLayanan?: string;
+    deskripsi?: string;
+    durasiMenit?: number;
+    aktif?: boolean;
+  }
+) {
+  return fetchApi<any>(`/api/admin/layanan/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiAdminHapusLayanan(id: string) {
+  return fetchApi<{ id: string; aktif?: boolean; dinonaktifkan?: boolean; message: string }>(
+    `/api/admin/layanan/${id}`,
+    {
+      method: "DELETE",
+    }
+  );
+}
+
 

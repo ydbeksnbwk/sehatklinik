@@ -15,7 +15,15 @@ import GenderAvatar from "./GenderAvatar";
 import NotificationDrawer from "./NotificationDrawer";
 import { downloadRekapExcel } from "../utils/exportRekapExcel";
 import { printVisitSummary } from "../utils/printVisitSummary";
-import { apiUpdateProfil, apiGetPekerjaanNotifikasi, type PekerjaanNotifikasiItem } from "../utils/api";
+import {
+  apiUpdateProfil,
+  apiGetPekerjaanNotifikasi,
+  apiGetLayanan,
+  apiAdminTambahLayanan,
+  apiAdminUpdateLayanan,
+  apiAdminHapusLayanan,
+  type PekerjaanNotifikasiItem
+} from "../utils/api";
 import {
   DEMO_DATE,
   remaining,
@@ -2231,60 +2239,55 @@ export default function ClinicWorkspace({
             : [...d, value],
         );
       } else if (editor.type === "Layanan") {
-        if (
-          services.some(
-            (s) =>
-              s.name.toLowerCase() === get("name").toLowerCase() &&
-              s.id !== editor.id,
-          )
-        ) {
-          setError("Nama layanan sudah digunakan.");
-          return;
-        }
-        const existingSrv = editor.id
-          ? services.find((item) => item.id === editor.id)
-          : null;
-        const value: Service = {
-          id: editor.id || `s${Date.now()}`,
-          name: get("name"),
-          description: get("description"),
-          duration: Number(get("duration")),
-          active,
-          overview: existingSrv?.overview || get("description"),
-          steps: existingSrv?.steps || [
-            {
-              step: 1,
-              title: "Skrining Awal",
-              description: "Pemeriksaan tanda vital",
-            },
-            {
-              step: 2,
-              title: "Anamnesis",
-              description: "Konsultasi keluhan pasien",
-            },
-            {
-              step: 3,
-              title: "Pemeriksaan Fisik",
-              description: "Pemeriksaan organ terarah",
-            },
-            {
-              step: 4,
-              title: "Edukasi & Terapi",
-              description: "Penetapan resep dan rencana kontrol",
-            },
-          ],
-          cases: existingSrv?.cases || ["Pemeriksaan keluhan medis umum"],
-          facilities: existingSrv?.facilities || [
-            "Peralatan diagnostik medis terstandar",
-          ],
-          preparation:
-            existingSrv?.preparation || "Membawa kartu identitas resmi.",
+        const payload = {
+          namaLayanan: get("name"),
+          deskripsi: get("description") || undefined,
+          durasiMenit: Number(get("duration")) || 20,
+          aktif: active,
         };
-        setServices((s) =>
-          editor.id
-            ? s.map((item) => (item.id === editor.id ? value : item))
-            : [...s, value],
-        );
+        (async () => {
+          try {
+            if (editor.id && !editor.id.startsWith("s_local") && !editor.id.startsWith("s-dummy")) {
+              const res = await apiAdminUpdateLayanan(editor.id, payload);
+              if (res.error) throw new Error(res.error.message);
+            } else {
+              const res = await apiAdminTambahLayanan(payload);
+              if (res.error) throw new Error(res.error.message);
+            }
+            const updated = await apiGetLayanan();
+            if (updated.data) {
+              const rows = updated.data;
+              setServices((prev) =>
+                rows.map((l: any) => {
+                  const existing = prev.find((p) => p.id === l.id);
+                  return {
+                    id: l.id,
+                    name: l.namaLayanan,
+                    description: l.deskripsi || "",
+                    duration: l.durasiMenit || 20,
+                    active: l.aktif ?? true,
+                    overview: l.deskripsi || existing?.overview || "",
+                    steps: existing?.steps || [
+                      { step: 1, title: "Registrasi & Skrining", description: "Pemeriksaan tanda vital" },
+                      { step: 2, title: "Konsultasi Dokter", description: "Pemeriksaan dan tindakan" },
+                    ],
+                    cases: existing?.cases || ["Pemeriksaan umum"],
+                    facilities: existing?.facilities || ["Ruang periksa terstandar"],
+                    preparation: existing?.preparation || "Bawa kartu identitas resmi.",
+                  };
+                })
+              );
+            }
+            setEditor(null);
+            setError("");
+            notify("Data layanan berhasil disimpan ke database.");
+          } catch (err: any) {
+            setError(err.message || "Gagal menyimpan layanan.");
+          } finally {
+            setBusy(false);
+          }
+        })();
+        return;
       } else if (editor.type === "Jadwal") {
         if (get("start") >= get("end")) {
           setError("Jam selesai harus setelah jam mulai.");
@@ -2896,12 +2899,57 @@ export default function ClinicWorkspace({
                     </div>
                   )}
 
-                  <button
-                    className="secondary"
-                    onClick={() => showEditor("Layanan", s.id)}
-                  >
-                    Edit Layanan & Alur
-                  </button>
+                  <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
+                    <button
+                      type="button"
+                      className="secondary"
+                      style={{ flex: 1 }}
+                      onClick={() => showEditor("Layanan", s.id)}
+                    >
+                      Edit Layanan
+                    </button>
+                    <button
+                      type="button"
+                      className="danger"
+                      style={{ padding: "6px 12px", fontSize: "12px" }}
+                      onClick={async () => {
+                        if (!confirm(`Hapus atau nonaktifkan layanan "${s.name}"?`)) return;
+                        try {
+                          const res = await apiAdminHapusLayanan(s.id);
+                          if (res.error) throw new Error(res.error.message);
+                          notify(res.data?.message || "Layanan berhasil diproses.");
+                          const updated = await apiGetLayanan();
+                          if (updated.data) {
+                            const rows = updated.data;
+                            setServices((prev) =>
+                              rows.map((l: any) => {
+                                const existing = prev.find((p) => p.id === l.id);
+                                return {
+                                  id: l.id,
+                                  name: l.namaLayanan,
+                                  description: l.deskripsi || "",
+                                  duration: l.durasiMenit || 20,
+                                  active: l.aktif ?? true,
+                                  overview: l.deskripsi || existing?.overview || "",
+                                  steps: existing?.steps || [
+                                    { step: 1, title: "Registrasi & Skrining", description: "Pemeriksaan tanda vital" },
+                                    { step: 2, title: "Konsultasi Dokter", description: "Pemeriksaan dan tindakan" },
+                                  ],
+                                  cases: existing?.cases || ["Pemeriksaan umum"],
+                                  facilities: existing?.facilities || ["Ruang periksa terstandar"],
+                                  preparation: existing?.preparation || "Bawa kartu identitas resmi.",
+                                };
+                              })
+                            );
+                          }
+                        } catch (err: any) {
+                          notify(err.message || "Gagal memproses layanan.");
+                        }
+                      }}
+                    >
+                      Hapus
+                    </button>
+                  </div>
                 </section>
               ))}
             </div>
