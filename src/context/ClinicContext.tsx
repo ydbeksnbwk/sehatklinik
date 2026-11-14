@@ -504,7 +504,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Refresh otomatis sesi berkala (setiap 15 menit) saat pengguna aktif agar sesi tidak mati (PRD §8 & Butir 5)
+  // Refresh otomatis sesi berkala (setiap 15 menit) saat pengguna aktif.
   useEffect(() => {
     if (!currentUser?.id) return
 
