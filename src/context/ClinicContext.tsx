@@ -442,6 +442,67 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   const [editingProfile, setEditingProfile] = useState(false)
   const [initialized, setInitialized] = useState(false)
 
+  const currentUserRef = React.useRef(currentUser)
+  useEffect(() => {
+    currentUserRef.current = currentUser
+  }, [currentUser])
+
+  const handleSessionExpired = () => {
+    if (typeof window !== "undefined") {
+      if (sessionStorage.getItem("sehatklinik_session_expired")) return
+      sessionStorage.setItem("sehatklinik_session_expired", "1")
+      sessionStorage.setItem("sehatklinik_toast", "Sesi berakhir, silakan masuk lagi")
+    }
+
+    setCurrentUser(null)
+    setRole("Publik")
+    setVisits([])
+    setNotifications([])
+    setNotificationJobs([])
+    setPushSubscriptionActive(false)
+    setPushSubscriptionError(null)
+
+    notify("Sesi berakhir, silakan masuk lagi")
+
+    if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+      window.location.href = "/login"
+    }
+  }
+
+  // Tangani 401 dari endpoint terproteksi
+  useEffect(() => {
+    const handleUnauthorizedEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ path: string }>
+      const targetPath = customEvent.detail?.path || ""
+      if (
+        targetPath.includes("/api/auth/login") ||
+        targetPath.includes("/api/auth/register") ||
+        targetPath.includes("/login") ||
+        targetPath.includes("/register")
+      ) {
+        return
+      }
+      if (currentUserRef.current) {
+        handleSessionExpired()
+      }
+    }
+
+    window.addEventListener("auth:unauthorized", handleUnauthorizedEvent)
+    return () => window.removeEventListener("auth:unauthorized", handleUnauthorizedEvent)
+  }, [])
+
+  // Tampilkan toast dari sessionStorage saat halaman dimuat (mis. redirect dari sesi berakhir)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedToast = sessionStorage.getItem("sehatklinik_toast")
+      if (storedToast) {
+        sessionStorage.removeItem("sehatklinik_toast")
+        sessionStorage.removeItem("sehatklinik_session_expired")
+        notify(storedToast)
+      }
+    }
+  }, [])
+
   // Check browser Notification permission on mount
   useEffect(() => {
     const supported = typeof window !== "undefined" && "Notification" in window
@@ -530,6 +591,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
 
     async function loadBackendData() {
       setLoadingData(true)
+      let currentRole: Role | null = null
       try {
         // 1. Cek sesi login aktif via cookie httpOnly
         try {
@@ -537,6 +599,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           if (meRes.data) {
             const u = meRes.data
             const roleCap = (u.role.charAt(0).toUpperCase() + u.role.slice(1)) as Role
+            currentRole = roleCap
             const authUser: ClinicUser = {
               id: u.id,
               name: u.nama || u.email?.split("@")[0] || "Pengguna",
@@ -717,32 +780,36 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           })
         }
 
-        // Muat data pasien dari backend
-        try {
-          const pRes = await apiGetPasien()
-          if (pRes.data && pRes.data.length > 0) {
-            const dbPatients: Patient[] = pRes.data.map((p: any) => ({
-              id: p.id || p.noRekamMedis || p.no_rekam_medis,
-              name: p.nama,
-              phone: p.telepon || "-",
-              birth: p.tanggalLahir || p.tanggal_lahir || "2000-01-01",
-              gender: (p.jenisKelamin === "P" || p.jenis_kelamin === "P") ? "Perempuan" : "Laki-laki",
-              address: p.alamat || "-",
-              emergency: p.kontakDarurat || p.kontak_darurat || "-",
-              account: Boolean(p.profileId || p.profile_id),
-              nik: p.nik || "-",
-            }))
-            setPatients((prev) => {
-              const currentP = prev.find((item) => item.account && item.id.length > 10)
-              if (currentP && !dbPatients.some((p) => p.id === currentP.id)) {
-                return [currentP, ...dbPatients]
-              }
-              return dbPatients
-            })
-          }
-        } catch {}
+        // Muat data pasien dari backend HANYA untuk peran Petugas dan Admin
+        if (currentRole === "Petugas" || currentRole === "Admin") {
+          try {
+            const pRes = await apiGetPasien()
+            if (pRes.data && pRes.data.length > 0) {
+              const dbPatients: Patient[] = pRes.data.map((p: any) => ({
+                id: p.id || p.noRekamMedis || p.no_rekam_medis,
+                name: p.nama,
+                phone: p.telepon || "-",
+                birth: p.tanggalLahir || p.tanggal_lahir || "2000-01-01",
+                gender: (p.jenisKelamin === "P" || p.jenis_kelamin === "P") ? "Perempuan" : "Laki-laki",
+                address: p.alamat || "-",
+                emergency: p.kontakDarurat || p.kontak_darurat || "-",
+                account: Boolean(p.profileId || p.profile_id),
+                nik: p.nik || "-",
+              }))
+              setPatients((prev) => {
+                const currentP = prev.find((item) => item.account && item.id.length > 10)
+                if (currentP && !dbPatients.some((p) => p.id === currentP.id)) {
+                  return [currentP, ...dbPatients]
+                }
+                return dbPatients
+              })
+            }
+          } catch {}
+        }
 
-        await fetchVisits()
+        if (currentRole) {
+          await fetchVisits()
+        }
       } catch (err) {
         console.warn("Gagal memuat data dari backend:", err)
       } finally {
@@ -751,26 +818,49 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     }
 
     loadBackendData()
+  }, [])
 
-    // Polling antrean setiap 5 detik dengan proteksi visibilitychange (K5 & Dokumen Induk §8.5)
-    const timer = setInterval(() => {
+  // Polling antrean setiap 5 detik HANYA saat currentUser aktif (PRD §8.5 & K5)
+  // Polling TIDAK BOLEH berjalan bila currentUser kosong.
+  useEffect(() => {
+    if (!currentUser?.id) return
+
+    let active = true
+
+    const runPoll = async () => {
+      if (!active || !currentUserRef.current) return
       if (typeof document !== "undefined" && document.visibilityState === "visible") {
-        fetchVisits()
+        try {
+          const res = await apiGetKunjungan()
+          if (!active) return
+          if (res.error?.code === "HTTP_401" || (res as any).status === 401) {
+            handleSessionExpired()
+            return
+          }
+          if (res.data) {
+            const dbVisits: Visit[] = res.data.map(konversiKunjungan)
+            setVisits(dbVisits)
+          }
+        } catch {
+          // Abaikan kesalahan jaringan sementara
+        }
       }
-    }, 5000)
+    }
 
+    const timer = setInterval(runPoll, 5000)
     const onVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        fetchVisits()
+        runPoll()
       }
     }
 
     document.addEventListener("visibilitychange", onVisibilityChange)
     return () => {
+      active = false
       clearInterval(timer)
       document.removeEventListener("visibilitychange", onVisibilityChange)
     }
-  }, [])
+  }, [currentUser?.id])
 
   // Dialog ESC listener
   useEffect(() => {

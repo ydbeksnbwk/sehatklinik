@@ -44,6 +44,23 @@ export async function fetchApi<T>(
         code: `HTTP_${res.status}`,
         message: json?.message || `Terjadi kesalahan (HTTP ${res.status})`,
       };
+
+      if (res.status === 401) {
+        const isAuthWhitelist =
+          path.includes("/api/auth/login") ||
+          path.includes("/api/auth/register") ||
+          path.includes("/login") ||
+          path.includes("/register");
+
+        if (!isAuthWhitelist && typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("auth:unauthorized", {
+              detail: { path, status: 401 },
+            })
+          );
+        }
+      }
+
       return { error: err };
     }
 
