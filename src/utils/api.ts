@@ -87,11 +87,12 @@ export async function fetchApi<T>(
     }
 
     return json;
-  } catch (netErr: any) {
+  } catch (netErr: unknown) {
+    const message = netErr instanceof Error ? netErr.message : "Gagal terhubung ke server";
     return {
       error: {
         code: "NETWORK_ERROR",
-        message: netErr?.message || "Gagal terhubung ke server",
+        message,
       },
     };
   }
@@ -485,9 +486,9 @@ export async function apiAdminUpdateProfilKlinik(payload: {
   latitude?: number;
   longitude?: number;
   kontak?: string;
-  jamOperasional?: any;
+  jamOperasional?: string | Record<string, unknown> | null;
 }) {
-  return fetchApi<any>("/api/admin/profil-klinik", {
+  return fetchApi<{ message: string; profil: unknown }>("/api/admin/profil-klinik", {
     method: "PUT",
     body: JSON.stringify(payload),
   });
