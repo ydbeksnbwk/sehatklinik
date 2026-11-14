@@ -128,9 +128,10 @@ export async function apiLogin(payload: { email: string; password: string }) {
   });
 }
 
-export async function apiLogout() {
+export async function apiLogout(payload?: { endpoint?: string }) {
   return fetchApi<{ message: string }>("/api/auth/logout", {
     method: "POST",
+    body: payload ? JSON.stringify(payload) : undefined,
   });
 }
 

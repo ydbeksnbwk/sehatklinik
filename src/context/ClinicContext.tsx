@@ -1911,16 +1911,20 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
+      let currentEndpoint: string | undefined
       if (typeof window !== "undefined" && "serviceWorker" in navigator) {
         const reg = await navigator.serviceWorker.getRegistration("/sw.js").catch(() => null)
         const sub = await reg?.pushManager?.getSubscription().catch(() => null)
         if (sub?.endpoint) {
+          currentEndpoint = sub.endpoint
           await apiHapusPushSubscription({ endpoint: sub.endpoint }).catch(() => null)
           await sub.unsubscribe().catch(() => null)
         }
       }
-      await apiLogout()
+      await apiLogout(currentEndpoint ? { endpoint: currentEndpoint } : undefined)
     } catch {}
+    setPushSubscriptionActive(false)
+    setPushSubscriptionError(null)
     setCurrentUser(null)
     setRole("Publik")
     setNotifications([])
