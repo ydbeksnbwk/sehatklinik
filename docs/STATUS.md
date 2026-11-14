@@ -1,6 +1,6 @@
 # Status Proyek Sistem Informasi Klinik Kesehatan (Tim 7)
 
-Terakhir diperbarui: 14 November 2026 (Tahap 5 Selesai: Seed Idempoten, Suite Uji, & Dokumentasi Lengkap)
+Terakhir diperbarui: 14 November 2026 (Tahap 6 Bagian A: Kesiapan Deployment Selesai)
 
 ---
 
@@ -18,7 +18,7 @@ Terakhir diperbarui: 14 November 2026 (Tahap 5 Selesai: Seed Idempoten, Suite Uj
 | **Tahap 1D** | Endpoint admin & upload foto dokter Supabase Storage | **SELESAI** | CRUD `/api/admin/layanan`, `/api/admin/pengguna` (BR-11), profil klinik, rekap DB, foto dokter (magic bytes), `/api/petugas/pasien/[id]` terhubung UI |
 | **Tahap 1E** | Rate limiting, Pino logger, format galat global | **SELESAI** | Pembungkus apiHandler global, Zod utang K7, rate limit Redis/memori fail-open, Pino redaksi rahasia, audit rahasia & ESLint non-interaktif |
 | **Tahap 5** | Seed database, verifikasi demo, dokumentasi | **SELESAI** | Seed PRD §6.3 idempoten sejati, verifikasi SQL constraint, suite API 25/25 lulus, README, ARSITEKTUR, ERD, BUKTI_VERIFIKASI, FITUR |
-| **Tahap 6** | Deployment & pengujian produksi | **BELUM** | - |
+| **Tahap 6** | Deployment & pengujian produksi | **SEBAGIAN (BAGIAN A SELESAI)** | Bagian A (Kesiapan kode, worker:prod, middleware x-forwarded-host, Redis fail-open, pembersihan outbox, DEPLOYMENT.md, uji-deploy.ps1, UJI_DEPLOY.md) selesai; Bagian B menunggu eksekusi deploy Vercel & worker oleh pengguna |
 
 ---
 
@@ -629,6 +629,69 @@ Pengujian dilakukan pada build produksi Next.js 15 (`npm run start` di port 3000
 - `npx tsc --noEmit` : **LULUS** (0 kesalahan tipe).
 - `npm run lint` : **LULUS** (exit code 0).
 - `Test-Path` seluruh berkas dokumentasi yang direferensikan : **12/12 BERKAS TERSEDIA (100% TRUE)**.
+
+---
+
+## 15. Pelaksanaan Tahap 6 BAGIAN A: Kesiapan Deployment Multi-Platform (per 14 November 2026)
+
+### 15.1 Butir 1: Skrip Worker Produksi Cloud (`package.json` & `worker/index.mjs`)
+- Menambahkan skrip `"worker:prod": "node worker/index.mjs"` pada `package.json` yang membaca environment variables langsung dari container platform hosting (Railway/Render) tanpa bergantung pada file lokal `--env-file=.env.local`.
+- Skrip lokal `"worker": "node --env-file=.env.local worker/index.mjs"` tetap dipertahankan untuk pengujian lokal pengembang.
+- Meningkatkan ketegasan validasi environment pada `worker/index.mjs`: mencantumkan nama variabel yang kurang (`DATABASE_URL`, `REDIS_URL`, `VAPID_KEYS`) dan instruksi penanganannya sebelum keluar secara fatal.
+
+### 15.2 Butir 2: Hasil Pemeriksaan Kesiapan Arsitektur Produksi (2a s.d. 2f)
+- **2a. Pemeriksaan Origin & Reverse Proxy (`src/middleware.ts:28-32`)**:
+  - *Sebelumnya*: Memeriksa `originHost !== host` langsung dari header `host`.
+  - *Perbaikan*: Menambahkan pembacaan header `x-forwarded-host` (`const rawHost = request.headers.get("x-forwarded-host") || request.headers.get("host")`) dengan normalisasi koma/port. Perubahan ini menjamin request mutasi (POST/PUT/PATCH/DELETE) di domain `*.vercel.app` via HTTPS tidak mengalami penolakan palsu 403 Forbidden akibat rewrite host proxy internal.
+- **2b. Keamanan Cookie Sesi (`src/lib/auth.js:40-48`)**:
+  - `httpOnly: true` (terpasang).
+  - `secure: process.env.NODE_ENV === "production"` (otomatis bernilai `true` di lingkungan Vercel production).
+  - `sameSite: "lax"`, `path: "/"`.
+  - Tidak terdapat hardcoded atribut domain `localhost`, sehingga browser mengikat cookie secara otomatis ke host deployment.
+- **2c. Sifat Inlining Kunci Publik VAPID**:
+  - `NEXT_PUBLIC_VAPID_PUBLIC_KEY` disubstitusikan saat build Next.js. Wajib diisi pada Vercel Dashboard sebelum build/deploy dijalankan.
+- **2d. Ketahanan Koneksi Redis Serverless (`src/lib/push-queue.js:28-34` & `src/lib/rate-limit.js`)**:
+  - Ditambahkan opsi `enableOfflineQueue: false`, `lazyConnect: true`, dan `retryStrategy: () => null`. Menjamin jika Redis offline/lambat, request pendaftaran kunjungan langsung melanjutkan (fail-open) tanpa menahan serverless function Vercel.
+- **2e. Optimasi BullMQ Worker untuk Kuota Upstash (`worker/index.mjs:339-346`)**:
+  - Dikonfigurasikan `concurrency: 2`, `drainDelay: 10000` (jeda 10 detik saat antrean kosong), dan `stalledInterval: 60000` (cek stalled job tiap 60 detik). Mencegah habisnya kuota harian 10.000 perintah pada Upstash Free Tier.
+- **2f. Database Connection Pooler Supabase**:
+  - *Vercel*: Menggunakan Transaction Pooler (Port **6543** dengan host `pooler.supabase.com`).
+  - *Worker*: Menggunakan Session Pooler (Port **5432** dengan host `pooler.supabase.com`), mencegah kegagalan `ENOTFOUND` IPv6 pada platform container yang belum mendukung rute IPv6 keluar.
+
+### 15.3 Butir 3: Pembersihan Outbox & Langganan Mock Sebelum Deploy (`scripts/bersihkan-outbox.mjs`)
+- Dijalankan dengan guard `SEED_ALLOW=1`.
+- **Hasil Dry-Run**:
+  - Target outbox kedaluwarsa non-seed (> 1 hari): 0 baris.
+  - Sisa uji non-seed hari ini: 63 baris.
+  - Target subscription mock aktif: 1 baris (`uji-suite-temp-410`).
+- **Hasil Eksekusi Real**:
+  - Menandai 63 notifikasi sisa uji menjadi `push_status = 'gagal'` dengan pesan `Dibersihkan sebelum deploy (data uji lama)`.
+  - Menonaktifkan 1 langganan push mock/uji menjadi `aktif = false`.
+  - Rekap `push_status` sesudah pembersihan:
+    * `menunggu`: tepat 2 baris (hanya milik akun seed `c0000000-0000-0000-0000-000000000001` dan `...0002`).
+    * `berhasil`: 1 baris (milik seed).
+    * `gagal`: 131 baris (termasuk data lama & uji yang telah dibersihkan secara aman tanpa `DELETE`).
+  - Daftar langganan aktif tersisa 1 (peramban Chrome pengguna asli).
+
+### 15.4 Butir 4: Panduan Deployment Bertahap (`docs/DEPLOYMENT.md`)
+- Panduan lengkap deployment terdistribusi: Supabase (migrasi, seed, bucket foto-dokter), Upstash Redis (`rediss://`), Vercel (region Singapore `sin1`), dan Railway/Render (`npm run worker:prod`).
+- Tabel environment variables per platform dengan penanda rahasia `[SENSITIVE]`.
+- Panduan pemecahan masalah (troubleshooting) untuk 5 kendala utama: Pooler 6543 vs 5432, Direct IPv6, CSRF Origin 403, Web Push HTTPS, dan penggantian VAPID key.
+
+### 15.5 Butir 5: Skrip Uji Verifikasi Produksi (`scripts/uji-deploy.ps1`)
+- Menerima parameter `-BaseUrl` (dan `-JedaMs`).
+- Menguji keamanan tanpa login:
+  - `GET /api/health` -> HTTP 200 `{ status: "ok", db: "connected" }`.
+  - `GET /api/test-db-error` -> HTTP 404 (membuktikan rute uji telah tereliminasi dari build produksi).
+  - `/admin` tanpa sesi -> HTTP 307 Redirect ke `/login`.
+  - Pemeriksaan `Set-Cookie`: bendera `HttpOnly`, `SameSite=Lax`, dan `Secure` (saat HTTPS).
+- Memanggil master test suite `scripts/uji-suite.ps1` terhadap URL deployment dengan jeda antar-request.
+
+### 15.6 Butir 6: Lembar Kerja Checklist Uji Manual Alur 10 Langkah (`docs/UJI_DEPLOY.md`)
+- Format checklist pengujian manual alur 10 langkah PRD §5 (Langkah 1–10) dengan kolom status dan catatan penguji.
+- Tabel checklist pengujian ketahanan khusus: Web Push lintas 2 browser terpisah (Chrome & Edge), interaksi klik notifikasi (deep linking), worker dihentikan lalu dinyalakan kembali (stop/start resilience), dan pemutusan koneksi Redis (fail-open).
+- Status Tahap 6 Bagian B: Menunggu eksekusi deployment ke Vercel dan Railway/Render oleh pengguna.
+
 
 
 
