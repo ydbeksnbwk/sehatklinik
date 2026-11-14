@@ -16,7 +16,7 @@ Terakhir diperbarui: 13 November 2026 (Verifikasi Backend Tahap 1C)
 | **Tahap 3** | Service Worker sw.js & Web Push VAPID API | **SELESAI** | Sesuai PRD §9, endpoint `/api/push/kunci` dan `/api/push/langganan` aktif |
 | **Tahap 4** | Background Worker BullMQ + Redis | **SELESAI** | Sesuai PRD §9, pipeline antrean `notifikasi` outbox dan background processor |
 | **Tahap 1D** | Endpoint admin & upload foto dokter Supabase Storage | **SELESAI** | CRUD `/api/admin/layanan`, `/api/admin/pengguna` (BR-11), profil klinik, rekap DB, foto dokter (magic bytes), `/api/petugas/pasien/[id]` terhubung UI |
-| **Tahap 1E** | Rate limiting, Pino logger, format galat global | **BELUM** | - |
+| **Tahap 1E** | Rate limiting, Pino logger, format galat global | **SELESAI** | Pembungkus apiHandler global, Zod utang K7, rate limit Redis/memori fail-open, Pino redaksi rahasia, audit rahasia & ESLint non-interaktif |
 | **Tahap 5** | Seed database, verifikasi demo, dokumentasi | **BELUM** | - |
 | **Tahap 6** | Deployment & pengujian produksi | **BELUM** | - |
 
@@ -410,5 +410,55 @@ Tahap 1D mencakup kelengkapan endpoint manajemen Admin dan operasional koreksi i
    - Penegakan integritas database: NIK duplikat ditangkap via constraint violation 23505 dan dikembalikan sebagai HTTP 409 Conflict.
    - Transaksi database: update tabel `pasien` dan otomatis sinkronisasi ke tabel `profiles` pasien jika pasien telah memiliki akun login.
    - Terhubung ke UI "Edit administrasi" pasien di `ClinicWorkspace.tsx`.
+
+---
+
+## 12. Rincian dan Verifikasi Tahap 1E (per 14 November 2026)
+
+Tahap 1E mengokohkan ketahanan, standarisasi error handling, keamanan data, dan observabilitas backend Next.js:
+
+1. **Butir 1 - Pembungkus Handler Global (`src/lib/api-handler.js`)**:
+   - Fungsi pembungkus `apiHandler(handler)` membungkus seluruh 33 route handler di bawah `src/app/api/**/route.js`.
+   - Mengintegrasikan requestId unik via `crypto.randomUUID()`, pelacakan durasi eksekusi, dan logging otomatis permintaan/tanggapan.
+   - Menstandarkan penanganan exception via `handleApiError`:
+     - `ZodError` -> HTTP 400/422 dengan struktur seragam `{ error: { code: 'VALIDATION_ERROR', message, fields } }`.
+     - `HttpError` -> status HTTP dan kode error terpetakan sesuai kebutuhan domain.
+     - Constraint violation database (PostgreSQL 23505 duplikat -> 409, 23503 relasi asing -> 400).
+     - Error tak terduga (misal sintaks SQL salah, query crash) -> HTTP 500 generik `{ error: { code: 'INTERNAL', message: 'Terjadi kesalahan internal server' } }` tanpa membocorkan stack trace, query SQL, atau detail koneksi internal ke client.
+
+2. **Butir 2 - Validasi Skema Zod Utang K7 (`src/lib/validasi/`)**:
+   - Berkas skema terpisah per domain dengan pesan kesalahan dalam bahasa Indonesia:
+     - `src/lib/validasi/auth.js`: `skemaLogin` (email wajib format valid, password minimal 6 karakter).
+     - `src/lib/validasi/dokter.js`: `skemaDokterCreate` & `skemaDokterUpdate`.
+     - `src/lib/validasi/jadwal.js`: `skemaJadwalCreate` & `skemaJadwalUpdate` (validasi jam selesai > jam mulai, hari 0-6, kuota positif).
+     - `src/lib/validasi/profil.js`: `skemaProfilAdmin` & `skemaProfilPasien`.
+   - Diintegrasikan ke endpoint `admin/dokter`, `admin/jadwal`, `auth/login`, dan `api/profil` tanpa mengubah kontrak respons API yang telah ada.
+
+3. **Butir 3 - Rate Limiting Terdistribusi (`src/lib/rate-limit.js`)**:
+   - Perlindungan anti-brute-force dan DDoS pada endpoint kritis:
+     - `POST /api/auth/login`: 5 percobaan per menit per kombinasi IP + email.
+     - `POST /api/auth/register`: 3 pendaftaran per jam per IP.
+     - `POST /api/kunjungan`: 10 pendaftaran kunjungan per menit per IP.
+     - `POST /api/push/langganan`: 15 permintaan per menit per IP.
+   - Menggunakan Redis atomic sliding window (`ioredis`) bila `REDIS_URL` terkonfigurasi, atau in-memory map bila tidak.
+   - Menerapkan arsitektur **fail-open** ber-log (Pino error log): jika koneksi Redis terputus atau salah konfigurasi, request bisnis tetap dilayani normal agar ketersediaan layanan tidak terganggu.
+   - Mengembalikan HTTP 429 `{ error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Terlalu banyak permintaan' } }` disertai header HTTP `Retry-After`.
+
+4. **Butir 4 - Observabilitas & Logging Terstruktur Pino (`src/lib/logger.js`)**:
+   - Logger Pino terkonfigurasi dengan redaksi otomatis (censoring) pada field sensitif: `password`, `token`, `cookie`, `authorization`, `DATABASE_URL`, `REDIS_URL`, `p256dh`, dan `auth`.
+   - Seluruh 8 pemanggilan `console.log` / `console.error` lama di `src/app/api` telah dimigrasikan ke pemanggilan logger terstruktur (`git grep -n "console\." src/app/api` menghasilkan 0 baris).
+
+5. **Butir 5 - Kualitas Kode, Audit Rahasia, & CI Pipeline**:
+   - Konfigurasi ESLint non-interaktif `.eslintrc.json` berbasis `eslint-config-next` dan `eslint@8.57.1`. Perintah `npm run lint` berjalan otomatis dan lulus tanpa error interaktif.
+   - Pengurangan tipe `any` pada `src/utils/api.ts` menjadi tipe eksplisit dan `unknown`.
+   - Audit keamanan rahasia:
+     - `git grep -n -i "service_role\|VAPID_PRIVATE\|DATABASE_URL" -- src`: Nol kebocoran rahasia di berkas client/browser; seluruh kredensial terisolasi di sisi server.
+     - Pemeriksaan `.next/static`: Nol kebocoran variabel `VAPID_PRIVATE_KEY` di bundle aset statis browser.
+   - Disediakan pipeline `.github/workflows/ci.yml` untuk memvalidasi linting, TypeScript (`tsc`), dan Next.js build pada setiap push/PR secara otomatis tanpa secret.
+
+6. **Butir 6 - Dokumentasi Konfigurasi Memori Build `next.config.ts`**:
+   - Konfigurasi `experimental: { workerThreads: false, cpus: 1 }` (yang berasal dari commit `c97d29e`) dipertahankan untuk menjamin stabilitas build lokal di lingkungan Windows.
+   - *Alasan Teknis*: Lingkungan Windows pengembang lokal rentan mengalami lonjakan konsumsi memori (OOM), IPC deadlock antar-worker Next.js, dan transient file-locking pada direktori `.next` ketika worker threads dijalankan secara multi-threaded paralel. Menetapkan `workerThreads: false` dan `cpus: 1` membatasi proses kompilasi Next.js menjadi sekuensial pada thread utama Node.js, menjaga penggunaan RAM tetap stabil, mencegah heap exhaustion, dan memastikan perintah `npm run build` berhasil 100% secara deterministik.
+
 
 
