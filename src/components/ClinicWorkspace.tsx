@@ -202,6 +202,8 @@ export default function ClinicWorkspace({
     notificationDrawerOpen,
     setNotificationDrawerOpen,
     webPushPermission,
+    pushSubscriptionActive,
+    pushSubscriptionError,
     requestWebPushPermission,
     notificationJobs,
     retryNotificationJob,
@@ -781,14 +783,15 @@ export default function ClinicWorkspace({
     </div>
   );
   const webPushBanner = (audience: "Pasien" | "Petugas" | "Dokter") => {
-    const stateClass =
-      webPushPermission === "granted"
-        ? "is-granted"
-        : webPushPermission === "denied"
-          ? "is-denied"
-          : webPushPermission === "unsupported"
-            ? "is-unsupported"
-            : "";
+    const isGrantedAndActive = webPushPermission === "granted" && pushSubscriptionActive;
+    const isGrantedFailed = webPushPermission === "granted" && !pushSubscriptionActive;
+    const stateClass = isGrantedAndActive
+      ? "is-granted"
+      : isGrantedFailed || webPushPermission === "denied"
+        ? "is-denied"
+        : webPushPermission === "unsupported"
+          ? "is-unsupported"
+          : "";
     return (
       <section
         className={`ws-push-banner ${stateClass}`}
@@ -797,9 +800,9 @@ export default function ClinicWorkspace({
         <div className="ws-push-info">
           <span
             className={`icon-tile ${
-              webPushPermission === "granted"
+              isGrantedAndActive
                 ? "green"
-                : webPushPermission === "denied"
+                : isGrantedFailed || webPushPermission === "denied"
                   ? "amber"
                   : webPushPermission === "unsupported"
                     ? "teal"
@@ -809,7 +812,8 @@ export default function ClinicWorkspace({
             <Icon
               name={
                 webPushPermission === "denied" ||
-                webPushPermission === "unsupported"
+                webPushPermission === "unsupported" ||
+                isGrantedFailed
                   ? "help"
                   : "bell"
               }
@@ -817,7 +821,7 @@ export default function ClinicWorkspace({
             />
           </span>
           <div>
-            {webPushPermission === "granted" ? (
+            {isGrantedAndActive ? (
               <>
                 <h4>Notifikasi Web Push Aktif</h4>
                 <p>
@@ -826,6 +830,14 @@ export default function ClinicWorkspace({
                     ? "dan pendaftaran pasien baru"
                     : "dan status kunjungan Anda"}{" "}
                   akan dikirim secara langsung.
+                </p>
+              </>
+            ) : isGrantedFailed ? (
+              <>
+                <h4>Gagal Menghubungkan Notifikasi Push</h4>
+                <p>
+                  Izin browser telah diberikan, namun pendaftaran langganan ke server belum berhasil:{" "}
+                  {pushSubscriptionError || "Koneksi ke server gagal"}. Silakan klik &ldquo;Coba Lagi&rdquo;.
                 </p>
               </>
             ) : webPushPermission === "denied" ? (
@@ -879,8 +891,18 @@ export default function ClinicWorkspace({
               Aktifkan Notifikasi
             </button>
           )}
-          {webPushPermission === "granted" && (
+          {isGrantedAndActive && (
             <span className="ws-push-badge">Izin Diberikan · Aktif</span>
+          )}
+          {isGrantedFailed && (
+            <button
+              type="button"
+              className="primary"
+              onClick={() => requestWebPushPermission()}
+            >
+              <Icon name="bell" size={16} />
+              Coba Lagi
+            </button>
           )}
           {webPushPermission === "denied" && (
             <span className="ws-push-badge is-denied">Izin Diblokir</span>

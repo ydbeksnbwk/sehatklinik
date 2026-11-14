@@ -16,6 +16,7 @@ export default function NotificationDrawer() {
     markNotificationAsRead,
     markAllNotificationsAsRead,
     webPushPermission,
+    pushSubscriptionActive,
     requestWebPushPermission,
     setSelected,
     navigate,
@@ -267,11 +268,11 @@ export default function NotificationDrawer() {
                   width: "8px",
                   height: "8px",
                   borderRadius: "50%",
-                  background: webPushPermission === "granted" ? "#10b981" : "#f59e0b",
+                  background: (webPushPermission === "granted" && pushSubscriptionActive) ? "#10b981" : "#f59e0b",
                   display: "inline-block",
                 }}
               />
-              {webPushPermission === "granted"
+              {(webPushPermission === "granted" && pushSubscriptionActive)
                 ? "Notifikasi Browser Aktif"
                 : "Notifikasi Browser Belum Aktif"}
             </span>

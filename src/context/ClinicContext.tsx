@@ -179,6 +179,9 @@ type ClinicContextType = {
   notificationDrawerOpen: boolean
   setNotificationDrawerOpen: (val: boolean) => void
   webPushPermission: "default" | "granted" | "denied" | "unsupported"
+  pushSubscriptionActive: boolean
+  pushSubscriptionError: string | null
+  syncPushSubscription: (user?: ClinicUser | null, silent?: boolean) => Promise<boolean>
   loadingData: boolean
   /** True setelah GET /api/auth/me selesai dicek; dipakai agar UI tidak berkedip antara login dan dasbor. */
   authChecked: boolean
@@ -403,6 +406,8 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   const [webPushPermission, setWebPushPermission] = useState<
     "default" | "granted" | "denied" | "unsupported"
   >("default")
+  const [pushSubscriptionActive, setPushSubscriptionActive] = useState<boolean>(false)
+  const [pushSubscriptionError, setPushSubscriptionError] = useState<string | null>(null)
 
   const [mobile, setMobile] = useState(false)
   const [search, setSearch] = useState("")
@@ -973,6 +978,101 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     return outputArray
   }
 
+  const syncPushSubscription = async (
+    user?: ClinicUser | null,
+    silent: boolean = true
+  ): Promise<boolean> => {
+    if (
+      typeof window === "undefined" ||
+      !("Notification" in window) ||
+      !("serviceWorker" in navigator) ||
+      !("PushManager" in window)
+    ) {
+      setWebPushPermission("unsupported")
+      setPushSubscriptionActive(false)
+      setPushSubscriptionError("Browser tidak mendukung Web Push.")
+      return false
+    }
+
+    const currentPermission = Notification.permission
+    setWebPushPermission(currentPermission)
+    if (currentPermission !== "granted") {
+      setPushSubscriptionActive(false)
+      return false
+    }
+
+    const effectiveUser = user ?? currentUser
+    if (!effectiveUser?.id) {
+      setPushSubscriptionActive(false)
+      return false
+    }
+
+    try {
+      const reg = await navigator.serviceWorker.register("/sw.js")
+      await navigator.serviceWorker.ready
+
+      let sub = await reg.pushManager.getSubscription()
+      if (!sub) {
+        const keyRes = await apiGetPushKunci().catch(() => null)
+        const vapidKey =
+          keyRes?.data?.vapidPublicKey || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+        if (!vapidKey) {
+          throw new Error("Kunci publik VAPID belum dikonfigurasi di server.")
+        }
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidKey),
+        })
+      }
+
+      const subJSON = sub.toJSON()
+      if (!sub.endpoint || !subJSON.keys?.p256dh || !subJSON.keys?.auth) {
+        throw new Error("Kredensial langganan push peramban tidak lengkap.")
+      }
+
+      const res = await apiSimpanPushSubscription({
+        endpoint: sub.endpoint,
+        p256dh: subJSON.keys.p256dh,
+        auth: subJSON.keys.auth,
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+      })
+
+      if (res.error) {
+        throw new Error(res.error.message || "Gagal menyimpan langganan push di server.")
+      }
+
+      setPushSubscriptionActive(true)
+      setPushSubscriptionError(null)
+      return true
+    } catch (err: any) {
+      console.warn("Gagal sinkronisasi Web Push:", err)
+      setPushSubscriptionActive(false)
+      const errMsg = err?.message || "Gagal mendaftarkan langganan push."
+      setPushSubscriptionError(errMsg)
+      if (!silent) {
+        notify(errMsg)
+      }
+      return false
+    }
+  }
+
+  // Sinkronisasi otomatis Web Push setiap kali sesi login terbentuk atau berganti akun
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setPushSubscriptionActive(false)
+      setPushSubscriptionError(null)
+      return
+    }
+
+    if (
+      typeof window !== "undefined" &&
+      "Notification" in window &&
+      Notification.permission === "granted"
+    ) {
+      syncPushSubscription(currentUser, true)
+    }
+  }, [currentUser?.id])
+
   const requestWebPushPermission = async () => {
     if (
       typeof window === "undefined" ||
@@ -988,37 +1088,8 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       const permission = await Notification.requestPermission()
       setWebPushPermission(permission)
       if (permission === "granted") {
-        try {
-          const reg = await navigator.serviceWorker.register("/sw.js")
-          await navigator.serviceWorker.ready
-
-          const keyRes = await apiGetPushKunci().catch(() => null)
-          const vapidKey =
-            keyRes?.data?.vapidPublicKey || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-
-          if (!vapidKey) {
-            notify("Kunci publik VAPID belum dikonfigurasi di server.")
-            return
-          }
-
-          let sub = await reg.pushManager.getSubscription()
-          if (!sub) {
-            sub = await reg.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: urlBase64ToUint8Array(vapidKey),
-            })
-          }
-
-          const subJSON = sub.toJSON()
-          if (sub.endpoint && subJSON.keys?.p256dh && subJSON.keys?.auth) {
-            await apiSimpanPushSubscription({
-              endpoint: sub.endpoint,
-              p256dh: subJSON.keys.p256dh,
-              auth: subJSON.keys.auth,
-              userAgent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
-            })
-          }
-
+        const ok = await syncPushSubscription(currentUser, false)
+        if (ok) {
           notify("Notifikasi Web Push browser berhasil diaktifkan!")
           const welcomeTitle = "Selamat Datang di SehatKlinik"
           const userName = currentUser?.name || "Pengguna"
@@ -1033,11 +1104,9 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
             },
             true
           )
-        } catch (subErr) {
-          console.warn("Gagal meregistrasi Web Push Subscription ke server:", subErr)
-          notify("Gagal mendaftarkan langganan notifikasi push ke server.")
         }
       } else if (permission === "denied") {
+        setPushSubscriptionActive(false)
         notify("Izin notifikasi ditolak. Anda dapat mengaktifkannya di pengaturan izin situs browser.")
       }
     } catch {
@@ -1905,6 +1974,9 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         notificationDrawerOpen,
         setNotificationDrawerOpen,
         webPushPermission,
+        pushSubscriptionActive,
+        pushSubscriptionError,
+        syncPushSubscription,
         unreadCount,
         addNotification,
         markNotificationAsRead,
