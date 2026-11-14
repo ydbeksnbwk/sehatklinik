@@ -1,7 +1,5 @@
 import { apiHandler } from "@/lib/api-handler";
-// src/app/api/auth/register/route.js
-// POST /api/auth/register - registrasi akun pasien baru
-// Validasi Zod, akun via Supabase Auth Admin di server, profil via Drizzle.
+// POST /api/auth/register - registrasi akun pasien baru (validasi Zod, Auth Admin, Drizzle).
 
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";

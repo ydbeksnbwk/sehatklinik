@@ -1,10 +1,5 @@
 import { apiHandler } from "@/lib/api-handler";
-// src/app/api/kunjungan/route.js
-// GET /api/kunjungan - daftar kunjungan (dengan otorisasi per peran)
-// POST /api/kunjungan - pendaftaran kunjungan baru (pasien daring / petugas walk-in)
-//
-// CATATAN KONTRAK: Frontend (ClinicContext.tsx) memanggil endpoint ini.
-// URL dipertahankan sesuai permintaan prompt Tahap 1A.
+// Endpoint daftar dan pendaftaran kunjungan (GET/POST) dengan otorisasi peran.
 
 import { and, asc, desc, eq, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
