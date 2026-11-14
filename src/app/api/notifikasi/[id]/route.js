@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { notifikasi } from "@/db/schema";
@@ -5,7 +6,7 @@ import { HttpError, handleError, requireRole } from "@/lib/auth";
 import { UUID } from "@/lib/akses";
 import { denganRls } from "@/lib/rls";
 
-export async function PATCH(request, { params }) {
+async function _PATCH(request, { params }) {
   try {
     const { profile } = await requireRole(request);
     const { id } = await params;
@@ -26,3 +27,5 @@ export async function PATCH(request, { params }) {
     return handleError(err, "PATCH /api/notifikasi/[id]");
   }
 }
+
+export const PATCH = apiHandler(_PATCH, { route: "PATCH /api/notifikasi/[id]" });

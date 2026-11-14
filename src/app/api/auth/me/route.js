@@ -1,10 +1,11 @@
+import { apiHandler } from "@/lib/api-handler";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { pasien } from "@/db/schema";
 import { requireRole, handleError } from "@/lib/auth";
 
-export async function GET(request) {
+async function _GET(request) {
   try {
     const { user, profile } = await requireRole(request);
 
@@ -44,3 +45,5 @@ export async function GET(request) {
     return handleError(err, "GET /api/auth/me");
   }
 }
+
+export const GET = apiHandler(_GET, { route: "GET /api/auth/me" });

@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -31,7 +32,7 @@ const PenggunaCreateSchema = z.object({
     .nullable(),
 });
 
-export async function GET(request) {
+async function _GET(request) {
   try {
     await requireRole(request, ["admin"]);
 
@@ -124,7 +125,7 @@ export async function GET(request) {
   }
 }
 
-export async function POST(request) {
+async function _POST(request) {
   const admin = supabaseAdmin();
   let createdAuthUserId = null;
   try {
@@ -212,3 +213,6 @@ export async function POST(request) {
     return handleError(err, "POST /api/admin/pengguna");
   }
 }
+
+export const GET = apiHandler(_GET, { route: "GET /api/admin/pengguna" });
+export const POST = apiHandler(_POST, { route: "POST /api/admin/pengguna" });

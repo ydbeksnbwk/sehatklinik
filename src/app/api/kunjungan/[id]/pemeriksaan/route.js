@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 // src/app/api/kunjungan/[id]/pemeriksaan/route.js
 // PUT /api/kunjungan/[id]/pemeriksaan
 // Simpan/perbarui hasil pemeriksaan dan tindakan (BR-09, BR-10, BR-18)
@@ -17,7 +18,7 @@ function galat(code, message, fields, status) {
   );
 }
 
-export async function PUT(request, { params }) {
+async function _PUT(request, { params }) {
   try {
     // Next.js 15: params harus di-await
     const { id: kunjunganId } = await params;
@@ -61,3 +62,5 @@ export async function PUT(request, { params }) {
     return handleError(err, "PUT /api/kunjungan/[id]/pemeriksaan");
   }
 }
+
+export const PUT = apiHandler(_PUT, { route: "PUT /api/kunjungan/[id]/pemeriksaan" });

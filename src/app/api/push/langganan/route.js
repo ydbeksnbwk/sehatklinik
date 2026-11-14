@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -16,7 +17,7 @@ const BatalLanggananSchema = z.object({
   endpoint: z.string().trim().url("Format endpoint subscription tidak valid"),
 });
 
-export async function POST(request) {
+async function _POST(request) {
   try {
     const { profile } = await requireRole(request);
     const body = await request.json().catch(() => ({}));
@@ -75,7 +76,7 @@ export async function POST(request) {
   }
 }
 
-export async function DELETE(request) {
+async function _DELETE(request) {
   try {
     const { profile } = await requireRole(request);
     const body = await request.json().catch(() => ({}));
@@ -127,3 +128,6 @@ export async function DELETE(request) {
     return handleError(err, "DELETE /api/push/langganan");
   }
 }
+
+export const POST = apiHandler(_POST, { route: "POST /api/push/langganan" });
+export const DELETE = apiHandler(_DELETE, { route: "DELETE /api/push/langganan" });

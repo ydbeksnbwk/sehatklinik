@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 // src/app/api/kunjungan/[id]/transition/route.js
 // POST /api/kunjungan/[id]/transition
 // State machine antrean & kunjungan (BR-05, 06, 07, 08, 09, 15, K11, K12, K14)
@@ -17,7 +18,7 @@ function galat(code, message, fields, status) {
   );
 }
 
-export async function POST(request, { params }) {
+async function _POST(request, { params }) {
   try {
     // Next.js 15: params harus di-await
     const { id: kunjunganId } = await params;
@@ -70,3 +71,5 @@ export async function POST(request, { params }) {
     return handleError(err, "POST /api/kunjungan/[id]/transition");
   }
 }
+
+export const POST = apiHandler(_POST, { route: "POST /api/kunjungan/[id]/transition" });

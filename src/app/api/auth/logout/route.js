@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
 import { hapusCookieSesi, handleError, getCurrentUser } from "@/lib/auth";
@@ -5,7 +6,7 @@ import { db } from "@/db";
 import { pushSubscriptions } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 
-export async function POST(request) {
+async function _POST(request) {
   try {
     // Menonaktifkan hanya subscription perangkat ini bila endpoint dikirim (PRD §7.4 & Butir 3)
     try {
@@ -45,3 +46,5 @@ export async function POST(request) {
     return handleError(err, "POST /api/auth/logout");
   }
 }
+
+export const POST = apiHandler(_POST, { route: "POST /api/auth/logout" });

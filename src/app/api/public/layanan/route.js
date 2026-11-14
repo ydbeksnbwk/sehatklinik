@@ -1,10 +1,11 @@
+import { apiHandler } from "@/lib/api-handler";
 import { and, asc, count, eq, ilike, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { layanan } from "@/db/schema";
 import { handleError } from "@/lib/auth";
 import { sebagaiAnon } from "@/lib/rls";
 
-export async function GET(request) {
+async function _GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const q = (searchParams.get("q") || "").trim().replace(/[\\%_]/g, "\\$&");
@@ -61,3 +62,5 @@ export async function GET(request) {
     return handleError(err, "GET /api/public/layanan");
   }
 }
+
+export const GET = apiHandler(_GET, { route: "GET /api/public/layanan" });

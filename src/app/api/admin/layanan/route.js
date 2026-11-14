@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 import { and, asc, count, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -20,7 +21,7 @@ const LayananCreateSchema = z.object({
   aktif: z.boolean().optional().default(true),
 });
 
-export async function GET(request) {
+async function _GET(request) {
   try {
     await requireRole(request, ["admin"]);
 
@@ -82,7 +83,7 @@ export async function GET(request) {
   }
 }
 
-export async function POST(request) {
+async function _POST(request) {
   try {
     await requireRole(request, ["admin"]);
 
@@ -134,3 +135,6 @@ export async function POST(request) {
     return handleError(err, "POST /api/admin/layanan");
   }
 }
+
+export const GET = apiHandler(_GET, { route: "GET /api/admin/layanan" });
+export const POST = apiHandler(_POST, { route: "POST /api/admin/layanan" });

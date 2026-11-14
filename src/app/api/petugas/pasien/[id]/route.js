@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -50,7 +51,7 @@ const KoreksiPasienSchema = z
   })
   .strict();
 
-export async function PATCH(request, { params }) {
+async function _PATCH(request, { params }) {
   try {
     // Kebutuhan K10 & PRD: Hanya petugas yang boleh mengoreksi data pasien
     await requireRole(request, ["petugas"]);
@@ -143,3 +144,5 @@ export async function PATCH(request, { params }) {
     return handleError(err, "PATCH /api/petugas/pasien/[id]");
   }
 }
+
+export const PATCH = apiHandler(_PATCH, { route: "PATCH /api/petugas/pasien/[id]" });

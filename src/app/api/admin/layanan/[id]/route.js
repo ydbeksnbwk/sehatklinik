@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 import { and, count, eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -23,7 +24,7 @@ const LayananUpdateSchema = z.object({
   aktif: z.boolean().optional(),
 });
 
-export async function GET(request, { params }) {
+async function _GET(request, { params }) {
   try {
     await requireRole(request, ["admin"]);
     const { id } = await params;
@@ -48,7 +49,7 @@ export async function GET(request, { params }) {
   }
 }
 
-export async function PATCH(request, { params }) {
+async function _PATCH(request, { params }) {
   try {
     await requireRole(request, ["admin"]);
     const { id } = await params;
@@ -124,7 +125,7 @@ export async function PATCH(request, { params }) {
   }
 }
 
-export async function DELETE(request, { params }) {
+async function _DELETE(request, { params }) {
   try {
     await requireRole(request, ["admin"]);
     const { id } = await params;
@@ -189,3 +190,7 @@ export async function DELETE(request, { params }) {
     return handleError(err, "DELETE /api/admin/layanan/[id]");
   }
 }
+
+export const GET = apiHandler(_GET, { route: "GET /api/admin/layanan/[id]" });
+export const PATCH = apiHandler(_PATCH, { route: "PATCH /api/admin/layanan/[id]" });
+export const DELETE = apiHandler(_DELETE, { route: "DELETE /api/admin/layanan/[id]" });

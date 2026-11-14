@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -5,7 +6,7 @@ import { notifikasi, pasien, profiles } from "@/db/schema";
 import { supabaseServer } from "@/lib/supabase";
 import { handleError, pasangCookieSesi } from "@/lib/auth";
 
-export async function POST(request) {
+async function _POST(request) {
   try {
     const body = await request.json().catch(() => ({}));
     const email = typeof body.email === "string" ? body.email.trim() : "";
@@ -147,3 +148,5 @@ export async function POST(request) {
     return handleError(err, "POST /api/auth/login");
   }
 }
+
+export const POST = apiHandler(_POST, { route: "POST /api/auth/login" });

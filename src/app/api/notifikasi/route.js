@@ -1,10 +1,11 @@
+import { apiHandler } from "@/lib/api-handler";
 import { and, count, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { notifikasi } from "@/db/schema";
 import { handleError, requireRole } from "@/lib/auth";
 import { denganRls } from "@/lib/rls";
 
-export async function GET(request) {
+async function _GET(request) {
   try {
     const { profile, user } = await requireRole(request);
     const userId = profile?.id || user?.id;
@@ -52,7 +53,7 @@ export async function GET(request) {
 }
 
 // Tandai semua notifikasi milik pengguna sebagai sudah dibaca.
-export async function PATCH(request) {
+async function _PATCH(request) {
   try {
     const { profile, user } = await requireRole(request);
     const userId = profile?.id || user?.id;
@@ -73,3 +74,6 @@ export async function PATCH(request) {
     return handleError(err, "PATCH /api/notifikasi");
   }
 }
+
+export const GET = apiHandler(_GET, { route: "GET /api/notifikasi" });
+export const PATCH = apiHandler(_PATCH, { route: "PATCH /api/notifikasi" });

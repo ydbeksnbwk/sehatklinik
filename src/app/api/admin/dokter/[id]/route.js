@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
@@ -5,7 +6,7 @@ import { dokter, dokterLayanan, profiles } from "@/db/schema";
 import { HttpError, handleError, requireRole } from "@/lib/auth";
 import { UUID, str } from "@/lib/akses";
 
-export async function PATCH(request, { params }) {
+async function _PATCH(request, { params }) {
   try {
     await requireRole(request, ["admin"]);
     const { id } = await params;
@@ -98,3 +99,5 @@ export async function PATCH(request, { params }) {
     return handleError(err, "PATCH /api/admin/dokter/[id]");
   }
 }
+
+export const PATCH = apiHandler(_PATCH, { route: "PATCH /api/admin/dokter/[id]" });

@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 // src/app/api/auth/register/route.js
 // POST /api/auth/register - registrasi akun pasien baru
 // Validasi Zod, akun via Supabase Auth Admin di server, profil via Drizzle.
@@ -24,7 +25,7 @@ function keFormatInternasional(t) {
   return digit.startsWith("0") ? `62${digit.slice(1)}` : digit;
 }
 
-export async function POST(request) {
+async function _POST(request) {
   try {
     const body = await request.json().catch(() => ({}));
 
@@ -199,3 +200,5 @@ export async function POST(request) {
     return handleError(err, "POST /api/auth/register");
   }
 }
+
+export const POST = apiHandler(_POST, { route: "POST /api/auth/register" });

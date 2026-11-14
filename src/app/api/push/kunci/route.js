@@ -1,6 +1,7 @@
+import { apiHandler } from "@/lib/api-handler";
 import { NextResponse } from "next/server";
 
-export async function GET() {
+async function _GET() {
   const publicKey =
     process.env.VAPID_PUBLIC_KEY || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   if (!publicKey) {
@@ -18,3 +19,5 @@ export async function GET() {
     data: { vapidPublicKey: publicKey },
   });
 }
+
+export const GET = apiHandler(_GET, { route: "GET /api/push/kunci" });

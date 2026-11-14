@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 // src/app/api/admin/pekerjaan-notifikasi/route.js
 // GET /api/admin/pekerjaan-notifikasi
 // Endpoint pemantauan pekerjaan Web Push (PRD §7.5 & Butir 4)
@@ -16,7 +17,7 @@ const QuerySchema = z.object({
   status: z.enum(["semua", "menunggu", "berhasil", "gagal"]).default("semua"),
 });
 
-export async function GET(request) {
+async function _GET(request) {
   try {
     // 1. Otorisasi server-side: hanya admin dan petugas (dokter & pasien ditolak 403)
     await requireRole(request, ["admin", "petugas"]);
@@ -95,3 +96,5 @@ export async function GET(request) {
     return handleError(err, "GET /api/admin/pekerjaan-notifikasi");
   }
 }
+
+export const GET = apiHandler(_GET, { route: "GET /api/admin/pekerjaan-notifikasi" });

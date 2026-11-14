@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { dokter, kunjungan, layanan, pasien, pemeriksaan } from "@/db/schema";
@@ -7,7 +8,7 @@ import { denganRls } from "@/lib/rls";
 
 // Pasien: riwayat miliknya. Dokter: hanya pasien yang pernah ia tangani.
 // Petugas/admin: semua pasien. Dokter, petugas, dan admin wajib mengirim ?pasienId=
-export async function GET(request) {
+async function _GET(request) {
   try {
     const { profile } = await requireRole(request);
     const { searchParams } = new URL(request.url);
@@ -64,3 +65,5 @@ export async function GET(request) {
     return handleError(err, "GET /api/riwayat");
   }
 }
+
+export const GET = apiHandler(_GET, { route: "GET /api/riwayat" });

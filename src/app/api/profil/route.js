@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
@@ -8,7 +9,7 @@ import { skemaProfilPasien } from "@/lib/validasi/pasien";
 
 const TELEPON = /^\+?[0-9]{8,15}$/;
 
-export async function GET(request) {
+async function _GET(request) {
   try {
     const { user, profile } = await requireRole(request);
     const data = {
@@ -61,7 +62,7 @@ export async function GET(request) {
 
 // Pasien: hanya alamat, telepon, kontakDarurat (nama, NIK, tanggal lahir,
 // jenis kelamin hanya-baca). Admin: nama dan telepon. Dokter/petugas: 403.
-export async function PATCH(request) {
+async function _PATCH(request) {
   try {
     const { profile } = await requireRole(request);
 
@@ -185,4 +186,6 @@ export async function PATCH(request) {
   }
 }
 
-export const PUT = PATCH;
+export const GET = apiHandler(_GET, { route: "GET /api/profil" });
+export const PATCH = apiHandler(_PATCH, { route: "PATCH /api/profil" });
+export const PUT = apiHandler(_PATCH, { route: "PUT /api/profil" });

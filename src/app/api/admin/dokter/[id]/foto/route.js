@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
@@ -49,7 +50,7 @@ function getMimeAndExtFromMagicBytes(buffer) {
   return null;
 }
 
-export async function POST(request, { params }) {
+async function _POST(request, { params }) {
   try {
     await requireRole(request, ["admin"]);
     const { id } = await params;
@@ -142,3 +143,5 @@ export async function POST(request, { params }) {
     return handleError(err, "POST /api/admin/dokter/[id]/foto");
   }
 }
+
+export const POST = apiHandler(_POST, { route: "POST /api/admin/dokter/[id]/foto" });

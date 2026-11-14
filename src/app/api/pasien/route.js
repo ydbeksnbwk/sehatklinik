@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 // src/app/api/pasien/route.js
 // GET /api/pasien  - daftar pasien (petugas/admin, dengan paginasi dan pencarian)
 // POST /api/pasien - tambah pasien baru walk-in (petugas)
@@ -19,7 +20,7 @@ function galat(code, message, fields, status) {
 
 // GET /api/pasien?q=...&page=1&pageSize=10
 // Hanya petugas dan admin
-export async function GET(request) {
+async function _GET(request) {
   try {
     const { profile } = await requireRole(request, ["petugas", "admin"]);
 
@@ -38,7 +39,7 @@ export async function GET(request) {
 
 // POST /api/pasien - tambah pasien baru
 // Hanya petugas
-export async function POST(request) {
+async function _POST(request) {
   try {
     const { profile } = await requireRole(request, ["petugas"]);
 
@@ -74,3 +75,6 @@ export async function POST(request) {
     return handleError(err, "POST /api/pasien");
   }
 }
+
+export const GET = apiHandler(_GET, { route: "GET /api/pasien" });
+export const POST = apiHandler(_POST, { route: "POST /api/pasien" });

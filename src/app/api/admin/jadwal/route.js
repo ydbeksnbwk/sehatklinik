@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 import { and, eq, gt, lt } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
@@ -7,7 +8,7 @@ import { UUID, str } from "@/lib/akses";
 
 const JAM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-export async function POST(request) {
+async function _POST(request) {
   try {
     await requireRole(request, ["admin"]);
     const b = await request.json().catch(() => ({}));
@@ -62,3 +63,5 @@ export async function POST(request) {
     return handleError(err, "POST /api/admin/jadwal");
   }
 }
+
+export const POST = apiHandler(_POST, { route: "POST /api/admin/jadwal" });

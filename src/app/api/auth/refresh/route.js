@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
 import {
@@ -7,7 +8,7 @@ import {
   HttpError,
 } from "@/lib/auth";
 
-export async function POST(request) {
+async function _POST(request) {
   try {
     const refreshToken = ambilRefreshTokenDariRequest(request);
     if (!refreshToken) {
@@ -44,3 +45,5 @@ export async function POST(request) {
     return handleError(err, "POST /api/auth/refresh");
   }
 }
+
+export const POST = apiHandler(_POST, { route: "POST /api/auth/refresh" });

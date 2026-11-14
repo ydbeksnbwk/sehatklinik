@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 import { asc, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
@@ -9,7 +10,7 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Semua dokter, termasuk yang nonaktif, beserta layanannya.
-export async function GET(request) {
+async function _GET(request) {
   try {
     await requireRole(request, ["admin"]);
     const rows = await db.select().from(dokter).orderBy(asc(dokter.nama));
@@ -43,7 +44,7 @@ export async function GET(request) {
 }
 
 // Membuat akun login dokter + data dokter + relasi layanan.
-export async function POST(request) {
+async function _POST(request) {
   let userId = null;
   const admin = supabaseAdmin();
   try {
@@ -123,3 +124,6 @@ export async function POST(request) {
     return handleError(err, "POST /api/admin/dokter");
   }
 }
+
+export const GET = apiHandler(_GET, { route: "GET /api/admin/dokter" });
+export const POST = apiHandler(_POST, { route: "POST /api/admin/dokter" });

@@ -135,52 +135,8 @@ export async function requireRole(request, roles = []) {
   return ctx;
 }
 
-export function handleError(err, label) {
-  if (err instanceof HttpError) {
-    const code = err.kode || kodeDefault(err.status);
-    const errorBody = {
-      code,
-      message: err.message,
-    };
-    if (err.fields) {
-      errorBody.fields = err.fields;
-    }
-    return NextResponse.json({ error: errorBody }, { status: err.status });
-  }
+import { handleApiError } from "@/lib/api-handler";
 
-  const code = err?.code || err?.cause?.code;
-  if (code === "P0001") {
-    const msg =
-      err?.cause?.message ||
-      err?.message ||
-      "Aksi ditolak oleh aturan database";
-    return NextResponse.json(
-      { error: { code: "ATURAN_DATABASE_DITOLAK", message: msg } },
-      { status: 409 }
-    );
-  }
-  if (code === "23505") {
-    return NextResponse.json(
-      { error: { code: "DUPLIKAT", message: "Data bentrok dengan data yang sudah ada" } },
-      { status: 409 }
-    );
-  }
-  if (["23503", "23514", "22P02", "22007"].includes(code)) {
-    return NextResponse.json(
-      { error: { code: "DATA_TIDAK_VALID", message: "Data tidak valid" } },
-      { status: 400 }
-    );
-  }
-
-  console.error(label, err);
-  const body = {
-    error: {
-      code: "INTERNAL",
-      message: "Terjadi kesalahan server",
-    },
-  };
-  if (process.env.NODE_ENV !== "production") {
-    body.detail = String(err?.cause?.message || err?.message || err);
-  }
-  return NextResponse.json(body, { status: 500 });
+export function handleError(err, label = "API Error") {
+  return handleApiError(err, label);
 }

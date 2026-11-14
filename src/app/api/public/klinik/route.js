@@ -1,9 +1,10 @@
+import { apiHandler } from "@/lib/api-handler";
 import { NextResponse } from "next/server";
 import { profilKlinik } from "@/db/schema";
 import { handleError } from "@/lib/auth";
 import { sebagaiAnon } from "@/lib/rls";
 
-export async function GET() {
+async function _GET() {
   try {
     const [row] = await sebagaiAnon((tx) =>
       tx.select().from(profilKlinik).limit(1),
@@ -30,3 +31,5 @@ export async function GET() {
     return handleError(err, "GET /api/public/klinik");
   }
 }
+
+export const GET = apiHandler(_GET, { route: "GET /api/public/klinik" });

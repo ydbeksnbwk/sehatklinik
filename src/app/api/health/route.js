@@ -1,16 +1,10 @@
 import { pool } from "@/db/index.js";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function GET() {
-  try {
+export const GET = apiHandler(
+  async function GET() {
     await pool.query("select 1");
     return Response.json({ data: { database: "ok" } });
-  } catch (err) {
-    console.error("health gagal:", err.message);
-    return Response.json(
-      {
-        error: { code: "DB_ERROR", message: "Database tidak dapat dihubungi" },
-      },
-      { status: 500 },
-    );
-  }
-}
+  },
+  { route: "GET /api/health" }
+);

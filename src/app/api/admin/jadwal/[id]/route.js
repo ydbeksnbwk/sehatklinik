@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 import { and, eq, gt, lt, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
@@ -8,7 +9,7 @@ import { UUID } from "@/lib/akses";
 const JAM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const jam = (t) => String(t).slice(0, 5);
 
-export async function PATCH(request, { params }) {
+async function _PATCH(request, { params }) {
   try {
     await requireRole(request, ["admin"]);
     const { id } = await params;
@@ -79,3 +80,5 @@ export async function PATCH(request, { params }) {
     return handleError(err, "PATCH /api/admin/jadwal/[id]");
   }
 }
+
+export const PATCH = apiHandler(_PATCH, { route: "PATCH /api/admin/jadwal/[id]" });

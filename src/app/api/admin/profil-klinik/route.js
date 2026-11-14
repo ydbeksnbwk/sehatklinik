@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -29,7 +30,7 @@ const ProfilKlinikSchema = z.object({
   jamOperasional: z.record(z.any()).optional().default({}),
 });
 
-export async function GET(request) {
+async function _GET(request) {
   try {
     await requireRole(request, ["admin"]);
 
@@ -43,7 +44,7 @@ export async function GET(request) {
   }
 }
 
-export async function PUT(request) {
+async function _PUT(request) {
   try {
     await requireRole(request, ["admin"]);
 
@@ -113,3 +114,6 @@ export async function PUT(request) {
     return handleError(err, "PUT /api/admin/profil-klinik");
   }
 }
+
+export const GET = apiHandler(_GET, { route: "GET /api/admin/profil-klinik" });
+export const PUT = apiHandler(_PUT, { route: "PUT /api/admin/profil-klinik" });

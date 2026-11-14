@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 // src/app/api/kunjungan/route.js
 // GET /api/kunjungan - daftar kunjungan (dengan otorisasi per peran)
 // POST /api/kunjungan - pendaftaran kunjungan baru (pasien daring / petugas walk-in)
@@ -32,7 +33,7 @@ function galat(code, message, fields, status) {
 // - Pasien: hanya kunjungannya sendiri
 // - Dokter: hanya pasien yang ia tangani
 // - Petugas/admin: semua
-export async function GET(request) {
+async function _GET(request) {
   try {
     const { profile } = await requireRole(request);
     const { searchParams } = new URL(request.url);
@@ -93,7 +94,7 @@ export async function GET(request) {
 // Pasien: daftar daring untuk dirinya sendiri
 // Petugas: daftar walk-in dengan pasienId eksplisit
 // Admin/dokter: ditolak 403
-export async function POST(request) {
+async function _POST(request) {
   try {
     const { profile } = await requireRole(request, ["pasien", "petugas"]);
 
@@ -182,3 +183,6 @@ export async function POST(request) {
     return handleError(err, "POST /api/kunjungan");
   }
 }
+
+export const GET = apiHandler(_GET, { route: "GET /api/kunjungan" });
+export const POST = apiHandler(_POST, { route: "POST /api/kunjungan" });

@@ -1,3 +1,4 @@
+import { apiHandler } from "@/lib/api-handler";
 import { and, asc, count, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
@@ -12,7 +13,7 @@ import {
 import { handleError, requireRole } from "@/lib/auth";
 import { UUID } from "@/lib/akses";
 
-export async function GET(request) {
+async function _GET(request) {
   try {
     await requireRole(request, ["admin"]);
 
@@ -149,3 +150,5 @@ export async function GET(request) {
     return handleError(err, "GET /api/admin/rekap");
   }
 }
+
+export const GET = apiHandler(_GET, { route: "GET /api/admin/rekap" });
