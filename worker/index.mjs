@@ -1,8 +1,11 @@
 import { Queue, Worker, UnrecoverableError } from "bullmq";
 import { Redis } from "ioredis";
 import pg from "pg";
-import webpush from "web-push";
+import { createRequire } from "module";
 import pino from "pino";
+
+const require = createRequire(import.meta.url);
+const webpush = require("web-push");
 
 const { Pool } = pg;
 
@@ -82,6 +85,10 @@ const pool = new Pool({
     process.env.NODE_ENV === "production" || DATABASE_URL.includes("supabase.co")
       ? { rejectUnauthorized: false }
       : false,
+});
+
+pool.on("error", (err) => {
+  logger.error({ err: err.message, message: "Peringatan idle client pool DB (non-fatal)" });
 });
 
 const redisConnection = new Redis(REDIS_URL, {
