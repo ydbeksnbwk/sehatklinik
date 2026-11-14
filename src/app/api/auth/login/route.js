@@ -7,6 +7,7 @@ import { supabaseServer } from "@/lib/supabase";
 import { handleError, pasangCookieSesi } from "@/lib/auth";
 import { skemaLogin } from "@/lib/validasi/auth";
 import { logger } from "@/lib/logger";
+import { ambilClientIp, checkRateLimit, buildRateLimitResponse } from "@/lib/rate-limit";
 
 async function _POST(request) {
   try {
@@ -29,6 +30,17 @@ async function _POST(request) {
       );
     }
     const { email, password } = parsed.data;
+
+    // Rate Limiting per IP dan per Email (PRD §9)
+    const ip = ambilClientIp(request);
+    const ipLimit = await checkRateLimit(`login:ip:${ip}`, { max: 20, windowSeconds: 60 });
+    if (!ipLimit.allowed) {
+      return buildRateLimitResponse(ipLimit.retryAfter, 20);
+    }
+    const emailLimit = await checkRateLimit(`login:email:${email.toLowerCase()}`, { max: 5, windowSeconds: 60 });
+    if (!emailLimit.allowed) {
+      return buildRateLimitResponse(emailLimit.retryAfter, 5);
+    }
 
     const { data, error } = await supabaseServer().auth.signInWithPassword({
       email,

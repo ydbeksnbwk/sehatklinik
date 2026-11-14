@@ -19,6 +19,8 @@ import { tanggalValid } from "@/lib/tanggal";
 import { denganRls } from "@/lib/rls";
 import { skemaDaftarKunjungan } from "@/lib/validasi/kunjungan";
 import { daftarKunjungan, ambilPasienDariProfile } from "@/lib/domain/kunjungan";
+import { ambilClientIp, checkRateLimit, buildRateLimitResponse } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 const STATUS_KUNJUNGAN = ["terdaftar", "hadir", "selesai", "batal"];
 
@@ -29,28 +31,28 @@ function galat(code, message, fields, status) {
   );
 }
 
-// GET /api/kunjungan
-// - Pasien: hanya kunjungannya sendiri
-// - Dokter: hanya pasien yang ia tangani
-// - Petugas/admin: semua
+// GET /api/kunjungan?tanggal=YYYY-MM-DD&status=...&dokterId=...
 async function _GET(request) {
   try {
     const { profile } = await requireRole(request);
     const { searchParams } = new URL(request.url);
+
     const tanggal = searchParams.get("tanggal");
     const status = searchParams.get("status");
+    const dokterId = searchParams.get("dokterId");
 
     if (tanggal && !tanggalValid(tanggal)) {
-      return galat("VALIDATION_ERROR", "Format tanggal harus YYYY-MM-DD", null, 400);
+      return galat("VALIDATION_ERROR", "Format tanggal tidak valid", { tanggal: "Gunakan format YYYY-MM-DD" }, 400);
     }
     if (status && !STATUS_KUNJUNGAN.includes(status)) {
-      return galat("VALIDATION_ERROR", "Status tidak valid", null, 400);
+      return galat("VALIDATION_ERROR", "Status kunjungan tidak valid", { status: "Nilai status tidak dikenal" }, 400);
     }
 
     const rows = await denganRls(profile.id, async (tx) => {
       const conds = [];
       if (tanggal) conds.push(eq(vAntreanDetail.tanggal, tanggal));
       if (status) conds.push(eq(vAntreanDetail.statusKunjungan, status));
+      if (dokterId) conds.push(eq(vAntreanDetail.dokterId, dokterId));
 
       if (profile.role === "pasien") {
         const [p] = await tx
@@ -96,6 +98,13 @@ async function _GET(request) {
 // Admin/dokter: ditolak 403
 async function _POST(request) {
   try {
+    // Rate Limiting per IP (PRD §9)
+    const ip = ambilClientIp(request);
+    const rl = await checkRateLimit(`kunjungan:ip:${ip}`, { max: 20, windowSeconds: 60 });
+    if (!rl.allowed) {
+      return buildRateLimitResponse(rl.retryAfter, 20);
+    }
+
     const { profile } = await requireRole(request, ["pasien", "petugas"]);
 
     // Admin dan dokter ditolak (K12)
@@ -169,7 +178,7 @@ async function _POST(request) {
       await enqueuePendingNotificationsForProfile(profile.id);
     } catch (pushErr) {
       // Redis mati / galat push tidak membatalkan pendaftaran
-      console.warn("Enqueue push gagal setelah daftar kunjungan (non-fatal):", pushErr?.message);
+      logger.warn({ msg: "Enqueue push gagal setelah daftar kunjungan (non-fatal)", error: pushErr?.message });
     }
 
     return NextResponse.json({ data: result }, { status: 201 });

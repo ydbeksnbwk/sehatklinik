@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { pushSubscriptions } from "@/db/schema";
 import { handleError, requireRole } from "@/lib/auth";
+import { ambilClientIp, checkRateLimit, buildRateLimitResponse } from "@/lib/rate-limit";
 
 const LanggananSchema = z.object({
   endpoint: z.string().trim().url("Format endpoint subscription tidak valid"),
@@ -19,6 +20,13 @@ const BatalLanggananSchema = z.object({
 
 async function _POST(request) {
   try {
+    // Rate Limiting per IP (PRD §9)
+    const ip = ambilClientIp(request);
+    const rl = await checkRateLimit(`push:ip:${ip}`, { max: 20, windowSeconds: 60 });
+    if (!rl.allowed) {
+      return buildRateLimitResponse(rl.retryAfter, 20);
+    }
+
     const { profile } = await requireRole(request);
     const body = await request.json().catch(() => ({}));
     const parsed = LanggananSchema.safeParse(body);
@@ -98,13 +106,13 @@ async function _DELETE(request) {
     const { endpoint } = parsed.data;
 
     // Cek keberadaan langganan; data milik orang lain atau tidak ada -> 404
-    const [sub] = await db
+    const [existing] = await db
       .select({ id: pushSubscriptions.id, profileId: pushSubscriptions.profileId })
       .from(pushSubscriptions)
       .where(eq(pushSubscriptions.endpoint, endpoint))
       .limit(1);
 
-    if (!sub || sub.profileId !== profile.id) {
+    if (!existing || existing.profileId !== profile.id) {
       return NextResponse.json(
         {
           error: {
@@ -119,10 +127,12 @@ async function _DELETE(request) {
     await db
       .update(pushSubscriptions)
       .set({ aktif: false })
-      .where(eq(pushSubscriptions.id, sub.id));
+      .where(and(eq(pushSubscriptions.endpoint, endpoint), eq(pushSubscriptions.profileId, profile.id)));
 
     return NextResponse.json({
-      data: { success: true },
+      data: {
+        pesan: "Langganan push berhasil dinonaktifkan",
+      },
     });
   } catch (err) {
     return handleError(err, "DELETE /api/push/langganan");

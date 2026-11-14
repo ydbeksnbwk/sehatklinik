@@ -10,6 +10,8 @@ import { notifikasi, pasien, profiles } from "@/db/schema";
 import { handleError, HttpError } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { skemaRegistrasi } from "@/lib/validasi/auth";
+import { ambilClientIp, checkRateLimit, buildRateLimitResponse } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 function galat(code, message, fields, status = 400) {
   return NextResponse.json(
@@ -27,6 +29,13 @@ function keFormatInternasional(t) {
 
 async function _POST(request) {
   try {
+    // Rate Limiting per IP (PRD §9)
+    const ip = ambilClientIp(request);
+    const rl = await checkRateLimit(`register:ip:${ip}`, { max: 10, windowSeconds: 60 });
+    if (!rl.allowed) {
+      return buildRateLimitResponse(rl.retryAfter, 10);
+    }
+
     const body = await request.json().catch(() => ({}));
 
     // 1. Validasi Zod: NIK 16 digit, password kuat, telepon, nama, dll.
@@ -70,28 +79,26 @@ async function _POST(request) {
       );
     }
 
-    // 4. Daftarkan akun di Supabase Auth Admin
-    const phone = keFormatInternasional(telepon);
-    const { data: authData, error: authError } = await supabaseAdmin().auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      ...(phone ? { phone, phone_confirm: true } : {}),
-      user_metadata: {
-        display_name: nama,
-        nama,
-        telepon,
-        nik,
-        tanggal_lahir: tanggalLahir,
-        jenis_kelamin: jenisKelamin,
-        alamat: alamat || "",
-        kontak_darurat: kontakDarurat || "",
-        role: "pasien",
-      },
-      app_metadata: {
-        role: "pasien",
-      },
-    });
+    // 4. Buat akun di Supabase Auth lewat Admin Client
+    const admin = supabaseAdmin();
+    const { data: authData, error: authError } =
+      await admin.auth.admin.createUser({
+        email,
+        password,
+        phone: keFormatInternasional(telepon),
+        email_confirm: true,
+        phone_confirm: true,
+        app_metadata: { role: "pasien" },
+        user_metadata: {
+          nama,
+          nik,
+          tanggal_lahir: tanggalLahir,
+          jenis_kelamin: jenisKelamin,
+          alamat: alamat || null,
+          kontak_darurat: kontakDarurat || null,
+          telepon: telepon || null,
+        },
+      });
 
     if (authError) {
       const msg = authError.message || "";
@@ -101,7 +108,7 @@ async function _POST(request) {
       if (/already|registered|exists/i.test(msg)) {
         return galat("DUPLIKAT", "Email sudah terdaftar", { email: "Email sudah terdaftar" }, 409);
       }
-      console.error("POST /api/auth/register authError:", authError);
+      logger.error({ msg: "POST /api/auth/register authError", error: authError.message });
       return galat("INTERNAL", "Gagal membuat akun autentikasi", null, 500);
     }
 
@@ -181,7 +188,7 @@ async function _POST(request) {
         isRead: false,
       });
     } catch (notifErr) {
-      console.warn("Gagal membuat notifikasi selamat datang register:", notifErr);
+      logger.warn({ msg: "Gagal membuat notifikasi selamat datang register", err: notifErr?.message });
     }
 
     return NextResponse.json(
