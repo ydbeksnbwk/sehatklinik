@@ -1,149 +1,200 @@
-# Sistem Informasi Klinik Kesehatan (Next.js App Router)
+# Sistem Informasi Klinik Kesehatan (Klinik Tim 7)
 
-Aplikasi web Sistem Informasi Klinik Kesehatan yang direka-ulang (**recreated**) menjadi **Next.js 15 (App Router, React 19, TypeScript)** dengan **100% desain, estetika visual, warna, font DM Sans, dan alur kerja asli tetap dipertahankan**.
-
-Proyek ini selaras dengan dokumen **PRD (Product Requirements Document) v1.0** dan **Diagram ERD/Use Case** yang ada pada repositori.
+Aplikasi web Sistem Informasi Manajemen Klinik Kesehatan berbasis **Next.js 15 (App Router, React 19, TypeScript & JavaScript Route Handlers)** dengan arsitektur validasi tiga lapis, otorisasi ketat berbasis sesi cookie HttpOnly, transaksi database Drizzle ORM + PostgreSQL (Supabase), serta notifikasi nyata Web Push VAPID dengan background worker BullMQ + Redis.
 
 ---
 
-## 🚀 Fitur Utama & Ruang Lingkup
+## 📋 Prasyarat Sistem
 
-### 1. Halaman Publik
-- **Beranda (`/`)**: Hero section dengan profil dokter berjilbab, jaminan mutu (*trust badges*), ringkasan layanan, dan ajakan bertindak (CTA).
-- **Layanan (`/layanan`)**: Daftar 5 layanan aktif (Poli Umum, Poli Gigi, Poli Anak, Konsultasi Gizi, Pemeriksaan Berkala) dengan durasi konsultasi dan karya seni sinematik.
-- **Dokter (`/dokter`)**: Profil 5 dokter spesialis dan umum dengan nomor SIP, jadwal sesi aktif, dan foto dokter.
-- **Jadwal Praktik (`/jadwal`)**: Pencarian jadwal dokter berdasarkan tanggal, hari, serta kalkulasi sisa kuota antrean secara *real-time*.
-- **Lokasi & Kontak (`/lokasi`)**: Alamat klinik (Jl. Melati No. 18, Jakarta Selatan), peta koordinat OpenStreetMap, jam operasional, dan kontak.
-- **Masuk & Registrasi (`/login`, `/daftar`)**: Formulir login dan pendaftaran pasien baru lengkap dengan tombol akses cepat peran demo.
-
-### 2. Area Kerja Berdasarkan Peran (Workspace)
-- **Pasien (`/pasien` atau `/dashboard`)**:
-  - Pendaftaran kunjungan bertahap (pilih layanan, dokter, tanggal, sesi jadwal, validasi kuota & anti-ganda).
-  - Tiket nomor antrean unik per dokter per tanggal.
-  - Pemantauan status antrean *live* (Menunggu, Dipanggil, Sedang Diperiksa, Selesai).
-  - Pembatalan kunjungan mandiri sebelum dipanggil (kuota dikembalikan).
-  - Riwayat kunjungan dengan ringkasan pemeriksaan medis *read-only*.
-  - Manajemen profil pasien.
-- **Petugas Loket (`/petugas` atau `/dashboard`)**:
-  - Dasbor antrean hari ini.
-  - Konfirmasi kehadiran pasien (*Check-in*).
-  - Pemanggilan antrean (*Panggil*).
-  - Pelewatan pasien yang belum hadir (*Lewati* dengan alasan).
-  - Pembatalan kunjungan dengan alasan (mengembalikan kuota).
-  - Pendaftaran kunjungan *walk-in* untuk pasien tanpa akun.
-  - Pencarian dan filter pasien.
-- **Dokter (`/dokter-dashboard` atau `/dashboard`)**:
-  - Antrean pribadi dokter (hanya pasien dokter bersangkutan).
-  - Pemanggilan pasien dan mulai pemeriksaan (*Sedang Diperiksa*).
-  - Pencatatan hasil pemeriksaan lengkap: anamnesis, tanda-tanda vital (tekanan darah sistolik/diastolik, suhu tubuh, berat badan), diagnosis, dan catatan.
-  - Pencatatan tindakan medis lanjutan.
-  - Validasi penyelesaian: kunjungan tidak dapat diselesaikan sebelum pemeriksaan disimpan.
-  - Riwayat pasien yang pernah ditangani.
-- **Admin (`/admin` atau `/dashboard`)**:
-  - Rekap statistik dan grafik tren kunjungan.
-  - Pengelolaan data master dokter (CRUD dan relasi layanan).
-  - Pengelolaan data master layanan (CRUD).
-  - Pengelolaan jadwal praktik dokter & kuota sesi (dengan validasi bentrok jadwal).
-  - Pengelolaan akun staf (Petugas dan Dokter).
-  - Pengaturan profil klinik (nama, jam operasional, alamat, koordinat).
-  - Rekapitulasi laporan kunjungan dengan filter periode tanggal, dokter, layanan, status, dan ekspor data.
+Sebelum memulai instalasi, pastikan lingkungan pengembangan telah memenuhi prasyarat berikut:
+- **Node.js**: Versi `20.x` atau lebih baru (`node -v`).
+- **NPM**: Versi `10.x` atau lebih baru (`npm -v`).
+- **PostgreSQL**: Instance PostgreSQL 15+ (disarankan menggunakan [Supabase](https://supabase.com/)).
+- **Redis** (Opsional untuk development, wajib untuk Web Push Worker): Instance Redis 6+ lokal (Docker / Memurai) atau cloud ([Upstash Redis](https://upstash.com/)).
 
 ---
 
-## 🛠️ Arsitektur & Teknologi
+## 🚀 Panduan Instalasi dari Git Clone
 
-| Lapisan | Teknologi |
-| :--- | :--- |
-| **Framework** | Next.js 15 (App Router) |
-| **Bahasa** | TypeScript |
-| **Library UI** | React 19 |
-| **Styling** | Vanilla CSS + Tailwind CSS v4 (@tailwindcss/postcss) |
-| **Tipografi** | Google Fonts DM Sans |
-| **State & Persistence** | React Context (`ClinicContext`) + `localStorage` (data tetap aman saat *refresh*) |
-| **Routing** | URL Route Next.js (`/`, `/layanan`, `/dokter`, `/jadwal`, `/lokasi`, `/login`, `/daftar`, `/dashboard`, `/admin`, `/petugas`, `/dokter-dashboard`, `/pasien`) |
-
----
-
-## 📁 Struktur Direktori
-
-```
-klinik-nextjs/
-├── public/
-│   ├── favicon.svg
-│   └── images/                       # Aset foto dokter, konsultasi, logo, simbol
-├── src/
-│   ├── app/
-│   │   ├── layout.tsx                # Root layout dengan font DM Sans & CSS imports
-│   │   ├── page.tsx                  # Beranda utama (/)
-│   │   ├── layanan/page.tsx          # /layanan
-│   │   ├── dokter/page.tsx           # /dokter
-│   │   ├── jadwal/page.tsx           # /jadwal
-│   │   ├── lokasi/page.tsx           # /lokasi
-│   │   ├── login/page.tsx            # /login
-│   │   ├── daftar/page.tsx           # /daftar
-│   │   ├── dashboard/page.tsx        # /dashboard
-│   │   ├── admin/page.tsx            # /admin (shortcut role Admin)
-│   │   ├── petugas/page.tsx          # /petugas (shortcut role Petugas)
-│   │   ├── dokter-dashboard/page.tsx # /dokter-dashboard (shortcut role Dokter)
-│   │   └── pasien/page.tsx           # /pasien (shortcut role Pasien)
-│   ├── components/
-│   │   ├── BrandArtwork.tsx          # Logo dan wordmark SehatKlinik
-│   │   ├── CinematicArtwork.tsx      # Komponen grafis interaktif sinematik
-│   │   ├── ClinicWorkspace.tsx       # Komponen workspace utama multi-peran
-│   │   ├── Icon.tsx                  # Koleksi ikon SVG
-│   │   └── PublicSite.tsx            # Komponen tampilan landing publik
-│   ├── context/
-│   │   └── ClinicContext.tsx         # Manajemen state sinkron & persistensi localStorage
-│   ├── clinic-data.ts                # Seed data & fungsi kalkulasi kuota / tanggal
-│   ├── cinematic.css
-│   ├── design-system.css
-│   ├── index.css
-│   ├── patient.css
-│   ├── public-prd.css
-│   ├── public.css
-│   ├── sky.css
-│   └── workspace.css
-├── next.config.ts
-├── package.json
-├── postcss.config.mjs
-└── tsconfig.json
+### 1. Klon Repositori
+```bash
+git clone https://github.com/username/sehatklinik.git
+cd sehatklinik
 ```
 
----
+### 2. Pasang Dependensi
+```bash
+npm install
+```
 
-## 💻 Cara Menjalankan Proyek
-
-1. Buka terminal pada folder proyek:
-   ```bash
-   cd "e:\PEMWEB\KLINIK WEB\klinik-nextjs"
-   ```
-
-2. Jalankan server pengembangan (Development Server):
-   ```bash
-   npm run dev
-   ```
-
-3. Buka peramban (browser) di alamat:
-   ```
-   http://localhost:3000
-   ```
-
-4. Untuk membuat versi produksi (Production Build):
-   ```bash
-   npm run build
-   npm run start
-   ```
+### 3. Konfigurasi Environment Variables
+Salin berkas template environment:
+```bash
+cp .env.example .env.local
+```
+Lengkapi nilai-nilai variabel di dalam `.env.local` sesuai panduan tabel di bawah.
 
 ---
 
-## 🔄 Pengujian Alur Uji Minimum (Sesuai PRD Bagian 9.1)
+## 🔐 Tabel Environment Variables
 
-Anda dapat menguji 8 langkah alur utama langsung di browser:
-1. **Pasien**: Buka `/layanan` atau `/login` -> Pilih `Demo Pasien` -> Buka `Pendaftaran Kunjungan` -> Pilih dokter, tanggal, dan sesi -> Kirim pendaftaran -> Nomor antrean unik tampil.
-2. **Pasien**: Buka menu `Antrean Saya` -> Nomor antrean aktif dan status `Menunggu` terlihat.
-3. **Petugas**: Ganti peran ke `Petugas` melalui pemilih peran di topbar atau buka `/petugas` -> Buka `Antrean Hari Ini` -> Klik `Check-in` -> Status berubah menjadi `Hadir`.
-4. **Petugas**: Klik `Panggil Antrean` -> Status antrean berubah menjadi `Dipanggil`.
-5. **Dokter**: Ganti peran ke `Dokter` atau buka `/dokter-dashboard` -> Buka `Antrean Saya` -> Klik `Mulai Periksa` -> Status menjadi `Sedang Diperiksa`.
-6. **Dokter**: Isi tanda vital, diagnosis, dan tindakan -> Simpan pemeriksaan -> Klik `Selesaikan Kunjungan` -> Kunjungan berstatus `Selesai`.
-7. **Pasien**: Ganti peran ke `Pasien` -> Buka `Riwayat Kunjungan` -> Hasil pemeriksaan dan tindakan dokter dapat dibaca secara aman (*read-only*).
-8. **Admin**: Ganti peran ke `Admin` atau buka `/admin` -> Buka `Rekap Kunjungan` -> Jumlah dan statistik sinkron secara tepat.
+| Nama Variabel | Lingkungan | Deskripsi |
+|---|---|---|
+| `DATABASE_URL` | Server | String koneksi PostgreSQL pooler / direct (`postgresql://...`) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Browser & Server | URL instance Supabase project (`https://xxxx.supabase.co`) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser & Server | Kunci anon/publik Supabase |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server Khusus | Kunci service role Supabase (Auth Admin & Storage internal) |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Browser & Server | Kunci publik VAPID Web Push untuk registrasi Service Worker |
+| `VAPID_PRIVATE_KEY` | Server Khusus | Kunci privat VAPID untuk penandatanganan payload Web Push |
+| `VAPID_SUBJECT` | Server Khusus | Kontak pengirim VAPID (`mailto:admin@kliniktujuh.com` atau URL) |
+| `REDIS_URL` | Server & Worker | URL koneksi Redis (`redis://...` atau `rediss://...` untuk SSL) |
+| `SEED_ALLOW` | Tooling / Script | Penanda izin eksekusi seed database (`1` untuk mengizinkan) |
+
+> [!CAUTION]
+> Jangan pernah mengekspos `SUPABASE_SERVICE_ROLE_KEY`, `VAPID_PRIVATE_KEY`, `DATABASE_URL`, atau `REDIS_URL` ke sisi peramban atau berkas frontend. Variabel-variabel tersebut hanya boleh diakses di lingkungan server.
+
+---
+
+## 🔑 Pembuatan Kunci VAPID (Web Push)
+
+Untuk mengaktifkan fitur notifikasi browser berbasis standar Web Push VAPID, buat pasangan kunci menggunakan perintah:
+```bash
+npx web-push generate-vapid-keys
+```
+Keluaran perintah akan menghasilkan **Public Key** dan **Private Key**:
+1. Masukkan nilai Public Key ke variabel `NEXT_PUBLIC_VAPID_PUBLIC_KEY`.
+2. Masukkan nilai Private Key ke variabel `VAPID_PRIVATE_KEY`.
+3. Tentukan subjek kontak pada `VAPID_SUBJECT` (contoh: `mailto:admin@klinik.local`).
+
+---
+
+## 🗄️ Konfigurasi Redis
+
+Redis digunakan untuk penyimpanan antrean tugas background worker (`BullMQ`) dan *sliding-window rate limiter*. Pilih salah satu opsi:
+
+### Opsi A: Docker Container (Lokal)
+```bash
+docker run -d --name redis-klinik -p 6379:6379 redis:alpine
+```
+Setel di `.env.local`:
+```env
+REDIS_URL=redis://127.0.0.1:6379
+```
+
+### Opsi B: Memurai / Windows Native
+Jalankan layanan Memurai pada port default 6379.
+
+### Opsi C: Upstash Serverless Redis (Cloud)
+Gunakan koneksi TLS dari dashboard Upstash:
+```env
+REDIS_URL=rediss://default:token@host.upstash.io:6379
+```
+
+> [!NOTE]
+> Aplikasi web dirancang dengan arsitektur **fail-open** ber-log: bila koneksi Redis belum tersedia atau terputus, endpoint web tetap melayani transaksi bisnis secara normal (rate limit beralih ke cache memori lokal, dan notifikasi aman tersimpan pada tabel outbox database).
+
+---
+
+## 🛠️ Migrasi Database & Seed Data
+
+### 1. Eksekusi Migrasi Skema
+Menjalankan berkas migrasi SQL berurutan (`01` sampai `12`) pada database:
+```bash
+npm run db:migrate
+```
+
+### 2. Eksekusi Seed Data Idempoten
+Mengisi master data klinik, katalog layanan, jadwal praktik terstandar, 6 akun peran uji, dan 12 kunjungan/antrean demo sesuai spesifikasi PRD §6.3:
+
+**PowerShell (Windows):**
+```powershell
+$env:SEED_ALLOW="1"; npm run db:seed
+```
+
+**Bash / Linux / macOS:**
+```bash
+SEED_ALLOW=1 npm run db:seed
+```
+
+> [!TIP]
+> Skrip seed bersifat **idempoten sejati**: aman dijalankan berulang kali tanpa memicu duplikasi data kunjungan, jadwal, maupun lonjakan baris notifikasi.
+
+---
+
+## 👥 Akun Uji Coba Multi-Peran (Demo)
+
+Seluruh akun uji telah didaftarkan pada Supabase Auth dan disinkronkan ke tabel `profiles`:
+
+| Peran | Alamat Email | Kata Sandi | No. Rekam Medis / Identitas |
+|---|---|---|---|
+| **Admin** | `admin.klinik@gmail.com` | `Password123!` | Manajemen staf, master data, dan rekap |
+| **Petugas** | `rina.petugas@gmail.com` | `Password123!` | Loket pendaftaran, check-in, dan antrean |
+| **Dokter 1** | `dokter.reyhan@gmail.com` | `Password123!` | dr. Reyhan Adhitama (Poli Umum) |
+| **Dokter 2** | `nadira.kirana@gmail.com` | `Password123!` | drg. Nadira Kirana (Poli Gigi) |
+| **Pasien 1** | `ani.wulandari@gmail.com` | `Password123!` | Ani Wulandari (`RM-000001`) |
+| **Pasien 2** | `bagas.saputra@gmail.com` | `Password123!` | Bagas Saputra (`RM-000002`) |
+
+---
+
+## 🖥️ Menjalankan Aplikasi
+
+### 1. Menjalankan Server Web (Next.js)
+
+**Mode Pengembangan:**
+```bash
+npm run dev
+```
+Akses aplikasi melalui browser di `http://localhost:3000`.
+
+**Mode Produksi:**
+```bash
+npm run build
+npm run start
+```
+
+### 2. Menjalankan Background Worker (Web Push)
+Buka terminal terpisah untuk menjalankan consumer worker BullMQ yang memproses antrean notifikasi:
+```bash
+npm run worker
+```
+
+---
+
+## 🧪 Eksekusi Pengujian Otomatis
+
+Repositori dilengkapi dengan suite pengujian otomatis untuk memverifikasi integritas backend:
+```powershell
+# 1. Master Suite Pengujian Alur PRD §5 & Keamanan API
+powershell -ExecutionPolicy Bypass -File scripts/uji-suite.ps1
+
+# 2. Pembuktian Integritas Constraint Database (SQL ROLLBACK)
+node --env-file=.env.local scripts/run-verifikasi-db.mjs # atau eksekusi scripts/verifikasi-db.sql di PostgreSQL client
+
+# 3. Pengecekan Type Safety & Linting
+npx tsc --noEmit
+npm run lint
+```
+
+---
+
+## 🌐 Panduan Deployment Ringkas
+
+1. **Aplikasi Web (Next.js Frontend & API)**:
+   - Hubungkan repositori Git ke [Vercel](https://vercel.com).
+   - Masukkan environment variables: `DATABASE_URL` (gunakan transaction pooler Supabase port 6543 / 5432), `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, dan `REDIS_URL`.
+   - Vercel akan mengompilasi dan menyediakan URL HTTPS publik.
+2. **Background Worker & Redis**:
+   - Deploy direktori worker ke platform proses persisten seperti [Railway](https://railway.app) atau [Render](https://render.com) dengan perintah start `npm run worker`.
+   - Gunakan [Upstash Redis](https://upstash.com) dengan protokol `rediss://` untuk antrean tugas.
+3. **Database & Storage**:
+   - Instance PostgreSQL dan bucket penyimpanan publik `foto-dokter` terkelola pada [Supabase](https://supabase.com).
+
+---
+
+## 📚 Tautan Dokumentasi Terkait
+
+- [Arsitektur & Keputusan Desain](file:///D:/Materi%20Kuliah%20S.5/Pemrograman%20Web/sehatklinik/docs/ARSITEKTUR.md)
+- [Diagram Hubungan Entitas (ERD)](file:///D:/Materi%20Kuliah%20S.5/Pemrograman%20Web/sehatklinik/docs/ERD.md)
+- [Daftar Fitur & Panduan Uji Manual](file:///D:/Materi%20Kuliah%20S.5/Pemrograman%20Web/sehatklinik/docs/FITUR.md)
+- [Bukti Verifikasi Sembilan Butir Evaluasi](file:///D:/Materi%20Kuliah%20S.5/Pemrograman%20Web/sehatklinik/docs/BUKTI_VERIFIKASI.md)
+- [Status Kemajuan & Audit Kebutuhan](file:///D:/Materi%20Kuliah%20S.5/Pemrograman%20Web/sehatklinik/docs/STATUS.md)
