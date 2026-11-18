@@ -168,6 +168,28 @@ export async function apiLogin(payload: { email: string; password: string }) {
   });
 }
 
+export async function apiLoginCepat(peran: "pasien" | "petugas" | "dokter" | "admin") {
+  return fetchApi<{
+    user: {
+      id: string;
+      email: string;
+      nama: string;
+      telepon: string;
+      role: string;
+      pasienId?: string | null;
+      noRekamMedis?: string | null;
+      nik?: string;
+      tanggalLahir?: string;
+      jenisKelamin?: string;
+      alamat?: string;
+      kontakDarurat?: string;
+    };
+  }>("/api/auth/login-cepat", {
+    method: "POST",
+    body: JSON.stringify({ peran }),
+  });
+}
+
 export async function apiLogout(payload?: { endpoint?: string }) {
   return fetchApi<{ message: string }>("/api/auth/logout", {
     method: "POST",

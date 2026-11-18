@@ -19,6 +19,8 @@ import {
   apiTambahKunjungan,
   apiTransisiKunjungan,
   apiSimpanPemeriksaan,
+  apiLogin,
+  apiLoginCepat,
   apiLogout,
   apiRefreshSession,
   apiGetPushKunci,
@@ -161,6 +163,7 @@ type ClinicContextType = {
   currentUser: ClinicUser | null
   setCurrentUser: React.Dispatch<React.SetStateAction<ClinicUser | null>>
   login: (email: string, password?: string) => Promise<{ success: boolean; message: string; user?: ClinicUser }>
+  loginCepat: (peran: "pasien" | "petugas" | "dokter" | "admin") => Promise<{ success: boolean; message: string; user?: ClinicUser }>
   logout: () => Promise<void> | void
 
   clinic: ClinicProfile
@@ -280,65 +283,6 @@ const emptyClinic: ClinicProfile = {
   facilities: [],
   stats: [],
 }
-
-const defaultUsers: ClinicUser[] = [
-  {
-    name: "Rina Kusuma",
-    email: "rina@sehatklinik.id",
-    role: "Admin",
-    active: true,
-    password: "password123",
-  },
-  {
-    name: "Dina Wulandari",
-    email: "dina@sehatklinik.id",
-    role: "Petugas",
-    active: true,
-    password: "password123",
-  },
-  {
-    name: "dr. Reyhan Adhitama",
-    email: "dokter@sehatklinik.id",
-    role: "Dokter",
-    active: true,
-    password: "password123",
-  },
-  {
-    name: "dr. Reyhan Adhitama",
-    email: "reyhan.adhitama@gmail.com",
-    role: "Dokter",
-    active: true,
-    password: "password123",
-  },
-  {
-    name: "drg. Nadira Kirana",
-    email: "nadira.kirana@gmail.com",
-    role: "Dokter",
-    active: true,
-    password: "Password123!",
-  },
-  {
-    name: "dr. Raka Mahendra, Sp.A",
-    email: "raka.mahendra@gmail.com",
-    role: "Dokter",
-    active: true,
-    password: "Password123!",
-  },
-  {
-    name: "dr. Annisa Fadhilla, Sp.OG",
-    email: "annisa.fadhilla@gmail.com",
-    role: "Dokter",
-    active: true,
-    password: "Password123!",
-  },
-  {
-    name: "dr. Alea Prameswari, Sp.GK",
-    email: "alea.prameswari@gmail.com",
-    role: "Dokter",
-    active: true,
-    password: "Password123!",
-  },
-]
 
 const ClinicContext = createContext<ClinicContextType | null>(null)
 
@@ -1829,6 +1773,80 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     notify("Data sistem berhasil direset.")
   }
 
+  const pasangSesiUser = async (u: any, cleanEmail: string) => {
+    const userRole = (u.role.charAt(0).toUpperCase() + u.role.slice(1)) as Role
+    const authUser: ClinicUser = {
+      id: u.id,
+      name: u.nama || u.email?.split("@")[0] || "Pengguna",
+      email: u.email || cleanEmail,
+      role: userRole,
+      active: true,
+      pasienId: u.pasienId ?? null,
+      noRekamMedis: u.noRekamMedis ?? null,
+      nik: u.nik || "",
+      tanggalLahir: u.tanggalLahir || "2000-01-01",
+      jenisKelamin:
+        u.jenisKelamin === "P" || u.jenisKelamin === "Perempuan"
+          ? "Perempuan"
+          : "Laki-laki",
+      alamat: u.alamat || "-",
+      kontakDarurat: u.kontakDarurat || "-",
+      telepon: u.telepon || "-",
+    }
+    setCurrentUser(authUser)
+    setRole(userRole)
+    setPage("Dashboard")
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("sehatklinik_welcome_sent", "1")
+    }
+
+    if (userRole === "Pasien" || authUser.pasienId) {
+      const currentPatient: Patient = {
+        id: authUser.pasienId || authUser.noRekamMedis || authUser.id || "P-ME",
+        name: authUser.name,
+        phone: authUser.telepon || "-",
+        birth: authUser.tanggalLahir || "2000-01-01",
+        gender: authUser.jenisKelamin || "Laki-laki",
+        address: authUser.alamat || "-",
+        emergency: authUser.kontakDarurat || "-",
+        account: true,
+        nik: authUser.nik || "-",
+      }
+      setPatients((prev) => {
+        const rest = prev.filter(
+          (p) =>
+            p.id !== currentPatient.id &&
+            p.id !== authUser.id &&
+            (!authUser.pasienId || p.id !== authUser.pasienId) &&
+            (!authUser.noRekamMedis || p.id !== authUser.noRekamMedis) &&
+            p.name.trim().toLowerCase() !== authUser.name.trim().toLowerCase()
+        )
+        return [currentPatient, ...rest]
+      })
+    }
+
+    // Segera muat notifikasi backend terisolasi untuk profileId pengguna yang baru login
+    await refreshNotifications(userRole, u.id)
+
+    const welcomeTitle = "Selamat Datang di SehatKlinik"
+    const welcomeMessage = `Halo ${authUser.name}, akun Anda siap digunakan untuk pendaftaran antrean dan pemantauan kunjungan.`
+    addNotification(
+      {
+        targetRole: userRole,
+        targetUserId: u.id,
+        type: "INFO",
+        title: welcomeTitle,
+        message: welcomeMessage,
+      },
+      true
+    )
+    return {
+      success: true,
+      message: `Selamat datang, ${authUser.name}!`,
+      user: authUser,
+    }
+  }
+
   const login = async (
     email: string,
     password?: string
@@ -1839,190 +1857,50 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     setNotifications([])
     setNotificationJobs([])
 
-    // 1. Coba autentikasi via backend /api/auth/login (cookie httpOnly)
-    if (password) {
-      try {
-        const resp = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: cleanEmail, password }),
-        });
-        const resJson = await resp.json().catch(() => ({}));
-        if (resp.ok && resJson?.data?.user) {
-          const u = resJson.data.user;
-          const userRole = (u.role.charAt(0).toUpperCase() + u.role.slice(1)) as Role;
-          const authUser: ClinicUser = {
-            id: u.id,
-            name: u.nama || u.email?.split("@")[0] || "Pengguna",
-            email: u.email || cleanEmail,
-            role: userRole,
-            active: true,
-            pasienId: u.pasienId ?? null,
-            noRekamMedis: u.noRekamMedis ?? null,
-            nik: u.nik || "",
-            tanggalLahir: u.tanggalLahir || "2000-01-01",
-            jenisKelamin:
-              u.jenisKelamin === "P" || u.jenisKelamin === "Perempuan"
-                ? "Perempuan"
-                : "Laki-laki",
-            alamat: u.alamat || "-",
-            kontakDarurat: u.kontakDarurat || "-",
-            telepon: u.telepon || "-",
-          };
-          setCurrentUser(authUser);
-          setRole(userRole);
-          setPage("Dashboard");
-          if (typeof window !== "undefined") {
-            sessionStorage.setItem("sehatklinik_welcome_sent", "1");
-          }
-
-          if (userRole === "Pasien" || authUser.pasienId) {
-            const currentPatient: Patient = {
-              id: authUser.pasienId || authUser.noRekamMedis || authUser.id || "P-ME",
-              name: authUser.name,
-              phone: authUser.telepon || "-",
-              birth: authUser.tanggalLahir || "2000-01-01",
-              gender: authUser.jenisKelamin || "Laki-laki",
-              address: authUser.alamat || "-",
-              emergency: authUser.kontakDarurat || "-",
-              account: true,
-              nik: authUser.nik || "-",
-            };
-            setPatients((prev) => {
-              const rest = prev.filter(
-                (p) =>
-                  p.id !== currentPatient.id &&
-                  p.id !== authUser.id &&
-                  (!authUser.pasienId || p.id !== authUser.pasienId) &&
-                  (!authUser.noRekamMedis || p.id !== authUser.noRekamMedis) &&
-                  p.name.trim().toLowerCase() !== authUser.name.trim().toLowerCase()
-              );
-              return [currentPatient, ...rest];
-            });
-          }
-
-          // Segera muat notifikasi backend terisolasi untuk profileId pengguna yang baru login
-          await refreshNotifications(userRole, u.id);
-
-          const welcomeTitle = "Selamat Datang di SehatKlinik";
-          const welcomeMessage = `Halo ${authUser.name}, akun Anda siap digunakan untuk pendaftaran antrean dan pemantauan kunjungan.`;
-          addNotification(
-            {
-              targetRole: userRole,
-              targetUserId: u.id,
-              type: "INFO",
-              title: welcomeTitle,
-              message: welcomeMessage,
-            },
-            true
-          );
-          return {
-            success: true,
-            message: `Selamat datang, ${authUser.name}!`,
-            user: authUser,
-          };
-        } else if (!resp.ok && resJson?.error) {
-          return {
-            success: false,
-            message: resJson.error.message || "Gagal masuk akun",
-          };
-        }
-      } catch (authErr) {
-        console.warn("Backend login attempted, fallback to local:", authErr);
-      }
-    }
-
-    // 2. Fallback akun staf dan demo lokal
-    let staff = users.find((u) => u.email.trim().toLowerCase() === cleanEmail)
-    if (!staff) {
-      staff = defaultUsers.find((u) => u.email.trim().toLowerCase() === cleanEmail)
-    }
-    if (!staff) {
-      if (cleanEmail.includes("admin")) {
-        staff = { name: "Administrator", email: cleanEmail, role: "Admin", active: true }
-      } else if (cleanEmail.includes("petugas")) {
-        staff = { name: "Petugas Loket", email: cleanEmail, role: "Petugas", active: true }
-      } else if (cleanEmail.includes("dokter")) {
-        staff = { name: "dr. Reyhan Adhitama", email: cleanEmail, role: "Dokter", active: true }
-      }
-    }
-    if (staff) {
-      if (!staff.active) {
-        return {
-          success: false,
-          message: "Akun ini telah dinonaktifkan oleh Administrator klinik.",
-        }
-      }
-      if (staff.password && password && staff.password !== password) {
-        return {
-          success: false,
-          message: "Password yang Anda masukkan salah.",
-        }
-      }
-      setCurrentUser(staff)
-      setRole(staff.role as Role)
-      setPage("Dashboard")
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem("sehatklinik_welcome_sent", "1")
-      }
-      const welcomeTitle = "Selamat Datang di SehatKlinik"
-      const welcomeMessage = `Halo ${staff.name}, akun Anda siap digunakan untuk pendaftaran antrean dan pemantauan kunjungan.`
-      addNotification(
-        {
-          targetRole: staff.role as Role,
-          type: "INFO",
-          title: welcomeTitle,
-          message: welcomeMessage,
-        },
-        true
-      )
+    if (!password) {
       return {
-        success: true,
-        message: `Selamat datang, ${staff.name}!`,
-        user: staff,
+        success: false,
+        message: "Kata sandi wajib diisi",
       }
     }
 
-    // Default for patients (no admin registration required)
-    const matchedPatient = patients.find(
-      (p) => p.phone === cleanEmail || p.name.toLowerCase() === cleanEmail.toLowerCase()
-    )
-    const dynamicPatientName =
-      matchedPatient?.name ||
-      (cleanEmail.includes("@")
-        ? cleanEmail
-            .split("@")[0]
-            .replace(/[._-]/g, " ")
-            .replace(/\b\w/g, (c) => c.toUpperCase())
-        : "Pasien")
+    try {
+      const res = await apiLogin({ email: cleanEmail, password })
+      if (res.data?.user) {
+        return await pasangSesiUser(res.data.user, cleanEmail)
+      }
+      return {
+        success: false,
+        message: res.error?.message || "Gagal masuk akun",
+      }
+    } catch (authErr: any) {
+      return {
+        success: false,
+        message: authErr?.message || "Gagal terhubung ke server autentikasi",
+      }
+    }
+  }
 
-    const patientUser: ClinicUser = {
-      name: dynamicPatientName,
-      email: cleanEmail,
-      role: "Pasien",
-      active: true,
-    }
-    setCurrentUser(patientUser)
-    setRole("Pasien")
-    setPage("Dashboard")
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("sehatklinik_welcome_sent", "1")
-    }
-    const welcomeTitle = "Selamat Datang di SehatKlinik"
-    const welcomeMessage = `Halo ${patientUser.name}, akun Anda siap digunakan untuk pendaftaran antrean dan pemantauan kunjungan.`
-    addNotification(
-      {
-        targetRole: "Pasien",
-        type: "INFO",
-        title: welcomeTitle,
-        message: welcomeMessage,
-      },
-      true
-    )
-    return {
-      success: true,
-      message: "Selamat datang di Portal Pasien!",
-      user: patientUser,
+  const loginCepat = async (
+    peran: "pasien" | "petugas" | "dokter" | "admin"
+  ): Promise<{ success: boolean; message: string; user?: ClinicUser }> => {
+    setNotifications([])
+    setNotificationJobs([])
+
+    try {
+      const res = await apiLoginCepat(peran)
+      if (res.data?.user) {
+        return await pasangSesiUser(res.data.user, res.data.user.email)
+      }
+      return {
+        success: false,
+        message: res.error?.message || "Gagal masuk lewat login cepat demo",
+      }
+    } catch (authErr: any) {
+      return {
+        success: false,
+        message: authErr?.message || "Gagal terhubung ke server autentikasi",
+      }
     }
   }
 
@@ -2088,6 +1966,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         currentUser,
         setCurrentUser,
         login,
+        loginCepat,
         logout,
 
         clinic,

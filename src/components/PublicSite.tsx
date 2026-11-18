@@ -93,7 +93,7 @@ export default function PublicSite({
   visits,
   clinic,
 }: Props) {
-  const { login } = useClinic()
+  const { login, loginCepat } = useClinic()
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -222,6 +222,45 @@ export default function PublicSite({
       } catch {
         window.location.replace(dest)
       }
+    }
+  }
+
+  const handleLoginCepat = async (peran: "pasien" | "petugas" | "dokter" | "admin") => {
+    setLoginError("")
+    setAuthSuccess("")
+    setIsSubmittingAuth(true)
+
+    try {
+      const res = await loginCepat(peran)
+      if (!res.success) {
+        setLoginError(getErrorMessage(res.message))
+        return
+      }
+      const roleRoutes: Record<string, string> = {
+        Admin: "/admin",
+        Petugas: "/petugas",
+        Dokter: "/dokter-dashboard",
+        Pasien: "/pasien",
+      }
+      const targetRole = res.user?.role || "Pasien"
+      let dest = roleRoutes[targetRole] || "/pasien"
+
+      if (typeof window !== "undefined") {
+        const sp = new URLSearchParams(window.location.search)
+        const redirectParam = sp.get("redirect")
+        if (redirectParam && redirectParam.startsWith("/") && !redirectParam.startsWith("//")) {
+          dest = redirectParam
+        }
+        try {
+          router.replace(dest)
+        } catch {
+          window.location.replace(dest)
+        }
+      }
+    } catch (err: any) {
+      setLoginError(getErrorMessage(err))
+    } finally {
+      setIsSubmittingAuth(false)
     }
   }
 
@@ -916,6 +955,71 @@ export default function PublicSite({
                   <Icon name="arrow" size={18} />
                 </button>
               </form>
+              {page === "Login" && process.env.NEXT_PUBLIC_DEMO_LOGIN_ENABLED === "1" && (
+                <div
+                  className="demo-login-box"
+                  style={{
+                    marginTop: "20px",
+                    paddingTop: "16px",
+                    borderTop: "1px dashed #cbd5e1",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "#64748b",
+                      margin: "0 0 10px 0",
+                      textAlign: "center",
+                    }}
+                  >
+                    Masuk cepat (demo)
+                  </p>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(2, 1fr)",
+                      gap: "8px",
+                      width: "100%",
+                    }}
+                  >
+                    {(
+                      [
+                        { peran: "pasien", label: "Pasien" },
+                        { peran: "petugas", label: "Petugas" },
+                        { peran: "dokter", label: "Dokter" },
+                        { peran: "admin", label: "Admin" },
+                      ] as const
+                    ).map((item) => (
+                      <button
+                        key={item.peran}
+                        type="button"
+                        disabled={isSubmittingAuth}
+                        onClick={() => handleLoginCepat(item.peran)}
+                        className="web-demo-btn"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          padding: "10px 12px",
+                          fontSize: "12px",
+                          fontWeight: 500,
+                          borderRadius: "8px",
+                          border: "1px solid #e2e8f0",
+                          backgroundColor: "#f8fafc",
+                          color: "#1e293b",
+                          cursor: isSubmittingAuth ? "not-allowed" : "pointer",
+                          opacity: isSubmittingAuth ? 0.6 : 1,
+                          transition: "all 0.15s ease",
+                        }}
+                        aria-label={`Masuk cepat sebagai ${item.label}`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <p className="web-auth-switch">
                 {page === "Login" ? "Belum punya akun?" : "Sudah punya akun?"}{" "}
                 <button
