@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  serverExternalPackages: ["bullmq", "ioredis", "web-push"],
   experimental: {
     workerThreads: false,
     cpus: 1,

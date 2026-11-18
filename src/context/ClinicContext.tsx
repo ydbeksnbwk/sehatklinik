@@ -33,6 +33,7 @@ import {
   DEMO_DATE,
   remaining,
   queueLabel,
+  dateLabel,
   type Role,
   type Visit,
   type QueueStatus,
@@ -116,6 +117,9 @@ const petaStatusKunjungan: Record<string, VisitStatus> = {
   selesai: "Selesai",
   batal: "Dibatalkan",
 };
+
+const POLA_UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // GET /api/kunjungan mengembalikan baris datar dari v_antrean_detail:
 // field kuncinya kunjunganId, statusKunjungan, statusAntrean, nomorAntrean, alasan.
@@ -569,22 +573,166 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           const effectiveRole = targetRole || role;
           const effectiveUserId = targetUserId || currentUser?.id;
           const mappedNotifs: NotificationItem[] = notifJson.data.map(
-            (row: any) => ({
-              id: row.id,
-              targetRole: effectiveRole,
-              targetUserId: effectiveUserId,
-              type: (row.jenisKejadian as NotificationType) || "INFO",
-              title:
-                row.jenisKejadian === "WELCOME"
-                  ? "Selamat Datang di Klinik Sehat Sentosa"
-                  : row.jenisKejadian
-                    ? row.jenisKejadian.replace(/_/g, " ")
-                    : "Notifikasi",
-              message: row.pesan,
-              timestamp: row.createdAt || new Date().toISOString(),
-              isRead: Boolean(row.isRead),
-              actionUrl: row.tautan || undefined,
-            }),
+            (row: any) => {
+              // 1. Bersihkan prefiks "[SEED] " dari pesan jika ada agar tampilan notifikasi bersih
+              const rawPesan = String(row.pesan || "").replace(/^\[SEED\]\s*/i, "");
+              let formattedPesan = rawPesan;
+
+              // 2. Ekstrak visitId dari row.kunjunganId / row.visitId, atau dari pola UUID/ID kunjungan di tautan/pesan
+              let extractedVisitId: string | undefined =
+                row.kunjunganId || row.visitId || undefined;
+
+              if (!extractedVisitId && typeof row.tautan === "string") {
+                const tautanMatch =
+                  row.tautan.match(/\/(?:kunjungan|riwayat|antrean)\/([0-9a-f-]{8,})/i) ||
+                  row.tautan.match(/[?&](?:kunjunganId|visitId|id)=([0-9a-f-]{8,})/i) ||
+                  row.tautan.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+                if (tautanMatch) {
+                  extractedVisitId = tautanMatch[1];
+                }
+              }
+
+              if (!extractedVisitId && typeof rawPesan === "string") {
+                const visitInPesan = rawPesan.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+                if (visitInPesan) {
+                  extractedVisitId = visitInPesan[1];
+                }
+              }
+
+              // Cari kunjungan yang cocok di daftar visits lokal
+              const matchedVisit = extractedVisitId
+                ? visits.find((v) => v.id.toLowerCase() === extractedVisitId!.toLowerCase())
+                : undefined;
+
+              // Tentukan indeks dokter dari matchedVisit atau dari pencocokan nama dokter dalam teks pesan
+              let doctorIdx = -1;
+              if (matchedVisit) {
+                doctorIdx = doctors.findIndex((d) => d.id === matchedVisit.doctor);
+              }
+              if (doctorIdx === -1) {
+                for (let i = 0; i < doctors.length; i++) {
+                  const doc = doctors[i];
+                  if (!doc.name) continue;
+                  if (formattedPesan.toLowerCase().includes(doc.name.toLowerCase())) {
+                    doctorIdx = i;
+                    break;
+                  }
+                  const cleanDocName = doc.name
+                    .replace(/^(?:drg?\.\s*|dr\.\s*)/i, "")
+                    .split(",")[0]
+                    .trim();
+                  if (
+                    cleanDocName.length > 3 &&
+                    formattedPesan.toLowerCase().includes(cleanDocName.toLowerCase())
+                  ) {
+                    doctorIdx = i;
+                    break;
+                  }
+                }
+              }
+
+              const formatQueueTicket = (rawNum: number | string, docIndex: number) => {
+                const n = typeof rawNum === "string" ? parseInt(rawNum, 10) : rawNum;
+                const numPart = String(isNaN(n) ? rawNum : n).padStart(3, "0");
+                const prefix = docIndex >= 0 ? String(docIndex + 1).padStart(2, "0") : "01";
+                return `${prefix}-${numPart}`;
+              };
+
+              // 3. Pola: "Kunjungan <UUID> (<label>)" -> "Kunjungan <label>"
+              formattedPesan = formattedPesan.replace(
+                /Kunjungan\s+([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s*\(([^)]+)\)/gi,
+                "Kunjungan $2",
+              );
+
+              // 4. Pola: "<UUID> (<label>)" -> "<label>"
+              formattedPesan = formattedPesan.replace(
+                /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s*\(([^)]+)\)/gi,
+                "$2",
+              );
+
+              // 5. Seragamkan format tanggal di pesan (DD-MM-YYYY atau YYYY-MM-DD) menggunakan dateLabel(...)
+              formattedPesan = formattedPesan.replace(
+                /\b(\d{2})-(\d{2})-(\d{4})\b/g,
+                (_, day, month, year) => {
+                  const dNum = parseInt(day, 10);
+                  const mNum = parseInt(month, 10);
+                  const yNum = parseInt(year, 10);
+                  if (dNum >= 1 && dNum <= 31 && mNum >= 1 && mNum <= 12 && yNum >= 2000 && yNum <= 2099) {
+                    return dateLabel(`${year}-${month}-${day}`);
+                  }
+                  return `${day}-${month}-${year}`;
+                },
+              );
+              formattedPesan = formattedPesan.replace(
+                /\b(\d{4})-(\d{2})-(\d{2})\b/g,
+                (_, year, month, day) => {
+                  const dNum = parseInt(day, 10);
+                  const mNum = parseInt(month, 10);
+                  const yNum = parseInt(year, 10);
+                  if (dNum >= 1 && dNum <= 31 && mNum >= 1 && mNum <= 12 && yNum >= 2000 && yNum <= 2099) {
+                    return dateLabel(`${year}-${month}-${day}`);
+                  }
+                  return `${year}-${month}-${day}`;
+                },
+              );
+
+              // 6. Konversi pola nomor antrean mentah dari backend ke format tiket queueLabel (contoh: "01-001", "02-001")
+              formattedPesan = formattedPesan.replace(
+                /(nomor\s+antrean(?:\s+Anda)?(?:\s*:)?\s*|antrean(?:\s+nomor)?(?:\s*:)?\s*)(\d+)\b(?!-\d)/gi,
+                (_, prefix, num) => {
+                  return `${prefix}${formatQueueTicket(num, doctorIdx)}`;
+                },
+              );
+
+              // 7. Pola UUID: ganti dengan queueLabel jika cocok dengan kunjungan lokal
+              formattedPesan = formattedPesan.replace(
+                /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+                (uuid) => {
+                  const v = visits.find(
+                    (vis) => vis.id.toLowerCase() === uuid.toLowerCase(),
+                  );
+                  if (v) {
+                    const dIdx = doctors.findIndex((d) => d.id === v.doctor);
+                    return queueLabel(v, dIdx);
+                  }
+                  return "";
+                },
+              );
+
+              // 8. Hapus sisa UUID panjang / hex ID apa pun yang masih muncul di dalam pesan
+              formattedPesan = formattedPesan.replace(/#[0-9a-f]{6,}/gi, "");
+              formattedPesan = formattedPesan.replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, "");
+              formattedPesan = formattedPesan.replace(/\b[0-9a-f]{16,}\b/gi, "");
+
+              // 9. Bersihkan kurung kosong, pemisah ganda, dan spasi berlebih
+              formattedPesan = formattedPesan
+                .replace(/\(\s*\)/g, "")
+                .replace(/·\s*·/g, "·")
+                .replace(/\s{2,}/g, " ")
+                .replace(/\s+([,.:;)])/g, "$1")
+                .trim();
+
+              const rawJenis = String(row.jenisKejadian || "").trim().toUpperCase();
+              const notifTitle =
+                rawJenis === "WELCOME"
+                  ? "SELAMAT DATANG"
+                  : rawJenis
+                    ? rawJenis.replace(/_/g, " ")
+                    : "NOTIFIKASI";
+
+              return {
+                id: row.id,
+                targetRole: effectiveRole,
+                targetUserId: effectiveUserId,
+                type: (row.jenisKejadian as NotificationType) || "INFO",
+                title: notifTitle,
+                message: formattedPesan,
+                timestamp: row.createdAt || new Date().toISOString(),
+                isRead: Boolean(row.isRead),
+                visitId: extractedVisitId,
+                actionUrl: row.tautan || undefined,
+              };
+            },
           );
           setNotifications(mappedNotifs);
         }
@@ -674,25 +822,6 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
 
           // Muat notifikasi backend khusus untuk akun pengguna yang sedang login
           await refreshNotifications(roleCap, u.id);
-
-          if (
-            typeof window !== "undefined" &&
-            !sessionStorage.getItem("sehatklinik_welcome_sent")
-          ) {
-            sessionStorage.setItem("sehatklinik_welcome_sent", "1");
-            const welcomeTitle = "Selamat Datang di SehatKlinik";
-            const welcomeMessage = `Halo ${authUser.name}, akun Anda siap digunakan untuk pendaftaran antrean dan pemantauan kunjungan.`;
-            addNotification(
-              {
-                targetRole: roleCap,
-                targetUserId: u.id,
-                type: "INFO",
-                title: welcomeTitle,
-                message: welcomeMessage,
-              },
-              false,
-            );
-          }
         }
       } catch {}
 
@@ -958,23 +1087,28 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
               (n.visitId === v.id && n.type === "PENGINGAT_KUNJUNGAN"),
           );
           if (!exists) {
-            const dName = doctorName(v.doctor);
-            const qLabel = queueLabel(
-              v,
-              doctors.findIndex((d) => d.id === v.doctor),
+            const doctorIdx = doctors.findIndex((d) => d.id === v.doctor);
+            const qLabel = queueLabel(v, doctorIdx);
+            const hasValidRef = Boolean(
+              v.ref &&
+                !POLA_UUID.test(v.ref) &&
+                !/^[0-9a-f-]{16,}$/i.test(v.ref),
             );
+            const reminderMessage = hasValidRef
+              ? `${v.ref} · Antrean ${qLabel} · ${dateLabel(v.date)}`
+              : `Antrean ${qLabel} · ${dateLabel(v.date)}`;
+
             const newReminder: NotificationItem = {
               id: reminderId,
               targetRole: "Pasien",
               targetUserId: v.patient,
               type: "PENGINGAT_KUNJUNGAN",
-              title: "Pengingat Kunjungan",
-              message: `Pengingat: Anda memiliki jadwal kunjungan hari ini bersama ${dName} (Antrean: ${qLabel}).`,
+              title: "PENGINGAT KUNJUNGAN",
+              message: reminderMessage,
               timestamp: new Date().toISOString(),
               isRead: false,
               visitId: v.id,
-              queueNumber: qLabel,
-              actionUrl: "detail",
+              actionUrl: `/kunjungan/${v.id}`,
             };
             updated = [newReminder, ...updated];
             hasNew = true;
@@ -1093,9 +1227,6 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     // Also surface as a toast
     notify(`🔔 ${notif.title}: ${notif.message.slice(0, 60)}...`);
   };
-
-  const POLA_UUID =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   const markNotificationAsRead = async (id: string) => {
     // Notifikasi lokal (welcome/pengingat) tidak ada di tabel; cukup state lokal.
@@ -1266,7 +1397,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         const ok = await syncPushSubscription(currentUser, false);
         if (ok) {
           notify("Notifikasi Web Push browser berhasil diaktifkan!");
-          const welcomeTitle = "Selamat Datang di SehatKlinik";
+          const welcomeTitle = "SELAMAT DATANG";
           const userName = currentUser?.name || "Pengguna";
           const welcomeRole = (currentUser?.role ||
             (role !== "Publik" ? role : "Semua")) as Role | "Semua";
@@ -1299,7 +1430,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         targetRole: "Pasien",
         targetUserId: patient.id,
         type: "ANTREAN_DIPANGGIL",
-        title: "Giliran Anda Telah Tiba!",
+        title: "ANTREAN DIPANGGIL",
         message: `Nomor antrean 01-001 (dr. Reyhan Adhitama - Poli Umum) sekarang dipanggil. Silakan menuju Ruang Periksa 1.`,
         visitId: "KJ-20261026-001",
         queueNumber: "01-001",
@@ -1310,7 +1441,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         targetRole: "Pasien",
         targetUserId: patient.id,
         type: "GILIRAN_MENDEKAT",
-        title: "Giliran Antrean Hampir Tiba",
+        title: "GILIRAN MENDEKAT",
         message:
           "Satu pasien lagi sebelum nomor giliran Anda. Mohon bersiap di ruang tunggu.",
         visitId: "KJ-20261026-001",
@@ -1321,7 +1452,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       addNotification({
         targetRole: "Petugas",
         type: "PENDAFTARAN_BARU",
-        title: "Pendaftaran Online Masuk",
+        title: "PENDAFTARAN BARU",
         message:
           "Pasien baru mendaftar untuk konsultasi Poli Anak pada sesi jam 09.00 WIB.",
         actionUrl: "antrean",
@@ -1330,7 +1461,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       addNotification({
         targetRole: "Semua",
         type: "INFO",
-        title: "Uji Coba Sistem Notifikasi Web Push",
+        title: "UJI COBA NOTIFIKASI",
         message:
           "Koneksi worker pengiriman notifikasi BullMQ + Redis terverifikasi aman dan responsif sesuai SRS.",
       });
@@ -1515,46 +1646,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         await syncVisitTransition(v.id, { target: "call" }, "call");
         await refreshKunjungan();
         updateVisit(v.id, { queue: "Dipanggil" });
-
-        // Trigger ANTREAN_DIPANGGIL notification for the patient
-        addNotification({
-          targetRole: "Pasien",
-          targetUserId: v.patient,
-          type: "ANTREAN_DIPANGGIL",
-          title: "Pasien Dipanggil!",
-          message: `Nomor antrean Anda (${qLabel}) telah dipanggil ke Ruang Periksa bersama ${docName}. Silakan segera masuk.`,
-          visitId: v.id,
-          queueNumber: qLabel,
-          actionUrl: "detail",
-        });
-
-        // Find the NEXT waiting patient for this doctor and send GILIRAN_MENDEKAT notification (SRS 11)
-        const nextInLine = todayVisits.find(
-          (other) =>
-            other.id !== v.id &&
-            other.doctor === v.doctor &&
-            other.status === "Hadir" &&
-            other.queue === "Menunggu",
-        );
-        if (nextInLine) {
-          const nextQLabel = queueLabel(
-            nextInLine,
-            doctors.findIndex((d) => d.id === nextInLine.doctor),
-          );
-          addNotification(
-            {
-              targetRole: "Pasien",
-              targetUserId: nextInLine.patient,
-              type: "GILIRAN_MENDEKAT",
-              title: "Giliran Antrean Anda Hampir Tiba",
-              message: `Nomor antrean sebelum Anda (${qLabel}) sedang dipanggil. Mohon bersiap di ruang tunggu untuk nomor Anda ${nextQLabel}.`,
-              visitId: nextInLine.id,
-              queueNumber: nextQLabel,
-              actionUrl: "detail",
-            },
-            false,
-          );
-        }
+        await refreshNotifications();
       } else if (
         target === "start" &&
         role === "Dokter" &&
@@ -1564,16 +1656,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         await refreshKunjungan();
         updateVisit(v.id, { queue: "Sedang Diperiksa" });
         notify(`Pemeriksaan untuk antrean ${qLabel} dimulai.`);
-        addNotification({
-          targetRole: "Pasien",
-          targetUserId: v.patient,
-          type: "ANTREAN_DIPANGGIL",
-          title: "Sedang Diperiksa",
-          message: `Nomor antrean ${qLabel} sedang diperiksa oleh ${docName} di Ruang Periksa.`,
-          visitId: v.id,
-          queueNumber: qLabel,
-          actionUrl: "detail",
-        });
+        await refreshNotifications();
       } else if (
         target === "finish" &&
         role === "Dokter" &&
@@ -1584,16 +1667,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         updateVisit(v.id, { status: "Selesai", queue: "Selesai" });
         notify("Kunjungan selesai. Ringkasan tersedia pada riwayat pasien.");
         setSelected(null);
-        addNotification({
-          targetRole: "Pasien",
-          targetUserId: v.patient,
-          type: "KUNJUNGAN_SELESAI",
-          title: "Pemeriksaan Selesai",
-          message: `Pemeriksaan selesai. Rekam medis dan resep obat dapat dilihat pada riwayat kunjungan.`,
-          visitId: v.id,
-          queueNumber: qLabel,
-          actionUrl: "detail",
-        });
+        await refreshNotifications();
       } else if (
         target === "skip" &&
         role === "Petugas" &&
@@ -1603,16 +1677,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         await syncVisitTransition(v.id, { target: "skip", reason }, "skip");
         await refreshKunjungan();
         updateVisit(v.id, { queue: "Dilewati", reason });
-        addNotification({
-          targetRole: "Pasien",
-          targetUserId: v.patient,
-          type: "KUNJUNGAN_DIBATALKAN",
-          title: "Antrean Dilewati",
-          message: `Nomor antrean ${qLabel} dilewati karena: ${reason}. Silakan hubungi loket petugas untuk jadwal ulang.`,
-          visitId: v.id,
-          queueNumber: qLabel,
-          actionUrl: "detail",
-        });
+        await refreshNotifications();
       } else if (
         target === "cancel" &&
         ((role === "Pasien" && v.queue === "Menunggu") ||
@@ -1629,16 +1694,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         });
         setSelected(null);
         notify("Kunjungan berhasil dibatalkan.");
-        addNotification({
-          targetRole: "Pasien",
-          targetUserId: v.patient,
-          type: "KUNJUNGAN_DIBATALKAN",
-          title: "Kunjungan Dibatalkan",
-          message: `Kunjungan ${v.id} (${qLabel}) dibatalkan. Alasan: ${reason}. Kuota jadwal telah dikembalikan.`,
-          visitId: v.id,
-          queueNumber: qLabel,
-          actionUrl: "detail",
-        });
+        await refreshNotifications();
       } else {
         setError(
           "Tindakan tidak tersedia. Periksa status kunjungan dan isi alasan bila diperlukan.",
@@ -1742,41 +1798,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       setReceipt(savedVisit);
       setStep(4);
 
-      const qLabel = queueLabel(
-        savedVisit,
-        doctors.findIndex((d) => d.id === savedVisit.doctor),
-      );
-      const dName = doctorName(savedVisit.doctor);
-      const sName = serviceName(savedVisit.service);
-      const pName = patientName(savedVisit.patient);
-
-      // Notifikasi ke Pasien (Pendaftaran Berhasil)
-      addNotification({
-        targetRole: "Pasien",
-        targetUserId: savedVisit.patient,
-        type: "KUNJUNGAN_TERDAFTAR",
-        title: "Pendaftaran Berhasil",
-        message: `Pendaftaran kunjungan ke ${dName} berhasil dikonfirmasi. Nomor antrean Anda: ${qLabel}.`,
-        visitId: savedVisit.id,
-        queueNumber: qLabel,
-        actionUrl: "detail",
-      });
-
-      // Notifikasi ke Petugas (SRS 11: Pendaftaran online baru)
-      if (savedVisit.source === "Online") {
-        addNotification(
-          {
-            targetRole: "Petugas",
-            type: "PENDAFTARAN_BARU",
-            title: "Pendaftaran Online Baru",
-            message: `Pasien ${pName} mendaftar online ke ${sName} (${dName}) untuk tanggal ${savedVisit.date}. Nomor antrean: ${qLabel}.`,
-            visitId: savedVisit.id,
-            queueNumber: qLabel,
-            actionUrl: "antrean",
-          },
-          false,
-        );
-      }
+      await refreshNotifications();
     } finally {
       setBusy(false);
     }
@@ -1977,19 +1999,6 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
 
     // Segera muat notifikasi backend terisolasi untuk profileId pengguna yang baru login
     await refreshNotifications(userRole, fullUser.id);
-
-    const welcomeTitle = "Selamat Datang di SehatKlinik";
-    const welcomeMessage = `Halo ${authUser.name}, akun Anda siap digunakan untuk pendaftaran antrean dan pemantauan kunjungan.`;
-    addNotification(
-      {
-        targetRole: userRole,
-        targetUserId: fullUser.id,
-        type: "INFO",
-        title: welcomeTitle,
-        message: welcomeMessage,
-      },
-      true,
-    );
     return {
       success: true,
       message: `Selamat datang, ${authUser.name}!`,

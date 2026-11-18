@@ -81,7 +81,6 @@ const menus: Record<Exclude<Role, "Publik">, [string, string][]> = {
     ["Antrean Hari Ini", "clock"],
     ["Pendaftaran Walk-in", "plus"],
     ["Data Pasien", "users"],
-    ["Pekerjaan Notifikasi", "bell"],
   ],
   Dokter: [
     ["Dashboard", "grid"],
@@ -4596,7 +4595,9 @@ export default function ClinicWorkspace({
               >
                 <Icon name="bell" size={18} />
                 {unreadCount > 0 && (
-                  <span className="notif-counter-badge">{unreadCount}</span>
+                  <span className="notif-counter-badge">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
                 )}
               </button>
               <span className="top-divider" />

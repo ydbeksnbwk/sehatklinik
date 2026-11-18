@@ -11,6 +11,7 @@ export default function NotificationDrawer() {
   const {
     role,
     notifications,
+    visits,
     notificationDrawerOpen,
     setNotificationDrawerOpen,
     markNotificationAsRead,
@@ -19,6 +20,7 @@ export default function NotificationDrawer() {
     pushSubscriptionActive,
     requestWebPushPermission,
     setSelected,
+    openVisit,
     navigate,
     currentUser,
     patient,
@@ -52,19 +54,68 @@ export default function NotificationDrawer() {
     activeTab === "unread" ? unreadItems : userNotifications
 
   const handleNotificationClick = (item: (typeof notifications)[0]) => {
+    // 1. Tandai notifikasi sebagai dibaca dan tutup drawer
     markNotificationAsRead(item.id)
     setNotificationDrawerOpen(false)
 
-    if (item.actionUrl && (item.actionUrl.startsWith("/") || item.actionUrl.startsWith("http"))) {
-      router.push(item.actionUrl)
+    // Ekstrak ID kunjungan dari visitId atau dari actionUrl
+    const urlVisitMatch =
+      item.actionUrl?.match(/\/(?:kunjungan|riwayat|antrean)\/([0-9a-f-]{8,})/i) ||
+      item.actionUrl?.match(/[?&](?:kunjunganId|visitId|id)=([0-9a-f-]{8,})/i) ||
+      item.actionUrl?.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i)
+
+    const targetVisitId =
+      item.visitId && item.visitId !== "KJ-SISTEM"
+        ? item.visitId
+        : urlVisitMatch
+          ? urlVisitMatch[1]
+          : undefined
+
+    // 2. Cari kunjungan yang cocok di array visits berdasarkan notif.visitId (atau ekstrak ID dari notif.actionUrl)
+    const matchedVisit = targetVisitId
+      ? visits.find((v) => v.id.toLowerCase() === targetVisitId.toLowerCase())
+      : undefined
+
+    if (matchedVisit) {
+      if (role === "Petugas") {
+        navigate("Antrean Hari Ini")
+      } else if (role === "Dokter" || role === "Pasien") {
+        navigate("Antrean Saya")
+      }
+      openVisit(matchedVisit)
       return
     }
 
-    if (item.visitId && item.visitId !== "KJ-SISTEM") {
-      setSelected(item.visitId)
+    // 3. Jika kunjungan spesifik tidak ditemukan di visits tetapi notif.actionUrl adalah URL internal (dimulai dengan "/")
+    if (item.actionUrl && item.actionUrl.startsWith("/")) {
+      const url = item.actionUrl.toLowerCase()
+      if (url.includes("/antrean") || url.includes("/petugas")) {
+        navigate("Antrean Hari Ini")
+      } else if (url.includes("/riwayat") || url.includes("/pasien") || url.includes("/dokter")) {
+        navigate("Antrean Saya")
+      } else if (item.actionUrl.includes("tab=") || item.actionUrl.includes("?")) {
+        try {
+          router.push(item.actionUrl)
+        } catch {
+          window.location.assign(item.actionUrl)
+        }
+      } else {
+        if (role === "Petugas") {
+          navigate("Antrean Hari Ini")
+        } else {
+          navigate("Antrean Saya")
+        }
+      }
+      return
     }
-    navigate("Antrean Saya")
-    router.push("/pasien")
+
+    // 4. Fallback terakhir jika tidak ada kunjungan spesifik yang cocok:
+    // Arahkan Petugas ke navigate("Antrean Hari Ini"), Dokter ke navigate("Antrean Saya"), dan Pasien ke navigate("Antrean Saya")
+    if (role === "Petugas") {
+      navigate("Antrean Hari Ini")
+    } else {
+      navigate("Antrean Saya")
+    }
   }
 
   // Format subtitle from visitId, queue, date or message matching mockup
@@ -179,6 +230,8 @@ export default function NotificationDrawer() {
               <div
                 key={item.id}
                 className={`notif-popup-item ${item.isRead ? "is-read" : "is-unread"}`}
+                onClick={() => handleNotificationClick(item)}
+                style={{ cursor: "pointer" }}
               >
                 {/* Icon in Circular Badge */}
                 <span className="notif-item-icon-badge">
@@ -238,7 +291,10 @@ export default function NotificationDrawer() {
                   <div className="notif-item-actions">
                     <button
                       className="notif-action-link"
-                      onClick={() => handleNotificationClick(item)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleNotificationClick(item)
+                      }}
                     >
                       <span>Lihat detail kunjungan</span>
                       <span className="notif-action-arrow">&rarr;</span>
@@ -247,7 +303,10 @@ export default function NotificationDrawer() {
                     {!item.isRead && (
                       <button
                         className="notif-mark-read-link"
-                        onClick={() => markNotificationAsRead(item.id)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          markNotificationAsRead(item.id)
+                        }}
                       >
                         Tandai dibaca
                       </button>
