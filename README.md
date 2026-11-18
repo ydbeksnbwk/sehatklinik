@@ -49,9 +49,12 @@ Lengkapi nilai-nilai variabel di dalam `.env.local` sesuai panduan tabel di bawa
 | `VAPID_SUBJECT` | Server Khusus | Kontak pengirim VAPID (`mailto:admin@kliniktujuh.com` atau URL) |
 | `REDIS_URL` | Server & Worker | URL koneksi Redis (`redis://...` atau `rediss://...` untuk SSL) |
 | `SEED_ALLOW` | Tooling / Script | Penanda izin eksekusi seed database (`1` untuk mengizinkan) |
+| `DEMO_LOGIN_ENABLED` | Server Khusus | Flag aktivasi endpoint backend `/api/auth/login-cepat` (`1` untuk aktif) |
+| `NEXT_PUBLIC_DEMO_LOGIN_ENABLED` | Browser | Flag tampilan tombol login cepat demo di halaman login frontend (`1` untuk aktif) |
+| `DEMO_LOGIN_PASSWORD` | Server Khusus | Kata sandi akun demo untuk autentikasi server (TIDAK diekspos ke browser) |
 
 > [!CAUTION]
-> Jangan pernah mengekspos `SUPABASE_SERVICE_ROLE_KEY`, `VAPID_PRIVATE_KEY`, `DATABASE_URL`, atau `REDIS_URL` ke sisi peramban atau berkas frontend. Variabel-variabel tersebut hanya boleh diakses di lingkungan server.
+> Jangan pernah mengekspos `SUPABASE_SERVICE_ROLE_KEY`, `VAPID_PRIVATE_KEY`, `DATABASE_URL`, `REDIS_URL`, atau `DEMO_LOGIN_PASSWORD` ke sisi peramban atau berkas frontend. Variabel-variabel tersebut hanya boleh diakses di lingkungan server.
 
 ---
 
@@ -133,6 +136,38 @@ Seluruh akun uji telah didaftarkan pada Supabase Auth dan disinkronkan ke tabel 
 | **Dokter 2** | `nadira.kirana@gmail.com` | `Password123!` | drg. Nadira Kirana (Poli Gigi) |
 | **Pasien 1** | `ani.wulandari@gmail.com` | `Password123!` | Ani Wulandari (`RM-000001`) |
 | **Pasien 2** | `bagas.saputra@gmail.com` | `Password123!` | Bagas Saputra (`RM-000002`) |
+
+---
+
+## ⚡ Login Cepat (Demo Penilaian)
+
+Fitur **Login Cepat** disediakan secara khusus atas permintaan revisi dosen pengampu untuk memudahkan penilaian dan demonstrasi 4 peran utama (**Pasien**, **Petugas**, **Dokter**, **Admin**) tanpa perlu mengetik kredensial satu per satu.
+
+### Prinsip Keamanan (Ketentuan Dosen No. 7)
+- Kata sandi akun demo **TIDAK PERNAH** ditulis atau diekspos di sisi browser (`NEXT_PUBLIC_*` maupun bundle JavaScript client).
+- Tombol di frontend hanya mengirim payload peran (`{ peran: "pasien" | "petugas" | "dokter" | "admin" }`) ke endpoint server `POST /api/auth/login-cepat`.
+- Backend memetakan peran ke akun email seed terstandar dan melakukan proses autentikasi resmi dengan kata sandi dari variabel server `DEMO_LOGIN_PASSWORD`.
+- Dilindungi pembatas laju (*rate limiter*) ketat: maksimal 10 permintaan per menit per alamat IP.
+
+### Cara Mengaktifkan Fitur untuk Penilaian
+Tambahkan variabel berikut ke berkas `.env.local`:
+```env
+DEMO_LOGIN_ENABLED=1
+NEXT_PUBLIC_DEMO_LOGIN_ENABLED=1
+DEMO_LOGIN_PASSWORD=Password123!
+```
+Setelah server Next.js dijalankan, pada halaman Login (`/`) akan muncul blok tombol **"Masuk cepat (demo)"** berisi 4 tombol peran yang langsung mengarahkan penilai ke dasbor masing-masing peran.
+
+### Cara Mematikan Fitur Setelah Penilaian Selesai
+Untuk mengembalikan sistem ke mode produksi murni, cukup kosongkan atau set variabel ke `0` pada `.env.local`:
+```env
+DEMO_LOGIN_ENABLED=0
+NEXT_PUBLIC_DEMO_LOGIN_ENABLED=0
+DEMO_LOGIN_PASSWORD=
+```
+Ketika dimatikan:
+1. Blok tombol "Masuk cepat (demo)" otomatis hilang dari antarmuka login frontend.
+2. Endpoint backend `POST /api/auth/login-cepat` akan otomatis menolak seluruh permintaan dengan status **HTTP 404 (Not Found)**.
 
 ---
 
