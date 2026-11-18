@@ -28,7 +28,7 @@ import {
   apiAdminGetProfilKlinik,
   apiAdminUpdateProfilKlinik,
   apiPetugasKoreksiPasien,
-  type PekerjaanNotifikasiItem
+  type PekerjaanNotifikasiItem,
 } from "../utils/api";
 import {
   DEMO_DATE,
@@ -248,7 +248,12 @@ export default function ClinicWorkspace({
   const [todayFormatted, setTodayFormatted] = useState("");
   const lastAutoOpenedVisitId = useRef<string | null>(null);
   const [jobsLive, setJobsLive] = useState<PekerjaanNotifikasiItem[]>([]);
-  const [jobsLiveMeta, setJobsLiveMeta] = useState({ page: 1, pageSize: 10, total: 0, totalPages: 1 });
+  const [jobsLiveMeta, setJobsLiveMeta] = useState({
+    page: 1,
+    pageSize: 10,
+    total: 0,
+    totalPages: 1,
+  });
   const [jobsLiveLoading, setJobsLiveLoading] = useState(false);
   const [jobsLiveError, setJobsLiveError] = useState<string | null>(null);
   const [jobsLiveStatus, setJobsLiveStatus] = useState("semua");
@@ -447,9 +452,7 @@ export default function ClinicWorkspace({
   }, [selected, editor]);
 
   const userGender =
-    currentUser?.jenisKelamin ||
-    (currentUser as any)?.gender ||
-    "Laki-laki";
+    currentUser?.jenisKelamin || (currentUser as any)?.gender || "Laki-laki";
   const userPatientId =
     currentUser?.pasienId ||
     currentUser?.noRekamMedis ||
@@ -507,8 +510,7 @@ export default function ClinicWorkspace({
                 ? currentUser.alamat
                 : matchedPatient.address,
             emergency:
-              currentUser?.kontakDarurat &&
-              currentUser.kontakDarurat !== "-"
+              currentUser?.kontakDarurat && currentUser.kontakDarurat !== "-"
                 ? currentUser.kontakDarurat
                 : matchedPatient.emergency,
             nik: currentUser?.nik || matchedPatient.nik,
@@ -799,8 +801,10 @@ export default function ClinicWorkspace({
     </div>
   );
   const webPushBanner = (audience: "Pasien" | "Petugas" | "Dokter") => {
-    const isGrantedAndActive = webPushPermission === "granted" && pushSubscriptionActive;
-    const isGrantedFailed = webPushPermission === "granted" && !pushSubscriptionActive;
+    const isGrantedAndActive =
+      webPushPermission === "granted" && pushSubscriptionActive;
+    const isGrantedFailed =
+      webPushPermission === "granted" && !pushSubscriptionActive;
     const stateClass = isGrantedAndActive
       ? "is-granted"
       : isGrantedFailed || webPushPermission === "denied"
@@ -852,8 +856,10 @@ export default function ClinicWorkspace({
               <>
                 <h4>Gagal Menghubungkan Notifikasi Push</h4>
                 <p>
-                  Izin browser telah diberikan, namun pendaftaran langganan ke server belum berhasil:{" "}
-                  {pushSubscriptionError || "Koneksi ke server gagal"}. Silakan klik &ldquo;Coba Lagi&rdquo;.
+                  Izin browser telah diberikan, namun pendaftaran langganan ke
+                  server belum berhasil:{" "}
+                  {pushSubscriptionError || "Koneksi ke server gagal"}. Silakan
+                  klik &ldquo;Coba Lagi&rdquo;.
                 </p>
               </>
             ) : webPushPermission === "denied" ? (
@@ -1892,7 +1898,15 @@ export default function ClinicWorkspace({
               <Icon name="check" size={42} />
             </span>
             <h2>Pendaftaran berhasil</h2>
-            <p>{receipt.ref ? `Ref. ${receipt.ref}` : (receipt.id ? (receipt.id.length > 8 ? receipt.id.slice(0, 8) : receipt.id) : "")}</p>
+            <p>
+              {receipt.ref
+                ? `Ref. ${receipt.ref}`
+                : receipt.id
+                  ? receipt.id.length > 8
+                    ? receipt.id.slice(0, 8)
+                    : receipt.id
+                  : ""}
+            </p>
             <div className="ticket">{formatQueue(receipt)}</div>
             <h3>{patientName(receipt.patient)}</h3>
             <p>
@@ -2207,7 +2221,11 @@ export default function ClinicWorkspace({
                 const fieldMsg = (res.error as any).fields
                   ? Object.values((res.error as any).fields).join(", ")
                   : null;
-                throw new Error(fieldMsg || res.error.message || "Gagal mengoreksi data pasien.");
+                throw new Error(
+                  fieldMsg ||
+                    res.error.message ||
+                    "Gagal mengoreksi data pasien.",
+                );
               }
               setPatients((p) =>
                 p.map((item) =>
@@ -2220,7 +2238,10 @@ export default function ClinicWorkspace({
               setError("");
               notify("Data identitas pasien berhasil dikoreksi.");
             } catch (err: unknown) {
-              const msg = err instanceof Error ? err.message : "Gagal mengoreksi data pasien.";
+              const msg =
+                err instanceof Error
+                  ? err.message
+                  : "Gagal mengoreksi data pasien.";
               setError(msg);
             } finally {
               setBusy(false);
@@ -2293,7 +2314,11 @@ export default function ClinicWorkspace({
         };
         (async () => {
           try {
-            if (editor.id && !editor.id.startsWith("s_local") && !editor.id.startsWith("s-dummy")) {
+            if (
+              editor.id &&
+              !editor.id.startsWith("s_local") &&
+              !editor.id.startsWith("s-dummy")
+            ) {
               const res = await apiAdminUpdateLayanan(editor.id, payload);
               if (res.error) throw new Error(res.error.message);
             } else {
@@ -2312,13 +2337,14 @@ export default function ClinicWorkspace({
                     description: l.deskripsi || "",
                     duration: l.durasiMenit || 20,
                     active: l.aktif ?? true,
-                    overview: l.overview || l.detail?.overview || l.deskripsi || "",
+                    overview:
+                      l.overview || l.detail?.overview || l.deskripsi || "",
                     steps: l.steps || l.detail?.steps || [],
                     cases: l.cases || l.detail?.cases || [],
                     facilities: l.facilities || l.detail?.facilities || [],
                     preparation: l.preparation || l.detail?.preparation || "",
                   };
-                })
+                }),
               );
             }
             setEditor(null);
@@ -2387,12 +2413,14 @@ export default function ClinicWorkspace({
                   role: r.role.charAt(0).toUpperCase() + r.role.slice(1),
                   active: r.statusAktif,
                   telepon: r.telepon,
-                }))
+                })),
               );
             }
             setEditor(null);
             setError("");
-            notify(`Akun staf ${staffPayload.nama} (${staffPayload.role}) berhasil didaftarkan di sistem.`);
+            notify(
+              `Akun staf ${staffPayload.nama} (${staffPayload.role}) berhasil didaftarkan di sistem.`,
+            );
           } catch (err: any) {
             setError(err.message || "Gagal membuat akun staf.");
           } finally {
@@ -2403,9 +2431,7 @@ export default function ClinicWorkspace({
       }
       setEditor(null);
       setError("");
-      notify(
-        "Data demo berhasil diperbarui. Perubahan hanya berlaku selama sesi ini.",
-      );
+      notify("Data berhasil diperbarui.");
     } finally {
       setBusy(false);
     }
@@ -2954,7 +2980,9 @@ export default function ClinicWorkspace({
                     </div>
                   )}
 
-                  <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
+                  <div
+                    style={{ display: "flex", gap: "8px", marginTop: "10px" }}
+                  >
                     <button
                       type="button"
                       className="secondary"
@@ -2968,30 +2996,47 @@ export default function ClinicWorkspace({
                       className="danger"
                       style={{ padding: "6px 12px", fontSize: "12px" }}
                       onClick={async () => {
-                        if (!confirm(`Hapus atau nonaktifkan layanan "${s.name}"?`)) return;
+                        if (
+                          !confirm(
+                            `Hapus atau nonaktifkan layanan "${s.name}"?`,
+                          )
+                        )
+                          return;
                         try {
                           const res = await apiAdminHapusLayanan(s.id);
                           if (res.error) throw new Error(res.error.message);
-                          notify(res.data?.message || "Layanan berhasil diproses.");
+                          notify(
+                            res.data?.message || "Layanan berhasil diproses.",
+                          );
                           const updated = await apiGetLayanan();
                           if (updated.data) {
                             const rows = updated.data;
                             setServices((prev) =>
                               rows.map((l: any) => {
-                                const existing = prev.find((p) => p.id === l.id);
+                                const existing = prev.find(
+                                  (p) => p.id === l.id,
+                                );
                                 return {
                                   id: l.id,
                                   name: l.namaLayanan,
                                   description: l.deskripsi || "",
                                   duration: l.durasiMenit || 20,
                                   active: l.aktif ?? true,
-                                  overview: l.overview || l.detail?.overview || l.deskripsi || "",
+                                  overview:
+                                    l.overview ||
+                                    l.detail?.overview ||
+                                    l.deskripsi ||
+                                    "",
                                   steps: l.steps || l.detail?.steps || [],
                                   cases: l.cases || l.detail?.cases || [],
-                                  facilities: l.facilities || l.detail?.facilities || [],
-                                  preparation: l.preparation || l.detail?.preparation || "",
+                                  facilities:
+                                    l.facilities || l.detail?.facilities || [],
+                                  preparation:
+                                    l.preparation ||
+                                    l.detail?.preparation ||
+                                    "",
                                 };
-                              })
+                              }),
                             );
                           }
                         } catch (err: any) {
@@ -3356,10 +3401,14 @@ export default function ClinicWorkspace({
                               onClick={async () => {
                                 if (u.id) {
                                   try {
-                                    const res = await apiAdminUpdatePengguna(u.id, {
-                                      statusAktif: !u.active,
-                                    });
-                                    if (res.error) throw new Error(res.error.message);
+                                    const res = await apiAdminUpdatePengguna(
+                                      u.id,
+                                      {
+                                        statusAktif: !u.active,
+                                      },
+                                    );
+                                    if (res.error)
+                                      throw new Error(res.error.message);
                                     setUsers((previous) =>
                                       previous.map((item) =>
                                         item.id === u.id
@@ -3367,9 +3416,14 @@ export default function ClinicWorkspace({
                                           : item,
                                       ),
                                     );
-                                    notify(`Status akun ${u.name} berhasil diperbarui.`);
+                                    notify(
+                                      `Status akun ${u.name} berhasil diperbarui.`,
+                                    );
                                   } catch (err: any) {
-                                    notify(err.message || "Gagal mengubah status akun.");
+                                    notify(
+                                      err.message ||
+                                        "Gagal mengubah status akun.",
+                                    );
                                   }
                                 } else {
                                   setUsers((previous) =>
@@ -3410,8 +3464,8 @@ export default function ClinicWorkspace({
           )}
           <div className="notice ws-inset">
             <Icon name="shield" size={20} />
-            Ini simulasi tampilan akun. Pembuatan akun dan pembatasan akses
-            server belum terhubung.
+            Akun staf yang didaftarkan oleh admin langsung tersinkronisasi dan
+            dapat digunakan untuk masuk ke ruang kerja masing-masing.
           </div>
         </section>
       );
@@ -3426,7 +3480,9 @@ export default function ClinicWorkspace({
               name={patient.name}
             />
             <h2>{patient.name}</h2>
-            {patient.nik && <p className="muted">NIK: {patient.nik}</p>}
+            {patient.nik && patient.nik !== "-" && (
+              <p className="muted">NIK: {patient.nik}</p>
+            )}
             <Badge text="Pasien" />
             <div className="patient-profile-fixed">
               <Icon name="shield" size={19} />
@@ -3471,7 +3527,7 @@ export default function ClinicWorkspace({
                 ].map(([label, value]) => (
                   <div key={label}>
                     <dt>{label}</dt>
-                    <dd>{value || "Belum diisi"}</dd>
+                    <dd>{value && value !== "-" ? value : "Belum diisi"}</dd>
                   </div>
                 ))}
               </dl>
@@ -3490,7 +3546,7 @@ export default function ClinicWorkspace({
                     className={label === "Alamat" ? "full-width" : ""}
                   >
                     <dt>{label}</dt>
-                    <dd>{value || "Belum diisi"}</dd>
+                    <dd>{value && value !== "-" ? value : "Belum diisi"}</dd>
                   </div>
                 ))}
               </dl>
@@ -3503,10 +3559,13 @@ export default function ClinicWorkspace({
         <section className="panel queue-panel">
           <div className="panel-heading">
             <div>
-              <span className="eyebrow">MONITORING WEB PUSH & WORKER (PRD §7.5)</span>
+              <span className="eyebrow">
+                MONITORING WEB PUSH & WORKER (PRD §7.5)
+              </span>
               <h3>Pekerjaan Notifikasi Web Push</h3>
               <p>
-                Daftar antrean pengiriman push notification outbox, status percobaan, dan log kegagalan.
+                Daftar antrean pengiriman push notification outbox, status
+                percobaan, dan log kegagalan.
               </p>
             </div>
             <div style={{ display: "flex", gap: "8px" }}>
@@ -3521,18 +3580,25 @@ export default function ClinicWorkspace({
                     page: pagination,
                     pageSize: 10,
                     status: jobsLiveStatus,
-                  }).then((res) => {
-                    if (res.error) setJobsLiveError(res.error.message || "Gagal memuat pekerjaan notifikasi.");
-                    else {
-                      setJobsLive(res.data || []);
-                      if (res.meta) setJobsLiveMeta({
-                        page: res.meta.page || pagination,
-                        pageSize: res.meta.pageSize || 10,
-                        total: res.meta.total || 0,
-                        totalPages: res.meta.totalPages || 1,
-                      });
-                    }
-                  }).finally(() => setJobsLiveLoading(false));
+                  })
+                    .then((res) => {
+                      if (res.error)
+                        setJobsLiveError(
+                          res.error.message ||
+                            "Gagal memuat pekerjaan notifikasi.",
+                        );
+                      else {
+                        setJobsLive(res.data || []);
+                        if (res.meta)
+                          setJobsLiveMeta({
+                            page: res.meta.page || pagination,
+                            pageSize: res.meta.pageSize || 10,
+                            total: res.meta.total || 0,
+                            totalPages: res.meta.totalPages || 1,
+                          });
+                      }
+                    })
+                    .finally(() => setJobsLiveLoading(false));
                 }}
               >
                 <Icon name="refresh" size={14} />
@@ -3542,15 +3608,35 @@ export default function ClinicWorkspace({
           </div>
 
           {jobsLiveError && (
-            <div style={{ padding: "12px 16px", margin: "12px 0", background: "#fef2f2", color: "#b91c1c", borderRadius: "8px", fontSize: "13px" }}>
+            <div
+              style={{
+                padding: "12px 16px",
+                margin: "12px 0",
+                background: "#fef2f2",
+                color: "#b91c1c",
+                borderRadius: "8px",
+                fontSize: "13px",
+              }}
+            >
               <b>Gagal memuat data:</b> {jobsLiveError}
             </div>
           )}
 
           <div className="table-tools">
-            <div className="filters" style={{ width: "100%", display: "flex", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                <label style={{ fontSize: "13px", fontWeight: 500 }}>Filter Status:</label>
+            <div
+              className="filters"
+              style={{
+                width: "100%",
+                display: "flex",
+                justifyContent: "space-between",
+              }}
+            >
+              <div
+                style={{ display: "flex", gap: "10px", alignItems: "center" }}
+              >
+                <label style={{ fontSize: "13px", fontWeight: 500 }}>
+                  Filter Status:
+                </label>
                 <select
                   aria-label="Filter status notifikasi"
                   value={jobsLiveStatus}
@@ -3565,7 +3651,12 @@ export default function ClinicWorkspace({
                   <option value="gagal">Gagal</option>
                 </select>
               </div>
-              <span style={{ fontSize: "13px", color: "var(--text-muted, #64748b)" }}>
+              <span
+                style={{
+                  fontSize: "13px",
+                  color: "var(--text-muted, #64748b)",
+                }}
+              >
                 Total: {jobsLiveMeta.total} pekerjaan
               </span>
             </div>
@@ -3587,81 +3678,95 @@ export default function ClinicWorkspace({
                 </tr>
               </thead>
               <tbody>
-                {jobsLiveLoading ? (
-                  Array.from({ length: 4 }, (_, idx) => (
-                    <tr key={`job-skel-${idx}`}>
-                      <td colSpan={9}>
-                        <div className="ws-skeleton ws-skeleton-line" />
-                      </td>
-                    </tr>
-                  ))
-                ) : jobsLive.map((j) => (
-                  <tr key={j.id}>
-                    <td>
-                      <code title={j.id} style={{ fontSize: "11px" }}>
-                        {j.id ? j.id.slice(0, 8) : "-"}
-                      </code>
-                    </td>
-                    <td>
-                      <small style={{ color: "var(--text-muted, #64748b)" }}>
-                        {j.createdAt ? new Date(j.createdAt).toLocaleString("id-ID") : "-"}
-                      </small>
-                    </td>
-                    <td>
-                      <b>{j.namaPenerima}</b>
-                    </td>
-                    <td>
-                      <code>{j.jenisKejadian || "-"}</code>
-                    </td>
-                    <td style={{ maxWidth: "260px" }}>
-                      <span style={{ fontSize: "12.5px" }}>{j.pesan}</span>
-                    </td>
-                    <td>
-                      <span
-                        className={`job-status-badge ${
-                          j.pushStatus === "berhasil"
-                            ? "status-success"
-                            : j.pushStatus === "gagal"
-                              ? "status-failed"
-                              : "status-queued"
-                        }`}
-                      >
-                        {j.pushStatus === "berhasil"
-                          ? "Berhasil"
-                          : j.pushStatus === "gagal"
-                            ? "Gagal"
-                            : "Menunggu"}
-                      </span>
-                    </td>
-                    <td>{j.pushPercobaan}x</td>
-                    <td>
-                      <small style={{ color: "var(--text-muted, #64748b)" }}>
-                        {j.pushDiprosesAt ? new Date(j.pushDiprosesAt).toLocaleTimeString("id-ID") : "-"}
-                      </small>
-                    </td>
-                    <td>
-                      {j.pushError ? (
-                        <span style={{ color: "#dc2626", fontSize: "11px" }}>
-                          {j.pushError}
-                        </span>
-                      ) : j.pushStatus === "berhasil" ? (
-                        <span style={{ color: "#16a34a", fontSize: "11px" }}>
-                          Sukses terkirim
-                        </span>
-                      ) : (
-                        <span style={{ color: "#94a3b8", fontSize: "11px" }}>
-                          Menunggu antrean worker
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {jobsLiveLoading
+                  ? Array.from({ length: 4 }, (_, idx) => (
+                      <tr key={`job-skel-${idx}`}>
+                        <td colSpan={9}>
+                          <div className="ws-skeleton ws-skeleton-line" />
+                        </td>
+                      </tr>
+                    ))
+                  : jobsLive.map((j) => (
+                      <tr key={j.id}>
+                        <td>
+                          <code title={j.id} style={{ fontSize: "11px" }}>
+                            {j.id ? j.id.slice(0, 8) : "-"}
+                          </code>
+                        </td>
+                        <td>
+                          <small
+                            style={{ color: "var(--text-muted, #64748b)" }}
+                          >
+                            {j.createdAt
+                              ? new Date(j.createdAt).toLocaleString("id-ID")
+                              : "-"}
+                          </small>
+                        </td>
+                        <td>
+                          <b>{j.namaPenerima}</b>
+                        </td>
+                        <td>
+                          <code>{j.jenisKejadian || "-"}</code>
+                        </td>
+                        <td style={{ maxWidth: "260px" }}>
+                          <span style={{ fontSize: "12.5px" }}>{j.pesan}</span>
+                        </td>
+                        <td>
+                          <span
+                            className={`job-status-badge ${
+                              j.pushStatus === "berhasil"
+                                ? "status-success"
+                                : j.pushStatus === "gagal"
+                                  ? "status-failed"
+                                  : "status-queued"
+                            }`}
+                          >
+                            {j.pushStatus === "berhasil"
+                              ? "Berhasil"
+                              : j.pushStatus === "gagal"
+                                ? "Gagal"
+                                : "Menunggu"}
+                          </span>
+                        </td>
+                        <td>{j.pushPercobaan}x</td>
+                        <td>
+                          <small
+                            style={{ color: "var(--text-muted, #64748b)" }}
+                          >
+                            {j.pushDiprosesAt
+                              ? new Date(j.pushDiprosesAt).toLocaleTimeString(
+                                  "id-ID",
+                                )
+                              : "-"}
+                          </small>
+                        </td>
+                        <td>
+                          {j.pushError ? (
+                            <span
+                              style={{ color: "#dc2626", fontSize: "11px" }}
+                            >
+                              {j.pushError}
+                            </span>
+                          ) : j.pushStatus === "berhasil" ? (
+                            <span
+                              style={{ color: "#16a34a", fontSize: "11px" }}
+                            >
+                              Sukses terkirim
+                            </span>
+                          ) : (
+                            <span
+                              style={{ color: "#94a3b8", fontSize: "11px" }}
+                            >
+                              Menunggu antrean worker
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
               </tbody>
             </table>
             {!jobsLiveLoading && !jobsLive.length && !jobsLiveError && (
-              <div className="empty">
-                Tidak ada data pekerjaan notifikasi.
-              </div>
+              <div className="empty">Tidak ada data pekerjaan notifikasi.</div>
             )}
           </div>
           {renderPaginationBar(
@@ -3826,13 +3931,13 @@ export default function ClinicWorkspace({
             <p className="muted">
               {role === "Admin"
                 ? "Perubahan data alamat, kontak darurat, koordinat GPS, dan jam operasional langsung tersinkronisasi ke halaman publik."
-                : "Peran akun pasien dikelola oleh sistem."}
+                : "Perbarui alamat tempat tinggal, nomor telepon, atau kontak darurat Anda."}
             </p>
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
                 const data = new FormData(e.currentTarget);
-                const get = (key: string) => String(data.get(key) || "");
+                const get = (key: string) => String(data.get(key) || "").trim();
                 if (role === "Admin") {
                   const newClinic = {
                     name: get("name"),
@@ -3850,18 +3955,27 @@ export default function ClinicWorkspace({
                       deskripsi: newClinic.description,
                       alamat: newClinic.address,
                       kontak: newClinic.phone,
-                      latitude: newClinic.latitude ? Number(newClinic.latitude) : undefined,
-                      longitude: newClinic.longitude ? Number(newClinic.longitude) : undefined,
+                      latitude: newClinic.latitude
+                        ? Number(newClinic.latitude)
+                        : undefined,
+                      longitude: newClinic.longitude
+                        ? Number(newClinic.longitude)
+                        : undefined,
                       jamOperasional: newClinic.hours,
                     });
                     if (res.error) {
-                      throw new Error(res.error.message || "Gagal memperbarui profil klinik.");
+                      throw new Error(
+                        res.error.message || "Gagal memperbarui profil klinik.",
+                      );
                     }
                     setClinic(newClinic);
                     setEditingProfile(false);
                     notify("Profil klinik berhasil diperbarui.");
                   } catch (err: unknown) {
-                    const msg = err instanceof Error ? err.message : "Gagal memperbarui profil klinik.";
+                    const msg =
+                      err instanceof Error
+                        ? err.message
+                        : "Gagal memperbarui profil klinik.";
                     notify(msg);
                   } finally {
                     setBusy(false);
@@ -3883,7 +3997,7 @@ export default function ClinicWorkspace({
                       setProfilFieldErrors(res.error.fields || {});
                       throw new Error(
                         res.error.message ||
-                          "Gagal memperbarui profil di database."
+                          "Gagal memperbarui profil di database.",
                       );
                     }
                     const saved = res.data as
@@ -3917,7 +4031,7 @@ export default function ClinicWorkspace({
                     setCurrentUser(updatedUser);
                   } catch (err: any) {
                     notify(
-                      err?.message || "Gagal memperbarui profil di database."
+                      err?.message || "Gagal memperbarui profil di database.",
                     );
                     setBusy(false);
                     return;
@@ -3931,7 +4045,7 @@ export default function ClinicWorkspace({
                         item.id === patient.id ||
                         (currentUser?.id && item.id === currentUser.id) ||
                         (currentUser?.pasienId &&
-                          item.id === currentUser.pasienId)
+                          item.id === currentUser.pasienId),
                     );
                     if (exists) {
                       return p.map((item) =>
@@ -3945,7 +4059,7 @@ export default function ClinicWorkspace({
                               address: updatedAddress,
                               emergency: updatedEmergency,
                             }
-                          : item
+                          : item,
                       );
                     }
                     return [
@@ -3996,18 +4110,14 @@ export default function ClinicWorkspace({
                       name="birth"
                       disabled
                       type="date"
-                      defaultValue={
-                        currentUser?.tanggalLahir || patient.birth
-                      }
+                      defaultValue={currentUser?.tanggalLahir || patient.birth}
                     />
                   </Field>
                   <Field label="Jenis kelamin">
                     <select
                       name="gender"
                       disabled
-                      defaultValue={
-                        currentUser?.jenisKelamin || patient.gender
-                      }
+                      defaultValue={currentUser?.jenisKelamin || patient.gender}
                     >
                       <option>Laki-laki</option>
                       <option>Perempuan</option>
@@ -4021,7 +4131,13 @@ export default function ClinicWorkspace({
                     name="nik"
                     disabled
                     maxLength={16}
-                    defaultValue={currentUser?.nik || patient.nik || ""}
+                    defaultValue={
+                      currentUser?.nik && currentUser.nik !== "-"
+                        ? currentUser.nik
+                        : patient.nik && patient.nik !== "-"
+                          ? patient.nik
+                          : ""
+                    }
                   />
                 </Field>
               )}
@@ -4034,12 +4150,15 @@ export default function ClinicWorkspace({
                 <textarea
                   name="address"
                   required
+                  placeholder="Masukkan alamat lengkap tempat tinggal..."
                   defaultValue={
                     role === "Admin"
                       ? clinic.address
                       : currentUser?.alamat && currentUser.alamat !== "-"
                         ? currentUser.alamat
-                        : patient.address
+                        : patient.address && patient.address !== "-"
+                          ? patient.address
+                          : ""
                   }
                 />
               </Field>
@@ -4053,12 +4172,15 @@ export default function ClinicWorkspace({
                   name="phone"
                   required
                   type="tel"
+                  placeholder="Contoh: 081234567890"
                   defaultValue={
                     role === "Admin"
                       ? clinic.phone
                       : currentUser?.telepon && currentUser.telepon !== "-"
                         ? currentUser.telepon
-                        : patient.phone
+                        : patient.phone && patient.phone !== "-"
+                          ? patient.phone
+                          : ""
                   }
                 />
               </Field>
@@ -4100,14 +4222,25 @@ export default function ClinicWorkspace({
                   <input
                     name="emergency"
                     type="tel"
+                    placeholder="Nomor telepon keluarga / kerabat terdekat"
                     defaultValue={
                       currentUser?.kontakDarurat &&
                       currentUser.kontakDarurat !== "-"
                         ? currentUser.kontakDarurat
-                        : patient.emergency
+                        : patient.emergency && patient.emergency !== "-"
+                          ? patient.emergency
+                          : ""
                     }
                   />
                 </Field>
+              )}
+              {Object.keys(profilFieldErrors).length > 0 && (
+                <div className="ws-error" role="alert">
+                  <Icon name="help" size={18} />
+                  {Object.entries(profilFieldErrors)
+                    .map(([k, v]) => `${k}: ${v}`)
+                    .join(" — ")}
+                </div>
               )}
               <div className="form-actions">
                 {role === "Pasien" && (
@@ -4139,7 +4272,7 @@ export default function ClinicWorkspace({
                 <div className="panel-heading">
                   <div>
                     <h3>Ringkasan per layanan</h3>
-                    <p>Seluruh periode · {visits.length} kunjungan simulasi</p>
+                    <p>Seluruh periode · {visits.length} kunjungan tercatat</p>
                   </div>
                   <Icon name="chart" size={18} />
                 </div>
@@ -4178,7 +4311,8 @@ export default function ClinicWorkspace({
           </>
         ) : (
           <>
-            {(role === "Petugas" || role === "Dokter") && webPushBanner(role === "Dokter" ? "Dokter" : "Petugas")}
+            {(role === "Petugas" || role === "Dokter") &&
+              webPushBanner(role === "Dokter" ? "Dokter" : "Petugas")}
             {workflow}
             <div className="ws-overview ws-operational">
               {visitTable(
@@ -4589,7 +4723,7 @@ export default function ClinicWorkspace({
               </span>
               <span>
                 <Icon name="shield" size={13} />
-                Prototipe berdasarkan PRD & ERD · Data simulasi
+                Sistem Informasi Manajemen Klinik Kesehatan
               </span>
             </footer>
           </main>
@@ -5358,15 +5492,15 @@ export default function ClinicWorkspace({
                   </Field>
                 )}
                 {showError}
-              {Object.keys(profilFieldErrors).length > 0 && (
-                <div className="ws-error" role="alert">
-                  <Icon name="help" size={18} />
-                  {Object.entries(profilFieldErrors)
-                    .map(([k, v]) => `${k}: ${v}`)
-                    .join(" — ")}
-                </div>
-              )}
-              <div className="form-actions">
+                {Object.keys(profilFieldErrors).length > 0 && (
+                  <div className="ws-error" role="alert">
+                    <Icon name="help" size={18} />
+                    {Object.entries(profilFieldErrors)
+                      .map(([k, v]) => `${k}: ${v}`)
+                      .join(" — ")}
+                  </div>
+                )}
+                <div className="form-actions">
                   <button
                     className="secondary"
                     type="button"
@@ -5376,7 +5510,7 @@ export default function ClinicWorkspace({
                     Batal
                   </button>
                   <button className="primary" type="submit" disabled={busy}>
-                    {busy ? "Menyimpan..." : "Simpan Data Demo"}
+                    {busy ? "Menyimpan..." : "Simpan Perubahan"}
                     <Icon name="check" size={16} />
                   </button>
                 </div>

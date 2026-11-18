@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import React, {
   createContext,
@@ -7,7 +7,7 @@ import React, {
   useEffect,
   type ReactNode,
   type FormEvent,
-} from "react"
+} from "react";
 import {
   apiGetDokter,
   apiGetLayanan,
@@ -28,7 +28,7 @@ import {
   apiHapusPushSubscription,
   apiTandaiSemuaNotifikasiDibaca,
   apiTandaiNotifikasiDibaca,
-} from "@/utils/api"
+} from "@/utils/api";
 import {
   DEMO_DATE,
   remaining,
@@ -46,55 +46,60 @@ import {
   type NotificationJob,
   type NotificationType,
   type ClinicProfileDetail,
-} from "../clinic-data"
+} from "../clinic-data";
 
 export type ClinicUser = {
-  id?: string
-  name: string
-  email: string
-  role: string
-  active: boolean
-  password?: string
-  pasienId?: string | null
-  noRekamMedis?: string | null
-  nik?: string
-  tanggalLahir?: string
-  jenisKelamin?: string
-  alamat?: string
-  kontakDarurat?: string
-  telepon?: string
-}
+  id?: string;
+  name: string;
+  email: string;
+  role: string;
+  active: boolean;
+  password?: string;
+  pasienId?: string | null;
+  noRekamMedis?: string | null;
+  nik?: string;
+  tanggalLahir?: string;
+  jenisKelamin?: string;
+  alamat?: string;
+  kontakDarurat?: string;
+  telepon?: string;
+};
 
 export type ClinicProfile = {
-  name: string
-  description: string
-  address: string
-  phone: string
-  latitude: string
-  longitude: string
-  hours: string
-  emergencyPhone?: string
-  whatsapp?: string
-  email?: string
-  tagline?: string
-  history?: string
-  vision?: string
-  mission?: string[]
-  values?: { title: string; subtitle?: string; desc: string; icon: string }[]
-  accreditation?: string
-  accreditationNumber?: string
-  facilities?: { name: string; category?: string; desc: string; icon: string }[]
-  stats?: { value: string; label: string; sub: string }[]
-}
+  name: string;
+  description: string;
+  address: string;
+  phone: string;
+  latitude: string;
+  longitude: string;
+  hours: string;
+  emergencyPhone?: string;
+  whatsapp?: string;
+  email?: string;
+  tagline?: string;
+  history?: string;
+  vision?: string;
+  mission?: string[];
+  values?: { title: string; subtitle?: string; desc: string; icon: string }[];
+  accreditation?: string;
+  accreditationNumber?: string;
+  facilities?: {
+    name: string;
+    category?: string;
+    desc: string;
+    icon: string;
+  }[];
+  stats?: { value: string; label: string; sub: string }[];
+};
 
 export type BookingState = {
-  patient: string
-  service: string
-  doctor: string
-  date: string
-  schedule: string
-  complaint: string
-}
+  patient: string;
+  service: string;
+  doctor: string;
+  date: string;
+  schedule: string;
+  complaint: string;
+};
 
 // Pemetaan status API (huruf kecil) ke label UI (huruf besar di awal)
 const petaStatusAntrean: Record<string, QueueStatus> = {
@@ -104,13 +109,13 @@ const petaStatusAntrean: Record<string, QueueStatus> = {
   selesai: "Selesai",
   dilewati: "Dilewati",
   batal: "Dibatalkan",
-}
+};
 const petaStatusKunjungan: Record<string, VisitStatus> = {
   terdaftar: "Terdaftar",
   hadir: "Hadir",
   selesai: "Selesai",
   batal: "Dibatalkan",
-}
+};
 
 // GET /api/kunjungan mengembalikan baris datar dari v_antrean_detail:
 // field kuncinya kunjunganId, statusKunjungan, statusAntrean, nomorAntrean, alasan.
@@ -123,144 +128,160 @@ function konversiKunjungan(k: any): Visit {
     schedule: k.jadwalId || k.jadwal_id || "j1",
     date: k.tanggal,
     complaint: k.keluhan || "",
-    source: (k.sumber === "walk_in" || k.sumberDaftar === "walk_in") ? "Walk-in" : "Online",
+    source:
+      k.sumber === "walk_in" || k.sumberDaftar === "walk_in"
+        ? "Walk-in"
+        : "Online",
     status: petaStatusKunjungan[k.statusKunjungan || k.status] || "Terdaftar",
-    queue: petaStatusAntrean[k.statusAntrean || k.antrean?.statusAntrean] || "Menunggu",
+    queue:
+      petaStatusAntrean[k.statusAntrean || k.antrean?.statusAntrean] ||
+      "Menunggu",
     number: k.nomorAntrean || k.antrean?.nomorAntrean || 1,
     ref: k.noReferensi || k.antrean?.noReferensi || undefined,
     reason: k.alasan || k.antrean?.alasan || undefined,
-  }
+  };
 }
 
 type ClinicContextType = {
-  role: Role
-  setRole: (role: Role) => void
-  switchRole: (role: string) => void
-  page: string
-  setPage: (page: string) => void
-  navigate: (target: string) => void
+  role: Role;
+  setRole: (role: Role) => void;
+  switchRole: (role: string) => void;
+  page: string;
+  setPage: (page: string) => void;
+  navigate: (target: string) => void;
 
-  visits: Visit[]
-  setVisits: React.Dispatch<React.SetStateAction<Visit[]>>
-  updateVisit: (id: string, changes: Partial<Visit>) => void
-  transition: (v: Visit, target: string) => Promise<void>
+  visits: Visit[];
+  setVisits: React.Dispatch<React.SetStateAction<Visit[]>>;
+  updateVisit: (id: string, changes: Partial<Visit>) => void;
+  transition: (v: Visit, target: string) => Promise<void>;
 
-  patients: Patient[]
-  setPatients: React.Dispatch<React.SetStateAction<Patient[]>>
+  patients: Patient[];
+  setPatients: React.Dispatch<React.SetStateAction<Patient[]>>;
 
-  doctors: Doctor[]
-  setDoctors: React.Dispatch<React.SetStateAction<Doctor[]>>
+  doctors: Doctor[];
+  setDoctors: React.Dispatch<React.SetStateAction<Doctor[]>>;
 
-  services: Service[]
-  setServices: React.Dispatch<React.SetStateAction<Service[]>>
+  services: Service[];
+  setServices: React.Dispatch<React.SetStateAction<Service[]>>;
 
-  schedules: Schedule[]
-  setSchedules: React.Dispatch<React.SetStateAction<Schedule[]>>
+  schedules: Schedule[];
+  setSchedules: React.Dispatch<React.SetStateAction<Schedule[]>>;
 
-  users: ClinicUser[]
-  setUsers: React.Dispatch<React.SetStateAction<ClinicUser[]>>
+  users: ClinicUser[];
+  setUsers: React.Dispatch<React.SetStateAction<ClinicUser[]>>;
 
-  currentUser: ClinicUser | null
-  setCurrentUser: React.Dispatch<React.SetStateAction<ClinicUser | null>>
-  login: (email: string, password?: string) => Promise<{ success: boolean; message: string; user?: ClinicUser }>
-  loginCepat: (peran: "pasien" | "petugas" | "dokter" | "admin") => Promise<{ success: boolean; message: string; user?: ClinicUser }>
-  logout: () => Promise<void> | void
+  currentUser: ClinicUser | null;
+  setCurrentUser: React.Dispatch<React.SetStateAction<ClinicUser | null>>;
+  login: (
+    email: string,
+    password?: string,
+  ) => Promise<{ success: boolean; message: string; user?: ClinicUser }>;
+  loginCepat: (
+    peran: "pasien" | "petugas" | "dokter" | "admin",
+  ) => Promise<{ success: boolean; message: string; user?: ClinicUser }>;
+  logout: () => Promise<void> | void;
 
-  clinic: ClinicProfile
-  setClinic: React.Dispatch<React.SetStateAction<ClinicProfile>>
+  clinic: ClinicProfile;
+  setClinic: React.Dispatch<React.SetStateAction<ClinicProfile>>;
 
   // Notification State & Operations (SRS & API Contract)
-  notifications: NotificationItem[]
-  notificationJobs: NotificationJob[]
-  notificationDrawerOpen: boolean
-  setNotificationDrawerOpen: (val: boolean) => void
-  webPushPermission: "default" | "granted" | "denied" | "unsupported"
-  pushSubscriptionActive: boolean
-  pushSubscriptionError: string | null
-  syncPushSubscription: (user?: ClinicUser | null, silent?: boolean) => Promise<boolean>
-  loadingData: boolean
+  notifications: NotificationItem[];
+  notificationJobs: NotificationJob[];
+  notificationDrawerOpen: boolean;
+  setNotificationDrawerOpen: (val: boolean) => void;
+  webPushPermission: "default" | "granted" | "denied" | "unsupported";
+  pushSubscriptionActive: boolean;
+  pushSubscriptionError: string | null;
+  syncPushSubscription: (
+    user?: ClinicUser | null,
+    silent?: boolean,
+  ) => Promise<boolean>;
+  loadingData: boolean;
   /** True setelah GET /api/auth/me selesai dicek; dipakai agar UI tidak berkedip antara login dan dasbor. */
-  authChecked: boolean
-  unreadCount: number
+  authChecked: boolean;
+  unreadCount: number;
   addNotification: (
     notif: Omit<NotificationItem, "id" | "timestamp" | "isRead">,
-    pushBrowser?: boolean
-  ) => void
-  markNotificationAsRead: (id: string) => void
-  markAllNotificationsAsRead: () => void
-  deleteNotification: (id: string) => void
-  clearAllNotifications: () => void
-  requestWebPushPermission: () => Promise<void>
-  sendDemoPushNotification: (customType?: NotificationType) => void
-  retryNotificationJob: (id: string) => void
-  refreshNotifications: (targetRole?: Role, targetUserId?: string) => Promise<void>
+    pushBrowser?: boolean,
+  ) => void;
+  markNotificationAsRead: (id: string) => void;
+  markAllNotificationsAsRead: () => void;
+  deleteNotification: (id: string) => void;
+  clearAllNotifications: () => void;
+  requestWebPushPermission: () => Promise<void>;
+  sendDemoPushNotification: (customType?: NotificationType) => void;
+  retryNotificationJob: (id: string) => void;
+  refreshNotifications: (
+    targetRole?: Role,
+    targetUserId?: string,
+  ) => Promise<void>;
 
-  mobile: boolean
-  setMobile: (val: boolean) => void
+  mobile: boolean;
+  setMobile: (val: boolean) => void;
 
-  search: string
-  setSearch: (val: string) => void
-  filter: string
-  setFilter: (val: string) => void
-  doctorFilter: string
-  setDoctorFilter: (val: string) => void
-  serviceFilter: string
-  setServiceFilter: (val: string) => void
-  range: { from: string; to: string }
-  setRange: React.Dispatch<React.SetStateAction<{ from: string; to: string }>>
-  pagination: number
-  setPagination: (val: number) => void
+  search: string;
+  setSearch: (val: string) => void;
+  filter: string;
+  setFilter: (val: string) => void;
+  doctorFilter: string;
+  setDoctorFilter: (val: string) => void;
+  serviceFilter: string;
+  setServiceFilter: (val: string) => void;
+  range: { from: string; to: string };
+  setRange: React.Dispatch<React.SetStateAction<{ from: string; to: string }>>;
+  pagination: number;
+  setPagination: (val: number) => void;
 
-  selected: string | null
-  setSelected: (id: string | null) => void
-  editor: { type: string; id?: string } | null
-  setEditor: (val: { type: string; id?: string } | null) => void
+  selected: string | null;
+  setSelected: (id: string | null) => void;
+  editor: { type: string; id?: string } | null;
+  setEditor: (val: { type: string; id?: string } | null) => void;
 
-  toast: string
-  setToast: (val: string) => void
-  notify: (message: string) => void
+  toast: string;
+  setToast: (val: string) => void;
+  notify: (message: string) => void;
 
-  error: string
-  setError: (val: string) => void
-  reason: string
-  setReason: (val: string) => void
+  error: string;
+  setError: (val: string) => void;
+  reason: string;
+  setReason: (val: string) => void;
 
-  exam: Examination | null
-  setExam: (val: Examination | null) => void
-  savedExam: boolean
-  setSavedExam: (val: boolean) => void
+  exam: Examination | null;
+  setExam: (val: Examination | null) => void;
+  savedExam: boolean;
+  setSavedExam: (val: boolean) => void;
 
-  step: number
-  setStep: (val: number) => void
-  booking: BookingState
-  setBooking: React.Dispatch<React.SetStateAction<BookingState>>
-  receipt: Visit | null
-  setReceipt: (val: Visit | null) => void
-  busy: boolean
-  setBusy: (val: boolean) => void
-  editingProfile: boolean
-  setEditingProfile: (val: boolean) => void
+  step: number;
+  setStep: (val: number) => void;
+  booking: BookingState;
+  setBooking: React.Dispatch<React.SetStateAction<BookingState>>;
+  receipt: Visit | null;
+  setReceipt: (val: Visit | null) => void;
+  busy: boolean;
+  setBusy: (val: boolean) => void;
+  editingProfile: boolean;
+  setEditingProfile: (val: boolean) => void;
 
   // Helper getters
-  patient: Patient
-  doctorName: (id: string) => string
-  serviceName: (id: string) => string
-  patientName: (id: string) => string
-  session: (id: string) => Schedule | undefined
-  scopedVisits: Visit[]
-  todayVisits: Visit[]
-  activeVisits: Visit[]
-  selectedVisit: Visit | undefined
+  patient: Patient;
+  doctorName: (id: string) => string;
+  serviceName: (id: string) => string;
+  patientName: (id: string) => string;
+  session: (id: string) => Schedule | undefined;
+  scopedVisits: Visit[];
+  todayVisits: Visit[];
+  activeVisits: Visit[];
+  selectedVisit: Visit | undefined;
 
   // Operations
-  openVisit: (v: Visit) => void
-  submitBooking: (e: FormEvent<HTMLFormElement>) => Promise<void>
-  saveExamination: (e: FormEvent<HTMLFormElement>) => Promise<void>
-  showEditor: (type: string, id?: string) => void
-  resetToDefaults: () => void
-  dataError: string | null
-  reloadAllData: () => Promise<void>
-}
+  openVisit: (v: Visit) => void;
+  submitBooking: (e: FormEvent<HTMLFormElement>) => Promise<void>;
+  saveExamination: (e: FormEvent<HTMLFormElement>) => Promise<void>;
+  showEditor: (type: string, id?: string) => void;
+  resetToDefaults: () => void;
+  dataError: string | null;
+  reloadAllData: () => Promise<void>;
+};
 
 const emptyClinic: ClinicProfile = {
   name: "",
@@ -282,91 +303,99 @@ const emptyClinic: ClinicProfile = {
   accreditationNumber: "",
   facilities: [],
   stats: [],
-}
+};
 
-const ClinicContext = createContext<ClinicContextType | null>(null)
+const ClinicContext = createContext<ClinicContextType | null>(null);
 
 // Nada chime 2-nada lembut frekuensi C6 -> E6 dengan gain rendah 0.08 dan fade-out cepat 0.25 detik
 function playSoftChime() {
-  if (typeof window === "undefined") return
+  if (typeof window === "undefined") return;
   try {
     const AudioContextClass =
       window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-    if (!AudioContextClass) return
-    const ctx = new AudioContextClass()
-    const now = ctx.currentTime
+      (window as unknown as { webkitAudioContext: typeof AudioContext })
+        .webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const now = ctx.currentTime;
 
     // Nada pertama: C6 (1046.50 Hz)
-    const osc1 = ctx.createOscillator()
-    const gain1 = ctx.createGain()
-    osc1.type = "sine"
-    osc1.frequency.setValueAtTime(1046.5, now)
-    gain1.gain.setValueAtTime(0.08, now)
-    gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.12)
-    osc1.connect(gain1)
-    gain1.connect(ctx.destination)
-    osc1.start(now)
-    osc1.stop(now + 0.12)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = "sine";
+    osc1.frequency.setValueAtTime(1046.5, now);
+    gain1.gain.setValueAtTime(0.08, now);
+    gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.12);
 
     // Nada kedua: E6 (1318.51 Hz) sedikit overlap
-    const osc2 = ctx.createOscillator()
-    const gain2 = ctx.createGain()
-    osc2.type = "sine"
-    osc2.frequency.setValueAtTime(1318.51, now + 0.08)
-    gain2.gain.setValueAtTime(0.08, now + 0.08)
-    gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.25)
-    osc2.connect(gain2)
-    gain2.connect(ctx.destination)
-    osc2.start(now + 0.08)
-    osc2.stop(now + 0.25)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(1318.51, now + 0.08);
+    gain2.gain.setValueAtTime(0.08, now + 0.08);
+    gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(now + 0.08);
+    osc2.stop(now + 0.25);
   } catch {
     // Abaikan jika browser memblokir audio autoplay sebelum interaksi
   }
 }
 
 export function ClinicProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useState<Role>("Publik")
-  const [page, setPage] = useState("Beranda")
+  const [role, setRole] = useState<Role>("Publik");
+  const [page, setPage] = useState("Beranda");
 
-  const [visits, setVisits] = useState<Visit[]>([])
-  const [patients, setPatients] = useState<Patient[]>([])
-  const [doctors, setDoctors] = useState<Doctor[]>([])
-  const [services, setServices] = useState<Service[]>([])
-  const [schedules, setSchedules] = useState<Schedule[]>([])
-  const [users, setUsers] = useState<ClinicUser[]>([])
-  const [currentUser, setCurrentUser] = useState<ClinicUser | null>(null)
-  const [clinic, setClinic] = useState<ClinicProfile>(emptyClinic)
-  const [dataError, setDataError] = useState<string | null>(null)
+  const [visits, setVisits] = useState<Visit[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [users, setUsers] = useState<ClinicUser[]>([]);
+  const [currentUser, setCurrentUser] = useState<ClinicUser | null>(null);
+  const [clinic, setClinic] = useState<ClinicProfile>(emptyClinic);
+  const [dataError, setDataError] = useState<string | null>(null);
 
   // Notification States
-  const [notifications, setNotifications] = useState<NotificationItem[]>([])
-  const [notificationJobs, setNotificationJobs] = useState<NotificationJob[]>([])
-  const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false)
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notificationJobs, setNotificationJobs] = useState<NotificationJob[]>(
+    [],
+  );
+  const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
   const [webPushPermission, setWebPushPermission] = useState<
     "default" | "granted" | "denied" | "unsupported"
-  >("default")
-  const [pushSubscriptionActive, setPushSubscriptionActive] = useState<boolean>(false)
-  const [pushSubscriptionError, setPushSubscriptionError] = useState<string | null>(null)
+  >("default");
+  const [pushSubscriptionActive, setPushSubscriptionActive] =
+    useState<boolean>(false);
+  const [pushSubscriptionError, setPushSubscriptionError] = useState<
+    string | null
+  >(null);
 
-  const [mobile, setMobile] = useState(false)
-  const [search, setSearch] = useState("")
-  const [filter, setFilter] = useState("")
-  const [doctorFilter, setDoctorFilter] = useState("")
-  const [serviceFilter, setServiceFilter] = useState("")
+  const [mobile, setMobile] = useState(false);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("");
+  const [doctorFilter, setDoctorFilter] = useState("");
+  const [serviceFilter, setServiceFilter] = useState("");
   const [range, setRange] = useState({
     from: `${DEMO_DATE.slice(0, 7)}-01`,
     to: DEMO_DATE,
-  })
-  const [pagination, setPagination] = useState(1)
-  const [selected, setSelected] = useState<string | null>(null)
-  const [editor, setEditor] = useState<{ type: string; id?: string } | null>(null)
-  const [toast, setToast] = useState("")
-  const [error, setError] = useState("")
-  const [reason, setReason] = useState("")
-  const [exam, setExam] = useState<Examination | null>(null)
-  const [savedExam, setSavedExam] = useState(false)
-  const [step, setStep] = useState(1)
+  });
+  const [pagination, setPagination] = useState(1);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [editor, setEditor] = useState<{ type: string; id?: string } | null>(
+    null,
+  );
+  const [toast, setToast] = useState("");
+  const [error, setError] = useState("");
+  const [reason, setReason] = useState("");
+  const [exam, setExam] = useState<Examination | null>(null);
+  const [savedExam, setSavedExam] = useState(false);
+  const [step, setStep] = useState(1);
   const [booking, setBooking] = useState<BookingState>({
     patient: "",
     service: "s1",
@@ -374,507 +403,566 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     date: DEMO_DATE,
     schedule: "j1",
     complaint: "",
-  })
-  const [receipt, setReceipt] = useState<Visit | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [loadingData, setLoadingData] = useState(true)
-  const [authChecked, setAuthChecked] = useState(false)
-  const [editingProfile, setEditingProfile] = useState(false)
-  const [initialized, setInitialized] = useState(false)
+  });
+  const [receipt, setReceipt] = useState<Visit | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
-  const currentUserRef = React.useRef(currentUser)
+  const currentUserRef = React.useRef(currentUser);
   useEffect(() => {
-    currentUserRef.current = currentUser
-  }, [currentUser])
+    currentUserRef.current = currentUser;
+  }, [currentUser]);
 
   const handleSessionExpired = () => {
     if (typeof window !== "undefined") {
-      if (sessionStorage.getItem("sehatklinik_session_expired")) return
-      sessionStorage.setItem("sehatklinik_session_expired", "1")
-      sessionStorage.setItem("sehatklinik_toast", "Sesi berakhir, silakan masuk lagi")
+      if (sessionStorage.getItem("sehatklinik_session_expired")) return;
+      sessionStorage.setItem("sehatklinik_session_expired", "1");
+      sessionStorage.setItem(
+        "sehatklinik_toast",
+        "Sesi berakhir, silakan masuk lagi",
+      );
     }
 
-    setCurrentUser(null)
-    setRole("Publik")
-    setVisits([])
-    setNotifications([])
-    setNotificationJobs([])
-    setPushSubscriptionActive(false)
-    setPushSubscriptionError(null)
+    setCurrentUser(null);
+    setRole("Publik");
+    setVisits([]);
+    setNotifications([]);
+    setNotificationJobs([]);
+    setPushSubscriptionActive(false);
+    setPushSubscriptionError(null);
 
-    notify("Sesi berakhir, silakan masuk lagi")
+    notify("Sesi berakhir, silakan masuk lagi");
 
-    if (typeof window !== "undefined" && window.location.pathname !== "/login") {
-      window.location.href = "/login"
+    if (
+      typeof window !== "undefined" &&
+      window.location.pathname !== "/login"
+    ) {
+      window.location.href = "/login";
     }
-  }
+  };
 
   // Tangani 401 dari endpoint terproteksi
   useEffect(() => {
     const handleUnauthorizedEvent = (e: Event) => {
-      const customEvent = e as CustomEvent<{ path: string }>
-      const targetPath = customEvent.detail?.path || ""
+      const customEvent = e as CustomEvent<{ path: string }>;
+      const targetPath = customEvent.detail?.path || "";
       if (
         targetPath.includes("/api/auth/login") ||
         targetPath.includes("/api/auth/register") ||
         targetPath.includes("/login") ||
         targetPath.includes("/register")
       ) {
-        return
+        return;
       }
       if (currentUserRef.current) {
-        handleSessionExpired()
+        handleSessionExpired();
       }
-    }
+    };
 
-    window.addEventListener("auth:unauthorized", handleUnauthorizedEvent)
-    return () => window.removeEventListener("auth:unauthorized", handleUnauthorizedEvent)
-  }, [])
+    window.addEventListener("auth:unauthorized", handleUnauthorizedEvent);
+    return () =>
+      window.removeEventListener("auth:unauthorized", handleUnauthorizedEvent);
+  }, []);
 
   // Tampilkan toast dari sessionStorage saat halaman dimuat (mis. redirect dari sesi berakhir)
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const storedToast = sessionStorage.getItem("sehatklinik_toast")
+      const storedToast = sessionStorage.getItem("sehatklinik_toast");
       if (storedToast) {
-        sessionStorage.removeItem("sehatklinik_toast")
-        sessionStorage.removeItem("sehatklinik_session_expired")
-        notify(storedToast)
+        sessionStorage.removeItem("sehatklinik_toast");
+        sessionStorage.removeItem("sehatklinik_session_expired");
+        notify(storedToast);
       }
     }
-  }, [])
+  }, []);
 
   // Refresh otomatis sesi berkala (setiap 15 menit) saat pengguna aktif.
   useEffect(() => {
-    if (!currentUser?.id) return
+    if (!currentUser?.id) return;
 
-    const refreshInterval = setInterval(async () => {
-      if (typeof document !== "undefined" && document.visibilityState === "visible") {
-        try {
-          const res = await apiRefreshSession()
-          if (res.error?.code === "HTTP_401" || (res as any).status === 401) {
-            handleSessionExpired()
+    const refreshInterval = setInterval(
+      async () => {
+        if (
+          typeof document !== "undefined" &&
+          document.visibilityState === "visible"
+        ) {
+          try {
+            const res = await apiRefreshSession();
+            if (res.error?.code === "HTTP_401" || (res as any).status === 401) {
+              handleSessionExpired();
+            }
+          } catch {
+            // Abaikan kegagalan refresh berkala sementara
           }
-        } catch {
-          // Abaikan kegagalan refresh berkala sementara
         }
-      }
-    }, 15 * 60 * 1000)
+      },
+      15 * 60 * 1000,
+    );
 
-    return () => clearInterval(refreshInterval)
-  }, [currentUser?.id])
+    return () => clearInterval(refreshInterval);
+  }, [currentUser?.id]);
 
   // Check browser Notification permission on mount
   useEffect(() => {
-    const supported = typeof window !== "undefined" && "Notification" in window
-    setWebPushPermission(supported ? Notification.permission : "unsupported")
-  }, [])
+    const supported = typeof window !== "undefined" && "Notification" in window;
+    setWebPushPermission(supported ? Notification.permission : "unsupported");
+  }, []);
 
   // Inisialisasi awal pada client mount tanpa ketergantungan localStorage
   useEffect(() => {
     try {
       if (typeof window !== "undefined") {
         try {
-          localStorage.removeItem("sehatklinik_state_v1")
-          localStorage.removeItem("sehatklinik_state_v2")
-          localStorage.removeItem("sehatklinik_state_v3")
-          localStorage.removeItem("sehatklinik_current_user")
+          localStorage.removeItem("sehatklinik_state_v1");
+          localStorage.removeItem("sehatklinik_state_v2");
+          localStorage.removeItem("sehatklinik_state_v3");
+          localStorage.removeItem("sehatklinik_current_user");
         } catch {}
 
-        const path = window.location.pathname
-        if (path === "/admin") setRole("Admin")
-        else if (path === "/petugas") setRole("Petugas")
-        else if (path === "/dokter-dashboard" || path === "/dokter/dashboard" || path === "/dokter") setRole("Dokter")
-        else if (path === "/pasien") setRole("Pasien")
+        const path = window.location.pathname;
+        if (path === "/admin") setRole("Admin");
+        else if (path === "/petugas") setRole("Petugas");
+        else if (
+          path === "/dokter-dashboard" ||
+          path === "/dokter/dashboard" ||
+          path === "/dokter"
+        )
+          setRole("Dokter");
+        else if (path === "/pasien") setRole("Pasien");
         else if (
           path === "/" ||
-          ["/layanan", "/jadwal", "/lokasi", "/profil", "/login", "/daftar"].includes(path) ||
+          [
+            "/layanan",
+            "/jadwal",
+            "/lokasi",
+            "/profil",
+            "/login",
+            "/daftar",
+          ].includes(path) ||
           path.startsWith("/layanan/") ||
           path.startsWith("/dokter/")
         ) {
-          setRole("Publik")
+          setRole("Publik");
         }
       }
     } catch {
       // ignore
     } finally {
-      setInitialized(true)
+      setInitialized(true);
     }
-  }, [])
+  }, []);
 
-  const refreshNotifications = async (targetRole?: Role, targetUserId?: string) => {
+  const refreshNotifications = async (
+    targetRole?: Role,
+    targetUserId?: string,
+  ) => {
     try {
-      const notifResp = await fetch("/api/notifikasi", { credentials: "same-origin" })
+      const notifResp = await fetch("/api/notifikasi", {
+        credentials: "same-origin",
+      });
       if (notifResp.ok) {
-        const notifJson = await notifResp.json()
+        const notifJson = await notifResp.json();
         if (Array.isArray(notifJson?.data)) {
-          const effectiveRole = targetRole || role
-          const effectiveUserId = targetUserId || currentUser?.id
-          const mappedNotifs: NotificationItem[] = notifJson.data.map((row: any) => ({
-            id: row.id,
-            targetRole: effectiveRole,
-            targetUserId: effectiveUserId,
-            type: (row.jenisKejadian as NotificationType) || "INFO",
-            title:
-              row.jenisKejadian === "WELCOME"
-                ? "Selamat Datang di Klinik Sehat Sentosa"
-                : row.jenisKejadian
-                  ? row.jenisKejadian.replace(/_/g, " ")
-                  : "Notifikasi",
-            message: row.pesan,
-            timestamp: row.createdAt || new Date().toISOString(),
-            isRead: Boolean(row.isRead),
-            actionUrl: row.tautan || undefined,
-          }))
-          setNotifications(mappedNotifs)
+          const effectiveRole = targetRole || role;
+          const effectiveUserId = targetUserId || currentUser?.id;
+          const mappedNotifs: NotificationItem[] = notifJson.data.map(
+            (row: any) => ({
+              id: row.id,
+              targetRole: effectiveRole,
+              targetUserId: effectiveUserId,
+              type: (row.jenisKejadian as NotificationType) || "INFO",
+              title:
+                row.jenisKejadian === "WELCOME"
+                  ? "Selamat Datang di Klinik Sehat Sentosa"
+                  : row.jenisKejadian
+                    ? row.jenisKejadian.replace(/_/g, " ")
+                    : "Notifikasi",
+              message: row.pesan,
+              timestamp: row.createdAt || new Date().toISOString(),
+              isRead: Boolean(row.isRead),
+              actionUrl: row.tautan || undefined,
+            }),
+          );
+          setNotifications(mappedNotifs);
         }
       }
     } catch (err) {
-      console.warn("Gagal memuat notifikasi backend:", err)
+      console.warn("Gagal memuat notifikasi backend:", err);
     }
-  }
+  };
 
   // Muat data live dari Backend API internal (/api/public/*, /api/auth/me, /api/kunjungan)
   async function fetchVisits(): Promise<boolean> {
     try {
-      const res = await apiGetKunjungan()
+      const res = await apiGetKunjungan();
       if (res.data && res.data.length > 0) {
-        const dbVisits: Visit[] = res.data.map(konversiKunjungan)
-        setVisits(dbVisits)
-        return true
+        const dbVisits: Visit[] = res.data.map(konversiKunjungan);
+        setVisits(dbVisits);
+        return true;
       }
     } catch (err) {
-      console.warn("Gagal memuat kunjungan dari backend:", err)
+      console.warn("Gagal memuat kunjungan dari backend:", err);
     }
-    return false
+    return false;
   }
 
   const loadBackendData = async () => {
-    setLoadingData(true)
-    let currentRole: Role | null = null
+    setLoadingData(true);
+    let currentRole: Role | null = null;
+    try {
+      // 1. Cek sesi login aktif via cookie httpOnly
       try {
-        // 1. Cek sesi login aktif via cookie httpOnly
+        const meRes = await apiGetMe();
+        if (meRes.data) {
+          const u = meRes.data;
+          const roleCap = (u.role.charAt(0).toUpperCase() +
+            u.role.slice(1)) as Role;
+          currentRole = roleCap;
+          const authUser: ClinicUser = {
+            id: u.id,
+            name: u.nama || u.email?.split("@")[0] || "Pengguna",
+            email: u.email,
+            role: roleCap,
+            active: true,
+            pasienId: u.pasienId ?? null,
+            noRekamMedis: u.noRekamMedis ?? null,
+            nik: u.nik || "",
+            tanggalLahir: u.tanggalLahir || "2000-01-01",
+            jenisKelamin:
+              u.jenisKelamin === "P" || u.jenisKelamin === "Perempuan"
+                ? "Perempuan"
+                : "Laki-laki",
+            alamat: u.alamat || "-",
+            kontakDarurat: u.kontakDarurat || "-",
+            telepon: u.telepon || "-",
+          };
+          setCurrentUser(authUser);
+          setRole(roleCap);
+
+          if (roleCap === "Pasien" || authUser.pasienId) {
+            const currentPatient: Patient = {
+              id:
+                authUser.pasienId ||
+                authUser.noRekamMedis ||
+                authUser.id ||
+                "P-ME",
+              name: authUser.name,
+              phone: authUser.telepon || "-",
+              birth: authUser.tanggalLahir || "2000-01-01",
+              gender: authUser.jenisKelamin || "Laki-laki",
+              address: authUser.alamat || "-",
+              emergency: authUser.kontakDarurat || "-",
+              account: true,
+              nik: authUser.nik || "-",
+            };
+            setPatients((prev) => {
+              const rest = prev.filter(
+                (p) =>
+                  p.id !== currentPatient.id &&
+                  p.id !== authUser.id &&
+                  (!authUser.pasienId || p.id !== authUser.pasienId) &&
+                  (!authUser.noRekamMedis || p.id !== authUser.noRekamMedis) &&
+                  p.name.trim().toLowerCase() !==
+                    authUser.name.trim().toLowerCase(),
+              );
+              return [currentPatient, ...rest];
+            });
+          }
+
+          // Muat notifikasi backend khusus untuk akun pengguna yang sedang login
+          await refreshNotifications(roleCap, u.id);
+
+          if (
+            typeof window !== "undefined" &&
+            !sessionStorage.getItem("sehatklinik_welcome_sent")
+          ) {
+            sessionStorage.setItem("sehatklinik_welcome_sent", "1");
+            const welcomeTitle = "Selamat Datang di SehatKlinik";
+            const welcomeMessage = `Halo ${authUser.name}, akun Anda siap digunakan untuk pendaftaran antrean dan pemantauan kunjungan.`;
+            addNotification(
+              {
+                targetRole: roleCap,
+                targetUserId: u.id,
+                type: "INFO",
+                title: welcomeTitle,
+                message: welcomeMessage,
+              },
+              false,
+            );
+          }
+        }
+      } catch {}
+
+      // Cek sesi selesai (berhasil maupun gagal): tandai authChecked agar UI tidak berkedip
+      setAuthChecked(true);
+
+      // 2. Muat data katalog publik (Dokter, Layanan, Jadwal, Profil Klinik)
+      const [docsRes, svcsRes, schedsRes, clinicRes] = await Promise.all([
+        apiGetDokter(),
+        apiGetLayanan(),
+        apiGetJadwal(),
+        apiGetProfilKlinik(),
+      ]);
+
+      // Cek apakah data katalog gagal dimuat karena server down/offline
+      if (clinicRes.error && docsRes.error && svcsRes.error) {
+        setDataError(
+          clinicRes.error.message ||
+            "Gagal memuat data dari server klinik. Periksa koneksi dan coba lagi.",
+        );
+      } else {
+        setDataError(null);
+      }
+
+      if (clinicRes.data) {
+        const c = clinicRes.data;
+        const detail = c.detail || {};
+        setClinic({
+          name: c.nama || "",
+          description: c.deskripsi || "",
+          address: c.alamat || "",
+          phone: c.kontak || "",
+          latitude: String(c.latitude ?? "-6.208800"),
+          longitude: String(c.longitude ?? "106.845600"),
+          hours:
+            typeof c.jamOperasional === "string"
+              ? c.jamOperasional
+              : c.hours || "Senin – Sabtu, 08.00 – 20.00 WIB",
+          emergencyPhone: c.emergencyPhone || detail.emergencyPhone || "",
+          whatsapp: c.whatsapp || detail.whatsapp || "",
+          email: c.email || detail.email || "",
+          tagline: c.tagline || detail.tagline || "",
+          history: c.history || detail.history || c.deskripsi || "",
+          vision: c.vision || detail.vision || "",
+          mission: c.mission || detail.mission || [],
+          values: c.values || detail.values || [],
+          accreditation: c.accreditation || detail.accreditation || "",
+          accreditationNumber:
+            c.accreditationNumber || detail.accreditationNumber || "",
+          facilities: c.facilities || detail.facilities || [],
+          stats: c.stats || detail.stats || [],
+        });
+      }
+
+      let loadedServices: Service[] = [];
+      if (svcsRes.data && svcsRes.data.length > 0) {
+        loadedServices = svcsRes.data.map((l: any) => {
+          const detail = l.detail || {};
+          return {
+            id: l.id,
+            name: l.namaLayanan || l.nama_layanan || "",
+            description: l.deskripsi || "",
+            duration: l.durasiMenit || l.durasi_menit || 30,
+            active: l.aktif ?? true,
+            overview: l.overview || detail.overview || l.deskripsi || "",
+            steps: l.steps || detail.steps || [],
+            cases: l.cases || detail.cases || [],
+            facilities: l.facilities || detail.facilities || [],
+            preparation: l.preparation || detail.preparation || "",
+          };
+        });
+        setServices(loadedServices);
+      }
+
+      let loadedDoctors: Doctor[] = [];
+      if (docsRes.data && docsRes.data.length > 0) {
+        loadedDoctors = docsRes.data.map((d: any) => {
+          const docServices = (d.layanan || []).map((rel: any) => rel.id);
+          const detail = d.detail || {};
+          return {
+            id: d.id,
+            name: d.nama,
+            specialty: d.spesialisasi,
+            sip: d.noSip || d.no_sip || "",
+            str: d.str || detail.str || "",
+            services: docServices,
+            active: d.aktif ?? true,
+            education: d.education || detail.education || [],
+            experienceYears: d.experienceYears ?? detail.experienceYears ?? 0,
+            almamater: d.almamater || detail.almamater || "",
+            certifications: d.certifications || detail.certifications || [],
+            bio: d.bio || detail.bio || d.deskripsi || "",
+            photoUrl: d.fotoUrl || undefined,
+          };
+        });
+        setDoctors(loadedDoctors);
+      }
+
+      let loadedSchedules: Schedule[] = [];
+      if (schedsRes.data && schedsRes.data.length > 0) {
+        loadedSchedules = schedsRes.data.map((sch: any) => ({
+          id: sch.id,
+          doctor: sch.dokterId || sch.dokter_id,
+          day: sch.hari,
+          start: sch.jamMulai ? String(sch.jamMulai).slice(0, 5) : "08:00",
+          end: sch.jamSelesai ? String(sch.jamSelesai).slice(0, 5) : "12:00",
+          quota: sch.kuota || 10,
+          active: sch.aktif ?? true,
+        }));
+        setSchedules(loadedSchedules);
+      }
+
+      // Set pilihan awal booking
+      if (loadedServices.length > 0) {
+        setBooking((prev) => {
+          const hasService = loadedServices.some((s) => s.id === prev.service);
+          if (!hasService) {
+            const firstSvc = loadedServices[0].id;
+            const firstDoc =
+              loadedDoctors.find((d) => d.services.includes(firstSvc))?.id ||
+              loadedDoctors[0]?.id ||
+              "";
+            const firstSched =
+              loadedSchedules.find((s) => s.doctor === firstDoc)?.id ||
+              loadedSchedules[0]?.id ||
+              "";
+            return {
+              ...prev,
+              service: firstSvc,
+              doctor: firstDoc,
+              schedule: firstSched,
+            };
+          }
+          return prev;
+        });
+      }
+
+      // Muat data pasien dari backend HANYA untuk peran Petugas dan Admin
+      if (currentRole === "Petugas" || currentRole === "Admin") {
         try {
-          const meRes = await apiGetMe()
-          if (meRes.data) {
-            const u = meRes.data
-            const roleCap = (u.role.charAt(0).toUpperCase() + u.role.slice(1)) as Role
-            currentRole = roleCap
-            const authUser: ClinicUser = {
-              id: u.id,
-              name: u.nama || u.email?.split("@")[0] || "Pengguna",
-              email: u.email,
-              role: roleCap,
-              active: true,
-              pasienId: u.pasienId ?? null,
-              noRekamMedis: u.noRekamMedis ?? null,
-              nik: u.nik || "",
-              tanggalLahir: u.tanggalLahir || "2000-01-01",
-              jenisKelamin:
-                u.jenisKelamin === "P" || u.jenisKelamin === "Perempuan"
+          const pRes = await apiGetPasien();
+          if (pRes.data && pRes.data.length > 0) {
+            const dbPatients: Patient[] = pRes.data.map((p: any) => ({
+              id: p.id || p.noRekamMedis || p.no_rekam_medis,
+              name: p.nama,
+              phone: p.telepon || "-",
+              birth: p.tanggalLahir || p.tanggal_lahir || "2000-01-01",
+              gender:
+                p.jenisKelamin === "P" || p.jenis_kelamin === "P"
                   ? "Perempuan"
                   : "Laki-laki",
-              alamat: u.alamat || "-",
-              kontakDarurat: u.kontakDarurat || "-",
-              telepon: u.telepon || "-",
-            }
-            setCurrentUser(authUser)
-            setRole(roleCap)
-
-            if (roleCap === "Pasien" || authUser.pasienId) {
-              const currentPatient: Patient = {
-                id: authUser.pasienId || authUser.noRekamMedis || authUser.id || "P-ME",
-                name: authUser.name,
-                phone: authUser.telepon || "-",
-                birth: authUser.tanggalLahir || "2000-01-01",
-                gender: authUser.jenisKelamin || "Laki-laki",
-                address: authUser.alamat || "-",
-                emergency: authUser.kontakDarurat || "-",
-                account: true,
-                nik: authUser.nik || "-",
+              address: p.alamat || "-",
+              emergency: p.kontakDarurat || p.kontak_darurat || "-",
+              account: Boolean(p.profileId || p.profile_id),
+              nik: p.nik || "-",
+            }));
+            setPatients((prev) => {
+              const currentP = prev.find(
+                (item) => item.account && item.id.length > 10,
+              );
+              if (currentP && !dbPatients.some((p) => p.id === currentP.id)) {
+                return [currentP, ...dbPatients];
               }
-              setPatients((prev) => {
-                const rest = prev.filter(
-                  (p) =>
-                    p.id !== currentPatient.id &&
-                    p.id !== authUser.id &&
-                    (!authUser.pasienId || p.id !== authUser.pasienId) &&
-                    (!authUser.noRekamMedis || p.id !== authUser.noRekamMedis) &&
-                    p.name.trim().toLowerCase() !== authUser.name.trim().toLowerCase()
-                )
-                return [currentPatient, ...rest]
-              })
-            }
-
-            // Muat notifikasi backend khusus untuk akun pengguna yang sedang login
-            await refreshNotifications(roleCap, u.id)
-
-            if (typeof window !== "undefined" && !sessionStorage.getItem("sehatklinik_welcome_sent")) {
-              sessionStorage.setItem("sehatklinik_welcome_sent", "1")
-              const welcomeTitle = "Selamat Datang di SehatKlinik"
-              const welcomeMessage = `Halo ${authUser.name}, akun Anda siap digunakan untuk pendaftaran antrean dan pemantauan kunjungan.`
-              addNotification(
-                {
-                  targetRole: roleCap,
-                  targetUserId: u.id,
-                  type: "INFO",
-                  title: welcomeTitle,
-                  message: welcomeMessage,
-                },
-                false
-              )
-            }
+              return dbPatients;
+            });
           }
         } catch {}
-
-        // Cek sesi selesai (berhasil maupun gagal): tandai authChecked agar UI tidak berkedip
-        setAuthChecked(true)
-
-        // 2. Muat data katalog publik (Dokter, Layanan, Jadwal, Profil Klinik)
-        const [docsRes, svcsRes, schedsRes, clinicRes] = await Promise.all([
-          apiGetDokter(),
-          apiGetLayanan(),
-          apiGetJadwal(),
-          apiGetProfilKlinik(),
-        ])
-
-        // Cek apakah data katalog gagal dimuat karena server down/offline
-        if (clinicRes.error && docsRes.error && svcsRes.error) {
-          setDataError(clinicRes.error.message || "Gagal memuat data dari server klinik. Periksa koneksi dan coba lagi.")
-        } else {
-          setDataError(null)
-        }
-
-        if (clinicRes.data) {
-          const c = clinicRes.data
-          const detail = c.detail || {}
-          setClinic({
-            name: c.nama || "",
-            description: c.deskripsi || "",
-            address: c.alamat || "",
-            phone: c.kontak || "",
-            latitude: String(c.latitude ?? "-6.208800"),
-            longitude: String(c.longitude ?? "106.845600"),
-            hours: typeof c.jamOperasional === "string" ? c.jamOperasional : (c.hours || "Senin – Sabtu, 08.00 – 20.00 WIB"),
-            emergencyPhone: c.emergencyPhone || detail.emergencyPhone || "",
-            whatsapp: c.whatsapp || detail.whatsapp || "",
-            email: c.email || detail.email || "",
-            tagline: c.tagline || detail.tagline || "",
-            history: c.history || detail.history || c.deskripsi || "",
-            vision: c.vision || detail.vision || "",
-            mission: c.mission || detail.mission || [],
-            values: c.values || detail.values || [],
-            accreditation: c.accreditation || detail.accreditation || "",
-            accreditationNumber: c.accreditationNumber || detail.accreditationNumber || "",
-            facilities: c.facilities || detail.facilities || [],
-            stats: c.stats || detail.stats || [],
-          })
-        }
-
-        let loadedServices: Service[] = []
-        if (svcsRes.data && svcsRes.data.length > 0) {
-          loadedServices = svcsRes.data.map((l: any) => {
-            const detail = l.detail || {}
-            return {
-              id: l.id,
-              name: l.namaLayanan || l.nama_layanan || "",
-              description: l.deskripsi || "",
-              duration: l.durasiMenit || l.durasi_menit || 30,
-              active: l.aktif ?? true,
-              overview: l.overview || detail.overview || l.deskripsi || "",
-              steps: l.steps || detail.steps || [],
-              cases: l.cases || detail.cases || [],
-              facilities: l.facilities || detail.facilities || [],
-              preparation: l.preparation || detail.preparation || "",
-            }
-          })
-          setServices(loadedServices)
-        }
-
-        let loadedDoctors: Doctor[] = []
-        if (docsRes.data && docsRes.data.length > 0) {
-          loadedDoctors = docsRes.data.map((d: any) => {
-            const docServices = (d.layanan || []).map((rel: any) => rel.id)
-            const detail = d.detail || {}
-            return {
-              id: d.id,
-              name: d.nama,
-              specialty: d.spesialisasi,
-              sip: d.noSip || d.no_sip || "",
-              str: d.str || detail.str || "",
-              services: docServices,
-              active: d.aktif ?? true,
-              education: d.education || detail.education || [],
-              experienceYears: d.experienceYears ?? detail.experienceYears ?? 0,
-              almamater: d.almamater || detail.almamater || "",
-              certifications: d.certifications || detail.certifications || [],
-              bio: d.bio || detail.bio || d.deskripsi || "",
-              photoUrl: d.fotoUrl || undefined,
-            }
-          })
-          setDoctors(loadedDoctors)
-        }
-
-        let loadedSchedules: Schedule[] = []
-        if (schedsRes.data && schedsRes.data.length > 0) {
-          loadedSchedules = schedsRes.data.map((sch: any) => ({
-            id: sch.id,
-            doctor: sch.dokterId || sch.dokter_id,
-            day: sch.hari,
-            start: sch.jamMulai ? String(sch.jamMulai).slice(0, 5) : "08:00",
-            end: sch.jamSelesai ? String(sch.jamSelesai).slice(0, 5) : "12:00",
-            quota: sch.kuota || 10,
-            active: sch.aktif ?? true,
-          }))
-          setSchedules(loadedSchedules)
-        }
-
-        // Set pilihan awal booking
-        if (loadedServices.length > 0) {
-          setBooking((prev) => {
-            const hasService = loadedServices.some((s) => s.id === prev.service)
-            if (!hasService) {
-              const firstSvc = loadedServices[0].id
-              const firstDoc =
-                loadedDoctors.find((d) => d.services.includes(firstSvc))?.id ||
-                loadedDoctors[0]?.id ||
-                ""
-              const firstSched =
-                loadedSchedules.find((s) => s.doctor === firstDoc)?.id ||
-                loadedSchedules[0]?.id ||
-                ""
-              return {
-                ...prev,
-                service: firstSvc,
-                doctor: firstDoc,
-                schedule: firstSched,
-              }
-            }
-            return prev
-          })
-        }
-
-        // Muat data pasien dari backend HANYA untuk peran Petugas dan Admin
-        if (currentRole === "Petugas" || currentRole === "Admin") {
-          try {
-            const pRes = await apiGetPasien()
-            if (pRes.data && pRes.data.length > 0) {
-              const dbPatients: Patient[] = pRes.data.map((p: any) => ({
-                id: p.id || p.noRekamMedis || p.no_rekam_medis,
-                name: p.nama,
-                phone: p.telepon || "-",
-                birth: p.tanggalLahir || p.tanggal_lahir || "2000-01-01",
-                gender: (p.jenisKelamin === "P" || p.jenis_kelamin === "P") ? "Perempuan" : "Laki-laki",
-                address: p.alamat || "-",
-                emergency: p.kontakDarurat || p.kontak_darurat || "-",
-                account: Boolean(p.profileId || p.profile_id),
-                nik: p.nik || "-",
-              }))
-              setPatients((prev) => {
-                const currentP = prev.find((item) => item.account && item.id.length > 10)
-                if (currentP && !dbPatients.some((p) => p.id === currentP.id)) {
-                  return [currentP, ...dbPatients]
-                }
-                return dbPatients
-              })
-            }
-          } catch {}
-        }
-
-        if (currentRole) {
-          await fetchVisits()
-        }
-      } catch (err) {
-        console.warn("Gagal memuat data dari backend:", err)
-      } finally {
-        setLoadingData(false)
       }
-    }
 
-    useEffect(() => {
-      loadBackendData()
-    }, [])
+      if (currentRole) {
+        await fetchVisits();
+      }
+    } catch (err) {
+      console.warn("Gagal memuat data dari backend:", err);
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  useEffect(() => {
+    loadBackendData();
+  }, []);
 
   // Polling antrean setiap 5 detik HANYA saat currentUser aktif (PRD §8.5 & K5)
   // Polling TIDAK BOLEH berjalan bila currentUser kosong.
   useEffect(() => {
-    if (!currentUser?.id) return
+    if (!currentUser?.id) return;
 
-    let active = true
+    let active = true;
 
     const runPoll = async () => {
-      if (!active || !currentUserRef.current) return
-      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+      if (!active || !currentUserRef.current) return;
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState === "visible"
+      ) {
         try {
-          const res = await apiGetKunjungan()
-          if (!active) return
+          const res = await apiGetKunjungan();
+          if (!active) return;
           if (res.error?.code === "HTTP_401" || (res as any).status === 401) {
-            handleSessionExpired()
-            return
+            handleSessionExpired();
+            return;
           }
           if (res.data) {
-            const dbVisits: Visit[] = res.data.map(konversiKunjungan)
-            setVisits(dbVisits)
+            const dbVisits: Visit[] = res.data.map(konversiKunjungan);
+            setVisits(dbVisits);
           }
         } catch {
           // Abaikan kesalahan jaringan sementara
         }
       }
-    }
+    };
 
-    const timer = setInterval(runPoll, 5000)
+    const timer = setInterval(runPoll, 5000);
     const onVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        runPoll()
+        runPoll();
       }
-    }
+    };
 
-    document.addEventListener("visibilitychange", onVisibilityChange)
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
-      active = false
-      clearInterval(timer)
-      document.removeEventListener("visibilitychange", onVisibilityChange)
-    }
-  }, [currentUser?.id])
+      active = false;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [currentUser?.id]);
 
   // Dialog ESC listener
   useEffect(() => {
-    if (!selected && !editor && !notificationDrawerOpen) return
+    if (!selected && !editor && !notificationDrawerOpen) return;
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setSelected(null)
-        setEditor(null)
-        setNotificationDrawerOpen(false)
+        setSelected(null);
+        setEditor(null);
+        setNotificationDrawerOpen(false);
       }
-    }
-    document.addEventListener("keydown", handleKey)
-    return () => document.removeEventListener("keydown", handleKey)
-  }, [selected, editor, notificationDrawerOpen])
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [selected, editor, notificationDrawerOpen]);
 
   // Pengingat Kunjungan Otomatis: jika ada kunjungan aktif pada tanggal hari ini
   useEffect(() => {
-    if (!initialized || visits.length === 0) return
-    const todayStr = DEMO_DATE
+    if (!initialized || visits.length === 0) return;
+    const todayStr = DEMO_DATE;
     const todayVisitsList = visits.filter(
       (v) =>
         v.date === todayStr &&
         v.status !== "Dibatalkan" &&
-        v.status !== "Selesai"
-    )
+        v.status !== "Selesai",
+    );
 
     if (todayVisitsList.length > 0) {
       setNotifications((prev) => {
-        let updated = [...prev]
-        let hasNew = false
+        let updated = [...prev];
+        let hasNew = false;
         todayVisitsList.forEach((v) => {
-          const reminderId = `reminder-${v.id}-${todayStr}`
+          const reminderId = `reminder-${v.id}-${todayStr}`;
           const exists = updated.some(
             (n) =>
               n.id === reminderId ||
-              (n.visitId === v.id && n.type === "PENGINGAT_KUNJUNGAN")
-          )
+              (n.visitId === v.id && n.type === "PENGINGAT_KUNJUNGAN"),
+          );
           if (!exists) {
-            const dName = doctorName(v.doctor)
-            const qLabel = queueLabel(v, doctors.findIndex((d) => d.id === v.doctor))
+            const dName = doctorName(v.doctor);
+            const qLabel = queueLabel(
+              v,
+              doctors.findIndex((d) => d.id === v.doctor),
+            );
             const newReminder: NotificationItem = {
               id: reminderId,
               targetRole: "Pasien",
@@ -887,40 +975,47 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
               visitId: v.id,
               queueNumber: qLabel,
               actionUrl: "detail",
-            }
-            updated = [newReminder, ...updated]
-            hasNew = true
+            };
+            updated = [newReminder, ...updated];
+            hasNew = true;
           }
-        })
-        return hasNew ? updated : prev
-      })
+        });
+        return hasNew ? updated : prev;
+      });
     }
-  }, [initialized, visits, doctors])
+  }, [initialized, visits, doctors]);
 
   const notify = (message: string) => {
-    setToast(message)
-    window.setTimeout(() => setToast(""), 4500)
-  }
+    setToast(message);
+    window.setTimeout(() => setToast(""), 4500);
+  };
 
   const defaultPatientFallback: Patient = {
-    id: "RM-00000",
+    id: currentUser?.pasienId || currentUser?.noRekamMedis || "RM-00000",
     name: currentUser?.name || "Pasien",
-    phone: "-",
-    birth: "2000-01-01",
-    gender: "Laki-laki",
-    address: "-",
-    emergency: "-",
+    phone: currentUser?.telepon || "-",
+    birth: currentUser?.tanggalLahir || "2000-01-01",
+    gender: currentUser?.jenisKelamin || "Laki-laki",
+    address: currentUser?.alamat || "-",
+    emergency: currentUser?.kontakDarurat || "-",
     account: true,
-    nik: "3301010101000001",
-  }
-  const patient = patients.find((p) => p.id === "RM-00128") || patients[0] || defaultPatientFallback
+    nik: currentUser?.nik || "-",
+  };
+  const patient =
+    (currentUser?.pasienId &&
+      patients.find((p) => p.id === currentUser.pasienId)) ||
+    (currentUser?.noRekamMedis &&
+      patients.find((p) => p.id === currentUser.noRekamMedis)) ||
+    patients.find((p) => p.account) ||
+    patients[0] ||
+    defaultPatientFallback;
   const doctorName = (id: string) =>
-    doctors.find((d) => d.id === id)?.name || "Dokter"
+    doctors.find((d) => d.id === id)?.name || "Dokter";
   const serviceName = (id: string) =>
-    services.find((s) => s.id === id)?.name || "Layanan"
+    services.find((s) => s.id === id)?.name || "Layanan";
   const patientName = (id: string) =>
-    patients.find((p) => p.id === id)?.name || "Pasien"
-  const session = (id: string) => schedules.find((s) => s.id === id)
+    patients.find((p) => p.id === id)?.name || "Pasien";
+  const session = (id: string) => schedules.find((s) => s.id === id);
 
   const activeDoctor =
     (currentUser &&
@@ -928,28 +1023,30 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         (d) => d.name.toLowerCase() === currentUser.name.toLowerCase(),
       )) ||
     doctors.find((d) => d.name.toLowerCase().includes("reyhan")) ||
-    doctors[0]
-  const activeDoctorId = activeDoctor?.id || "d1"
+    doctors[0];
+  const activeDoctorId = activeDoctor?.id || "d1";
 
   // Add Notification with Outbox Pattern according to SRS
   const addNotification = (
     notif: Omit<NotificationItem, "id" | "timestamp" | "isRead">,
-    pushBrowser = true
+    pushBrowser = true,
   ) => {
-    const newId = `notif-${Date.now()}-${Math.floor(Math.random() * 1000)}`
-    const newTimestamp = new Date().toISOString()
+    const newId = `notif-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const newTimestamp = new Date().toISOString();
     const item: NotificationItem = {
       ...notif,
       id: newId,
       timestamp: newTimestamp,
       isRead: false,
-    }
+    };
 
     // Add Outbox Job Record (sesuai SRS Bab 3 & 4: tabel notifikasi_job)
-    const jobId = `job-${Date.now()}`
+    const jobId = `job-${Date.now()}`;
     const job: NotificationJob = {
       id: jobId,
-      profileId: notif.targetUserId || (notif.targetRole === "Petugas" ? "USR-PETUGAS" : "USR-SYSTEM"),
+      profileId:
+        notif.targetUserId ||
+        (notif.targetRole === "Petugas" ? "USR-PETUGAS" : "USR-SYSTEM"),
       recipientName:
         notif.targetRole === "Pasien"
           ? patient.name
@@ -967,22 +1064,26 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       error: null,
       createdAt: newTimestamp,
       processedAt: newTimestamp,
-    }
+    };
 
-    setNotifications((prev) => [item, ...prev])
-    setNotificationJobs((prev) => [job, ...prev])
+    setNotifications((prev) => [item, ...prev]);
+    setNotificationJobs((prev) => [job, ...prev]);
 
     // Bunyikan nada chime 2-nada lembut (C6 -> E6, gain 0.08, fade-out 0.25s)
-    playSoftChime()
+    playSoftChime();
 
     // Trigger Browser Web Push if permitted (native OS notification sound)
-    if (pushBrowser && typeof window !== "undefined" && "Notification" in window) {
+    if (
+      pushBrowser &&
+      typeof window !== "undefined" &&
+      "Notification" in window
+    ) {
       if (Notification.permission === "granted") {
         try {
           new Notification(notif.title, {
             body: notif.message,
             icon: "/images/sehatklinik-symbol.png",
-          })
+          });
         } catch {
           // ignore notification trigger errors
         }
@@ -990,61 +1091,65 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     }
 
     // Also surface as a toast
-    notify(`🔔 ${notif.title}: ${notif.message.slice(0, 60)}...`)
-  }
+    notify(`🔔 ${notif.title}: ${notif.message.slice(0, 60)}...`);
+  };
 
   const POLA_UUID =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   const markNotificationAsRead = async (id: string) => {
     // Notifikasi lokal (welcome/pengingat) tidak ada di tabel; cukup state lokal.
     if (POLA_UUID.test(id)) {
-      const res = await apiTandaiNotifikasiDibaca(id)
+      const res = await apiTandaiNotifikasiDibaca(id);
       if (res.error) {
-        notify(res.error.message || "Gagal menandai notifikasi sebagai dibaca.")
-        return
+        notify(
+          res.error.message || "Gagal menandai notifikasi sebagai dibaca.",
+        );
+        return;
       }
     }
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-    )
-  }
+      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
+    );
+  };
 
   const markAllNotificationsAsRead = async () => {
-    const res = await apiTandaiSemuaNotifikasiDibaca()
+    const res = await apiTandaiSemuaNotifikasiDibaca();
     if (res.error) {
       notify(
-        res.error.message || "Gagal menandai semua notifikasi sebagai dibaca."
-      )
-      return
+        res.error.message || "Gagal menandai semua notifikasi sebagai dibaca.",
+      );
+      return;
     }
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
-    notify("Semua notifikasi telah ditandai sebagai dibaca.")
-  }
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    notify("Semua notifikasi telah ditandai sebagai dibaca.");
+  };
 
   const deleteNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id))
-  }
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
 
   const clearAllNotifications = () => {
-    setNotifications([])
-    notify("Seluruh riwayat notifikasi telah dibersihkan.")
-  }
+    setNotifications([]);
+    notify("Seluruh riwayat notifikasi telah dibersihkan.");
+  };
 
   function urlBase64ToUint8Array(base64String: string) {
-    const padding = "=".repeat((4 - (base64String.length % 4)) % 4)
-    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/")
-    const rawData = window.atob(base64)
-    const outputArray = new Uint8Array(rawData.length)
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding)
+      .replace(/-/g, "+")
+      .replace(/_/g, "/");
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
     for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i)
+      outputArray[i] = rawData.charCodeAt(i);
     }
-    return outputArray
+    return outputArray;
   }
 
   const syncPushSubscription = async (
     user?: ClinicUser | null,
-    silent: boolean = true
+    silent: boolean = true,
   ): Promise<boolean> => {
     if (
       typeof window === "undefined" ||
@@ -1052,80 +1157,84 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       !("serviceWorker" in navigator) ||
       !("PushManager" in window)
     ) {
-      setWebPushPermission("unsupported")
-      setPushSubscriptionActive(false)
-      setPushSubscriptionError("Browser tidak mendukung Web Push.")
-      return false
+      setWebPushPermission("unsupported");
+      setPushSubscriptionActive(false);
+      setPushSubscriptionError("Browser tidak mendukung Web Push.");
+      return false;
     }
 
-    const currentPermission = Notification.permission
-    setWebPushPermission(currentPermission)
+    const currentPermission = Notification.permission;
+    setWebPushPermission(currentPermission);
     if (currentPermission !== "granted") {
-      setPushSubscriptionActive(false)
-      return false
+      setPushSubscriptionActive(false);
+      return false;
     }
 
-    const effectiveUser = user ?? currentUser
+    const effectiveUser = user ?? currentUser;
     if (!effectiveUser?.id) {
-      setPushSubscriptionActive(false)
-      return false
+      setPushSubscriptionActive(false);
+      return false;
     }
 
     try {
-      const reg = await navigator.serviceWorker.register("/sw.js")
-      await navigator.serviceWorker.ready
+      const reg = await navigator.serviceWorker.register("/sw.js");
+      await navigator.serviceWorker.ready;
 
-      let sub = await reg.pushManager.getSubscription()
+      let sub = await reg.pushManager.getSubscription();
       if (!sub) {
-        const keyRes = await apiGetPushKunci().catch(() => null)
+        const keyRes = await apiGetPushKunci().catch(() => null);
         const vapidKey =
-          keyRes?.data?.vapidPublicKey || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+          keyRes?.data?.vapidPublicKey ||
+          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
         if (!vapidKey) {
-          throw new Error("Kunci publik VAPID belum dikonfigurasi di server.")
+          throw new Error("Kunci publik VAPID belum dikonfigurasi di server.");
         }
         sub = await reg.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(vapidKey),
-        })
+        });
       }
 
-      const subJSON = sub.toJSON()
+      const subJSON = sub.toJSON();
       if (!sub.endpoint || !subJSON.keys?.p256dh || !subJSON.keys?.auth) {
-        throw new Error("Kredensial langganan push peramban tidak lengkap.")
+        throw new Error("Kredensial langganan push peramban tidak lengkap.");
       }
 
       const res = await apiSimpanPushSubscription({
         endpoint: sub.endpoint,
         p256dh: subJSON.keys.p256dh,
         auth: subJSON.keys.auth,
-        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
-      })
+        userAgent:
+          typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+      });
 
       if (res.error) {
-        throw new Error(res.error.message || "Gagal menyimpan langganan push di server.")
+        throw new Error(
+          res.error.message || "Gagal menyimpan langganan push di server.",
+        );
       }
 
-      setPushSubscriptionActive(true)
-      setPushSubscriptionError(null)
-      return true
+      setPushSubscriptionActive(true);
+      setPushSubscriptionError(null);
+      return true;
     } catch (err: any) {
-      console.warn("Gagal sinkronisasi Web Push:", err)
-      setPushSubscriptionActive(false)
-      const errMsg = err?.message || "Gagal mendaftarkan langganan push."
-      setPushSubscriptionError(errMsg)
+      console.warn("Gagal sinkronisasi Web Push:", err);
+      setPushSubscriptionActive(false);
+      const errMsg = err?.message || "Gagal mendaftarkan langganan push.";
+      setPushSubscriptionError(errMsg);
       if (!silent) {
-        notify(errMsg)
+        notify(errMsg);
       }
-      return false
+      return false;
     }
-  }
+  };
 
   // Sinkronisasi otomatis Web Push setiap kali sesi login terbentuk atau berganti akun
   useEffect(() => {
     if (!currentUser?.id) {
-      setPushSubscriptionActive(false)
-      setPushSubscriptionError(null)
-      return
+      setPushSubscriptionActive(false);
+      setPushSubscriptionError(null);
+      return;
     }
 
     if (
@@ -1133,9 +1242,9 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       "Notification" in window &&
       Notification.permission === "granted"
     ) {
-      syncPushSubscription(currentUser, true)
+      syncPushSubscription(currentUser, true);
     }
-  }, [currentUser?.id])
+  }, [currentUser?.id]);
 
   const requestWebPushPermission = async () => {
     if (
@@ -1144,21 +1253,24 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       !("serviceWorker" in navigator) ||
       !("PushManager" in window)
     ) {
-      setWebPushPermission("unsupported")
-      notify("Browser ini tidak mendukung notifikasi Web Push atau Service Worker.")
-      return
+      setWebPushPermission("unsupported");
+      notify(
+        "Browser ini tidak mendukung notifikasi Web Push atau Service Worker.",
+      );
+      return;
     }
     try {
-      const permission = await Notification.requestPermission()
-      setWebPushPermission(permission)
+      const permission = await Notification.requestPermission();
+      setWebPushPermission(permission);
       if (permission === "granted") {
-        const ok = await syncPushSubscription(currentUser, false)
+        const ok = await syncPushSubscription(currentUser, false);
         if (ok) {
-          notify("Notifikasi Web Push browser berhasil diaktifkan!")
-          const welcomeTitle = "Selamat Datang di SehatKlinik"
-          const userName = currentUser?.name || "Pengguna"
-          const welcomeRole = (currentUser?.role || (role !== "Publik" ? role : "Semua")) as Role | "Semua"
-          const welcomeMessage = `Halo ${userName}, akun Anda siap digunakan untuk pendaftaran antrean dan pemantauan kunjungan.`
+          notify("Notifikasi Web Push browser berhasil diaktifkan!");
+          const welcomeTitle = "Selamat Datang di SehatKlinik";
+          const userName = currentUser?.name || "Pengguna";
+          const welcomeRole = (currentUser?.role ||
+            (role !== "Publik" ? role : "Semua")) as Role | "Semua";
+          const welcomeMessage = `Halo ${userName}, akun Anda siap digunakan untuk pendaftaran antrean dan pemantauan kunjungan.`;
           addNotification(
             {
               targetRole: welcomeRole,
@@ -1166,20 +1278,22 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
               title: welcomeTitle,
               message: welcomeMessage,
             },
-            true
-          )
+            true,
+          );
         }
       } else if (permission === "denied") {
-        setPushSubscriptionActive(false)
-        notify("Izin notifikasi ditolak. Anda dapat mengaktifkannya di pengaturan izin situs browser.")
+        setPushSubscriptionActive(false);
+        notify(
+          "Izin notifikasi ditolak. Anda dapat mengaktifkannya di pengaturan izin situs browser.",
+        );
       }
     } catch {
-      notify("Gagal meminta izin notifikasi browser.")
+      notify("Gagal meminta izin notifikasi browser.");
     }
-  }
+  };
 
   const sendDemoPushNotification = (customType?: NotificationType) => {
-    const type = customType || "ANTREAN_DIPANGGIL"
+    const type = customType || "ANTREAN_DIPANGGIL";
     if (type === "ANTREAN_DIPANGGIL") {
       addNotification({
         targetRole: "Pasien",
@@ -1190,137 +1304,147 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         visitId: "KJ-20261026-001",
         queueNumber: "01-001",
         actionUrl: "detail",
-      })
+      });
     } else if (type === "GILIRAN_MENDEKAT") {
       addNotification({
         targetRole: "Pasien",
         targetUserId: patient.id,
         type: "GILIRAN_MENDEKAT",
         title: "Giliran Antrean Hampir Tiba",
-        message: "Satu pasien lagi sebelum nomor giliran Anda. Mohon bersiap di ruang tunggu.",
+        message:
+          "Satu pasien lagi sebelum nomor giliran Anda. Mohon bersiap di ruang tunggu.",
         visitId: "KJ-20261026-001",
         queueNumber: "01-001",
         actionUrl: "detail",
-      })
+      });
     } else if (type === "PENDAFTARAN_BARU") {
       addNotification({
         targetRole: "Petugas",
         type: "PENDAFTARAN_BARU",
         title: "Pendaftaran Online Masuk",
-        message: "Pasien baru mendaftar untuk konsultasi Poli Anak pada sesi jam 09.00 WIB.",
+        message:
+          "Pasien baru mendaftar untuk konsultasi Poli Anak pada sesi jam 09.00 WIB.",
         actionUrl: "antrean",
-      })
+      });
     } else {
       addNotification({
         targetRole: "Semua",
         type: "INFO",
         title: "Uji Coba Sistem Notifikasi Web Push",
-        message: "Koneksi worker pengiriman notifikasi BullMQ + Redis terverifikasi aman dan responsif sesuai SRS.",
-      })
+        message:
+          "Koneksi worker pengiriman notifikasi BullMQ + Redis terverifikasi aman dan responsif sesuai SRS.",
+      });
     }
-  }
+  };
 
   const retryNotificationJob = (jobId: string) => {
     setNotificationJobs((prev) =>
       prev.map((j) =>
         j.id === jobId
           ? {
-            ...j,
-            status: "berhasil",
-            attempts: j.attempts + 1,
-            error: null,
-            processedAt: new Date().toISOString(),
-          }
-          : j
-      )
-    )
-    notify(`Pekerjaan notifikasi ${jobId} berhasil diproses ulang (retry sukses).`)
-  }
+              ...j,
+              status: "berhasil",
+              attempts: j.attempts + 1,
+              error: null,
+              processedAt: new Date().toISOString(),
+            }
+          : j,
+      ),
+    );
+    notify(
+      `Pekerjaan notifikasi ${jobId} berhasil diproses ulang (retry sukses).`,
+    );
+  };
 
   // Active unread notifications for current role & user (terisolasi per akun)
   const unreadCount = notifications.filter((n) => {
-    if (n.isRead) return false
-    if (n.targetRole !== "Semua" && n.targetRole !== role) return false
+    if (n.isRead) return false;
+    if (n.targetRole !== "Semua" && n.targetRole !== role) return false;
     if (n.targetUserId && currentUser) {
-      const target = n.targetUserId.toLowerCase()
+      const target = n.targetUserId.toLowerCase();
       const matchesUser =
         (currentUser.id && target === currentUser.id.toLowerCase()) ||
         (currentUser.email && target === currentUser.email.toLowerCase()) ||
         (currentUser.name && target === currentUser.name.toLowerCase()) ||
-        (role === "Pasien" && patient?.id && target === patient.id.toLowerCase())
-      if (!matchesUser) return false
+        (role === "Pasien" &&
+          patient?.id &&
+          target === patient.id.toLowerCase());
+      if (!matchesUser) return false;
     }
-    return true
-  }).length
+    return true;
+  }).length;
 
   const navigate = (target: string) => {
-    setPage(target)
-    setEditingProfile(false)
-    setMobile(false)
-    setSearch("")
-    setFilter("")
-    setDoctorFilter("")
-    setServiceFilter("")
-    setPagination(1)
-    setStep(1)
-    setReceipt(null)
-    setError("")
+    setPage(target);
+    setEditingProfile(false);
+    setMobile(false);
+    setSearch("");
+    setFilter("");
+    setDoctorFilter("");
+    setServiceFilter("");
+    setPagination(1);
+    setStep(1);
+    setReceipt(null);
+    setError("");
     if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "smooth" })
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
-  }
+  };
 
   const switchRole = (value: string) => {
-    setRole(value as Role)
-    setSelected(null)
-    setEditor(null)
-    setBooking((b) => ({ ...b, patient: patients[0]?.id || "" }))
-    navigate(value === "Publik" ? "Beranda" : "Dashboard")
-  }
+    setRole(value as Role);
+    setSelected(null);
+    setEditor(null);
+    setBooking((b) => ({ ...b, patient: patients[0]?.id || "" }));
+    navigate(value === "Publik" ? "Beranda" : "Dashboard");
+  };
 
   const scopedVisits = visits.filter((v) =>
     role === "Pasien"
       ? v.patient === patient.id
       : role === "Dokter"
         ? v.doctor === activeDoctorId
-        : true
-  )
-  const todayVisits = scopedVisits.filter((v) => v.date === DEMO_DATE)
+        : true,
+  );
+  const todayVisits = scopedVisits.filter((v) => v.date === DEMO_DATE);
   const activeVisits = scopedVisits.filter(
-    (v) => !["Selesai", "Dibatalkan", "Dilewati"].includes(v.queue)
-  )
-  const selectedVisit = scopedVisits.find((v) => v.id === selected)
+    (v) => !["Selesai", "Dibatalkan", "Dilewati"].includes(v.queue),
+  );
+  const selectedVisit = scopedVisits.find((v) => v.id === selected);
 
   const openVisit = (v: Visit) => {
-    setSelected(v.id)
-    setError("")
-    setReason("")
-    setSavedExam(Boolean(v.examination))
+    setSelected(v.id);
+    setError("");
+    setReason("");
+    setSavedExam(Boolean(v.examination));
     setExam(
       v.examination
-        ? { ...structuredClone(v.examination), height: v.examination.height || "" }
+        ? {
+            ...structuredClone(v.examination),
+            height: v.examination.height || "",
+          }
         : {
-          anamnesis: v.complaint,
-          pressure: "",
-          temperature: "",
-          weight: "",
-          height: "",
-          diagnosis: "",
-          notes: "",
-          actions: [],
-        }
-    )
-  }
+            anamnesis: v.complaint,
+            pressure: "",
+            temperature: "",
+            weight: "",
+            height: "",
+            diagnosis: "",
+            notes: "",
+            actions: [],
+          },
+    );
+  };
 
   const updateVisit = (id: string, changes: Partial<Visit>) =>
     setVisits((previous) =>
-      previous.map((v) => (v.id === id ? { ...v, ...changes } : v))
-    )
+      previous.map((v) => (v.id === id ? { ...v, ...changes } : v)),
+    );
 
   const syncVisitTransition = async (
     visitId: string,
     payload: { target: string; reason?: string },
-    label: string
+    label: string,
   ) => {
     const aksiMap: Record<string, string> = {
       checkin: "checkin",
@@ -1329,45 +1453,45 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       finish: "selesai",
       skip: "lewati",
       cancel: "batal",
-    }
-    const aksi = aksiMap[payload.target] || payload.target
+    };
+    const aksi = aksiMap[payload.target] || payload.target;
     const res = await apiTransisiKunjungan(visitId, {
       aksi,
       alasan: payload.reason,
-    })
+    });
     if (res.error) {
-      console.warn(`Sync ${label} error from API:`, res.error)
-      throw new Error(res.error.message || `Gagal melakukan aksi ${label}`)
+      console.warn(`Sync ${label} error from API:`, res.error);
+      throw new Error(res.error.message || `Gagal melakukan aksi ${label}`);
     }
-    return res.data
-  }
+    return res.data;
+  };
 
   // Muat ulang daftar kunjungan dari API agar daftar/kartu antrean
   // selalu mengikuti database, bukan state lokal saja.
   const refreshKunjungan = async () => {
     try {
-      const res = await apiGetKunjungan()
+      const res = await apiGetKunjungan();
       if (res.data) {
-        setVisits(res.data.map(konversiKunjungan))
-        return true
+        setVisits(res.data.map(konversiKunjungan));
+        return true;
       }
     } catch (err) {
-      console.warn("Gagal memuat ulang kunjungan dari backend:", err)
+      console.warn("Gagal memuat ulang kunjungan dari backend:", err);
     }
-    return false
-  }
+    return false;
+  };
 
   // Transition queue and trigger business notifications according to SRS & API Contract
   const transition = async (v: Visit, target: string) => {
-    if (busy) return
+    if (busy) return;
     const qLabel = queueLabel(
       v,
       doctors.findIndex((d) => d.id === v.doctor),
-    )
-    const pName = patientName(v.patient)
-    const docName = doctorName(v.doctor)
+    );
+    const pName = patientName(v.patient);
+    const docName = doctorName(v.doctor);
 
-    setBusy(true)
+    setBusy(true);
     try {
       if (
         target === "checkin" &&
@@ -1376,64 +1500,70 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         v.queue === "Menunggu"
       ) {
         // Sinkron ke API dulu; state lokal hanya diubah setelah API sukses
-        await syncVisitTransition(v.id, { target: "checkin" }, "check-in")
-        await refreshKunjungan()
-        updateVisit(v.id, { status: "Hadir" })
-        notify(`Pasien ${pName} (${qLabel}) berhasil Check-in. Siap dipanggil.`)
+        await syncVisitTransition(v.id, { target: "checkin" }, "check-in");
+        await refreshKunjungan();
+        updateVisit(v.id, { status: "Hadir" });
+        notify(
+          `Pasien ${pName} (${qLabel}) berhasil Check-in. Siap dipanggil.`,
+        );
       } else if (
         target === "call" &&
         ["Petugas", "Dokter"].includes(role) &&
         v.status === "Hadir" &&
         v.queue === "Menunggu"
       ) {
-        await syncVisitTransition(v.id, { target: "call" }, "call")
-        await refreshKunjungan()
-        updateVisit(v.id, { queue: "Dipanggil" })
+        await syncVisitTransition(v.id, { target: "call" }, "call");
+        await refreshKunjungan();
+        updateVisit(v.id, { queue: "Dipanggil" });
 
-      // Trigger ANTREAN_DIPANGGIL notification for the patient
-      addNotification({
-        targetRole: "Pasien",
-        targetUserId: v.patient,
-        type: "ANTREAN_DIPANGGIL",
-        title: "Pasien Dipanggil!",
-        message: `Nomor antrean Anda (${qLabel}) telah dipanggil ke Ruang Periksa bersama ${docName}. Silakan segera masuk.`,
-        visitId: v.id,
-        queueNumber: qLabel,
-        actionUrl: "detail",
-      })
+        // Trigger ANTREAN_DIPANGGIL notification for the patient
+        addNotification({
+          targetRole: "Pasien",
+          targetUserId: v.patient,
+          type: "ANTREAN_DIPANGGIL",
+          title: "Pasien Dipanggil!",
+          message: `Nomor antrean Anda (${qLabel}) telah dipanggil ke Ruang Periksa bersama ${docName}. Silakan segera masuk.`,
+          visitId: v.id,
+          queueNumber: qLabel,
+          actionUrl: "detail",
+        });
 
-      // Find the NEXT waiting patient for this doctor and send GILIRAN_MENDEKAT notification (SRS 11)
-      const nextInLine = todayVisits.find(
-        (other) =>
-          other.id !== v.id &&
-          other.doctor === v.doctor &&
-          other.status === "Hadir" &&
-          other.queue === "Menunggu"
-      )
-      if (nextInLine) {
-        const nextQLabel = queueLabel(
-          nextInLine,
-          doctors.findIndex((d) => d.id === nextInLine.doctor),
-        )
-        addNotification(
-          {
-            targetRole: "Pasien",
-            targetUserId: nextInLine.patient,
-            type: "GILIRAN_MENDEKAT",
-            title: "Giliran Antrean Anda Hampir Tiba",
-            message: `Nomor antrean sebelum Anda (${qLabel}) sedang dipanggil. Mohon bersiap di ruang tunggu untuk nomor Anda ${nextQLabel}.`,
-            visitId: nextInLine.id,
-            queueNumber: nextQLabel,
-            actionUrl: "detail",
-          },
-          false
-        )
-      }
-      } else if (target === "start" && role === "Dokter" && v.queue === "Dipanggil") {
-        await syncVisitTransition(v.id, { target: "start" }, "start")
-        await refreshKunjungan()
-        updateVisit(v.id, { queue: "Sedang Diperiksa" })
-        notify(`Pemeriksaan untuk antrean ${qLabel} dimulai.`)
+        // Find the NEXT waiting patient for this doctor and send GILIRAN_MENDEKAT notification (SRS 11)
+        const nextInLine = todayVisits.find(
+          (other) =>
+            other.id !== v.id &&
+            other.doctor === v.doctor &&
+            other.status === "Hadir" &&
+            other.queue === "Menunggu",
+        );
+        if (nextInLine) {
+          const nextQLabel = queueLabel(
+            nextInLine,
+            doctors.findIndex((d) => d.id === nextInLine.doctor),
+          );
+          addNotification(
+            {
+              targetRole: "Pasien",
+              targetUserId: nextInLine.patient,
+              type: "GILIRAN_MENDEKAT",
+              title: "Giliran Antrean Anda Hampir Tiba",
+              message: `Nomor antrean sebelum Anda (${qLabel}) sedang dipanggil. Mohon bersiap di ruang tunggu untuk nomor Anda ${nextQLabel}.`,
+              visitId: nextInLine.id,
+              queueNumber: nextQLabel,
+              actionUrl: "detail",
+            },
+            false,
+          );
+        }
+      } else if (
+        target === "start" &&
+        role === "Dokter" &&
+        v.queue === "Dipanggil"
+      ) {
+        await syncVisitTransition(v.id, { target: "start" }, "start");
+        await refreshKunjungan();
+        updateVisit(v.id, { queue: "Sedang Diperiksa" });
+        notify(`Pemeriksaan untuk antrean ${qLabel} dimulai.`);
         addNotification({
           targetRole: "Pasien",
           targetUserId: v.patient,
@@ -1443,13 +1573,17 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           visitId: v.id,
           queueNumber: qLabel,
           actionUrl: "detail",
-        })
-      } else if (target === "finish" && role === "Dokter" && v.queue === "Sedang Diperiksa") {
-        await syncVisitTransition(v.id, { target: "finish" }, "finish")
-        await refreshKunjungan()
-        updateVisit(v.id, { status: "Selesai", queue: "Selesai" })
-        notify("Kunjungan selesai. Ringkasan tersedia pada riwayat pasien.")
-        setSelected(null)
+        });
+      } else if (
+        target === "finish" &&
+        role === "Dokter" &&
+        v.queue === "Sedang Diperiksa"
+      ) {
+        await syncVisitTransition(v.id, { target: "finish" }, "finish");
+        await refreshKunjungan();
+        updateVisit(v.id, { status: "Selesai", queue: "Selesai" });
+        notify("Kunjungan selesai. Ringkasan tersedia pada riwayat pasien.");
+        setSelected(null);
         addNotification({
           targetRole: "Pasien",
           targetUserId: v.patient,
@@ -1459,16 +1593,16 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           visitId: v.id,
           queueNumber: qLabel,
           actionUrl: "detail",
-        })
+        });
       } else if (
         target === "skip" &&
         role === "Petugas" &&
         v.queue === "Dipanggil" &&
         reason.trim()
       ) {
-        await syncVisitTransition(v.id, { target: "skip", reason }, "skip")
-        await refreshKunjungan()
-        updateVisit(v.id, { queue: "Dilewati", reason })
+        await syncVisitTransition(v.id, { target: "skip", reason }, "skip");
+        await refreshKunjungan();
+        updateVisit(v.id, { queue: "Dilewati", reason });
         addNotification({
           targetRole: "Pasien",
           targetUserId: v.patient,
@@ -1478,18 +1612,23 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           visitId: v.id,
           queueNumber: qLabel,
           actionUrl: "detail",
-        })
+        });
       } else if (
         target === "cancel" &&
         ((role === "Pasien" && v.queue === "Menunggu") ||
-          (role === "Petugas" && ["Menunggu", "Dipanggil"].includes(v.queue))) &&
+          (role === "Petugas" &&
+            ["Menunggu", "Dipanggil"].includes(v.queue))) &&
         reason.trim()
       ) {
-        await syncVisitTransition(v.id, { target: "cancel", reason }, "cancel")
-        await refreshKunjungan()
-        updateVisit(v.id, { queue: "Dibatalkan", status: "Dibatalkan", reason })
-        setSelected(null)
-        notify("Kunjungan berhasil dibatalkan.")
+        await syncVisitTransition(v.id, { target: "cancel", reason }, "cancel");
+        await refreshKunjungan();
+        updateVisit(v.id, {
+          queue: "Dibatalkan",
+          status: "Dibatalkan",
+          reason,
+        });
+        setSelected(null);
+        notify("Kunjungan berhasil dibatalkan.");
         addNotification({
           targetRole: "Pasien",
           targetUserId: v.patient,
@@ -1499,40 +1638,40 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           visitId: v.id,
           queueNumber: qLabel,
           actionUrl: "detail",
-        })
+        });
       } else {
         setError(
-          "Tindakan tidak tersedia. Periksa status kunjungan dan isi alasan bila diperlukan."
-        )
-        return
+          "Tindakan tidak tersedia. Periksa status kunjungan dan isi alasan bila diperlukan.",
+        );
+        return;
       }
-      setError("")
+      setError("");
     } catch (err: any) {
       // Galat API: modal tetap terbuka, pesan jelas, tombol aktif kembali
-      setError(err?.message || "Aksi gagal. Silakan coba lagi.")
+      setError(err?.message || "Aksi gagal. Silakan coba lagi.");
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
-  }
+  };
 
   // Submit Booking with Automatic Patient & Officer Notifications (SRS 11 & Kontrak API 10)
   const submitBooking = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (busy) return
-    setError("")
+    e.preventDefault();
+    if (busy) return;
+    setError("");
     if (step < 3) {
-      setStep(step + 1)
-      return
+      setStep(step + 1);
+      return;
     }
-    const sched = session(booking.schedule)
+    const sched = session(booking.schedule);
     if (
       !sched ||
       !sched.active ||
       sched.doctor !== booking.doctor ||
       new Date(`${booking.date}T12:00:00`).getDay() !== sched.day
     ) {
-      setError("Pilih sesi aktif yang sesuai hari kunjungan.")
-      return
+      setError("Pilih sesi aktif yang sesuai hari kunjungan.");
+      return;
     }
     if (
       visits.some(
@@ -1540,52 +1679,52 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           v.patient === booking.patient &&
           v.schedule === sched.id &&
           v.date === booking.date &&
-          v.status !== "Dibatalkan"
+          v.status !== "Dibatalkan",
       )
     ) {
       setError(
-        "Pasien sudah memiliki kunjungan aktif pada dokter, sesi, dan tanggal ini."
-      )
-      return
+        "Pasien sudah memiliki kunjungan aktif pada dokter, sesi, dan tanggal ini.",
+      );
+      return;
     }
     if (!remaining(sched, booking.date, visits)) {
-      setError("Kuota sesi sudah penuh. Silakan pilih sesi lain.")
-      return
+      setError("Kuota sesi sudah penuh. Silakan pilih sesi lain.");
+      return;
     }
     const number =
       Math.max(
         0,
         ...visits
           .filter((v) => v.doctor === booking.doctor && v.date === booking.date)
-          .map((v) => v.number)
-      ) + 1
+          .map((v) => v.number),
+      ) + 1;
     const next: Visit = {
       id: `KJ-${booking.date.replace(/-/g, "")}-${String(
-        visits.length + 1
+        visits.length + 1,
       ).padStart(3, "0")}`,
       ...booking,
       number,
       source: role === "Petugas" ? "Walk-in" : "Online",
       status: "Terdaftar",
       queue: "Menunggu",
-    }
-    setBusy(true)
+    };
+    setBusy(true);
     try {
-      let savedVisit: Visit = next
+      let savedVisit: Visit = next;
 
       // Pendaftaran kunjungan ke API backend
       try {
-        const isPetugas = role === "Petugas"
+        const isPetugas = role === "Petugas";
         const res = await apiTambahKunjungan({
           jadwalId: next.schedule,
           layananId: next.service,
           tanggal: next.date,
           keluhan: next.complaint,
           pasienId: isPetugas ? next.patient : undefined,
-        })
+        });
         if (res.error) {
-          setError(res.error.message || "Gagal mendaftarkan kunjungan")
-          return
+          setError(res.error.message || "Gagal mendaftarkan kunjungan");
+          return;
         }
         if (res.data?.id) {
           savedVisit = {
@@ -1593,23 +1732,23 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
             id: res.data.id,
             ref: res.data.noReferensi || next.ref,
             number: res.data.nomorAntrean || next.number,
-          }
+          };
         }
       } catch (err) {
-        console.warn("Sync booking error:", err)
+        console.warn("Sync booking error:", err);
       }
 
-      setVisits((previous) => [...previous, savedVisit])
-      setReceipt(savedVisit)
-      setStep(4)
+      setVisits((previous) => [...previous, savedVisit]);
+      setReceipt(savedVisit);
+      setStep(4);
 
       const qLabel = queueLabel(
         savedVisit,
         doctors.findIndex((d) => d.id === savedVisit.doctor),
-      )
-      const dName = doctorName(savedVisit.doctor)
-      const sName = serviceName(savedVisit.service)
-      const pName = patientName(savedVisit.patient)
+      );
+      const dName = doctorName(savedVisit.doctor);
+      const sName = serviceName(savedVisit.service);
+      const pName = patientName(savedVisit.patient);
 
       // Notifikasi ke Pasien (Pendaftaran Berhasil)
       addNotification({
@@ -1621,7 +1760,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         visitId: savedVisit.id,
         queueNumber: qLabel,
         actionUrl: "detail",
-      })
+      });
 
       // Notifikasi ke Petugas (SRS 11: Pendaftaran online baru)
       if (savedVisit.source === "Online") {
@@ -1635,16 +1774,16 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
             queueNumber: qLabel,
             actionUrl: "antrean",
           },
-          false
-        )
+          false,
+        );
       }
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
-  }
+  };
 
   const saveExamination = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
+    e.preventDefault();
     if (
       busy ||
       !selectedVisit ||
@@ -1652,12 +1791,12 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       selectedVisit.queue !== "Sedang Diperiksa" ||
       !exam
     )
-      return
-    const pressureParts = exam.pressure.trim().split("/")
-    const systolicRaw = pressureParts[0]?.trim() || ""
-    const diastolicRaw = pressureParts[1]?.trim() || ""
-    const sistolik = Number(systolicRaw)
-    const diastolik = Number(diastolicRaw)
+      return;
+    const pressureParts = exam.pressure.trim().split("/");
+    const systolicRaw = pressureParts[0]?.trim() || "";
+    const diastolicRaw = pressureParts[1]?.trim() || "";
+    const sistolik = Number(systolicRaw);
+    const diastolik = Number(diastolicRaw);
     if (
       pressureParts.length !== 2 ||
       !/^\d+$/.test(systolicRaw) ||
@@ -1671,51 +1810,51 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       sistolik <= diastolik
     ) {
       setError(
-        "Tekanan darah tidak valid: sistolik 50–300 mmHg, diastolik 30–200 mmHg, dan sistolik harus lebih tinggi dari diastolik."
-      )
-      return
+        "Tekanan darah tidak valid: sistolik 50–300 mmHg, diastolik 30–200 mmHg, dan sistolik harus lebih tinggi dari diastolik.",
+      );
+      return;
     }
 
-    const suhu = Number(exam.temperature)
+    const suhu = Number(exam.temperature);
     if (
       !exam.temperature.trim() ||
       !Number.isFinite(suhu) ||
       suhu < 30 ||
       suhu > 45
     ) {
-      setError("Suhu tubuh harus berada pada rentang 30–45 °C.")
-      return
+      setError("Suhu tubuh harus berada pada rentang 30–45 °C.");
+      return;
     }
 
-    const berat_badan = Number(exam.weight)
+    const berat_badan = Number(exam.weight);
     if (
       !exam.weight.trim() ||
       !Number.isFinite(berat_badan) ||
       berat_badan < 1 ||
       berat_badan > 500
     ) {
-      setError("Berat badan harus berada pada rentang 1–500 kg.")
-      return
+      setError("Berat badan harus berada pada rentang 1–500 kg.");
+      return;
     }
 
-    const tinggi_badan = Number(exam.height)
+    const tinggi_badan = Number(exam.height);
     if (
       !exam.height.trim() ||
       !Number.isFinite(tinggi_badan) ||
       tinggi_badan < 20 ||
       tinggi_badan > 250
     ) {
-      setError("Tinggi badan harus berada pada rentang 20–250 cm.")
-      return
+      setError("Tinggi badan harus berada pada rentang 20–250 cm.");
+      return;
     }
 
     if (!exam.anamnesis.trim() || !exam.diagnosis.trim()) {
-      setError("Anamnesis dan diagnosis wajib diisi.")
-      return
+      setError("Anamnesis dan diagnosis wajib diisi.");
+      return;
     }
 
-    setError("")
-    setBusy(true)
+    setError("");
+    setBusy(true);
     try {
       // Simpan hasil pemeriksaan & tindakan ke backend API
       try {
@@ -1723,7 +1862,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           namaTindakan: a.name || "Tindakan Medis",
           keterangan: a.description || "",
           saran: a.advice || "",
-        }))
+        }));
         const res = await apiSimpanPemeriksaan(selectedVisit.id, {
           anamnesis: exam.anamnesis.trim(),
           diagnosis: exam.diagnosis.trim(),
@@ -1736,68 +1875,79 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
             tinggi_badan,
           },
           tindakan: tindakanFormatted,
-        })
+        });
         if (res.error) {
-          setError(res.error.message || "Gagal menyimpan pemeriksaan ke database")
+          setError(
+            res.error.message || "Gagal menyimpan pemeriksaan ke database",
+          );
         }
       } catch (err) {
-        console.warn("Sync examination error:", err)
+        console.warn("Sync examination error:", err);
       }
-      updateVisit(selectedVisit.id, { examination: exam })
-      setSavedExam(true)
-      notify("Pemeriksaan dan tindakan medis berhasil disimpan ke database!")
+      updateVisit(selectedVisit.id, { examination: exam });
+      setSavedExam(true);
+      notify("Pemeriksaan dan tindakan medis berhasil disimpan ke database!");
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
-  }
+  };
 
   const showEditor = (type: string, id?: string) => {
-    setEditor({ type, id })
-    setError("")
-  }
+    setEditor({ type, id });
+    setError("");
+  };
 
   const resetToDefaults = () => {
-    setVisits([])
-    setPatients([])
-    setUsers([])
-    setNotifications([])
-    setNotificationJobs([])
-    setRole("Publik")
-    setPage("Beranda")
-    localStorage.removeItem("sehatklinik_state_v1")
-    localStorage.removeItem("sehatklinik_state_v2")
-    localStorage.removeItem("sehatklinik_state_v3")
-    localStorage.removeItem("sehatklinik_current_user")
-    setCurrentUser(null)
-    loadBackendData()
-    notify("Data sistem berhasil direset.")
-  }
+    setVisits([]);
+    setPatients([]);
+    setUsers([]);
+    setNotifications([]);
+    setNotificationJobs([]);
+    setRole("Publik");
+    setPage("Beranda");
+    localStorage.removeItem("sehatklinik_state_v1");
+    localStorage.removeItem("sehatklinik_state_v2");
+    localStorage.removeItem("sehatklinik_state_v3");
+    localStorage.removeItem("sehatklinik_current_user");
+    setCurrentUser(null);
+    loadBackendData();
+    notify("Data sistem berhasil direset.");
+  };
 
   const pasangSesiUser = async (u: any, cleanEmail: string) => {
-    const userRole = (u.role.charAt(0).toUpperCase() + u.role.slice(1)) as Role
+    let fullUser = u;
+    try {
+      const meRes = await apiGetMe();
+      if (meRes.data) {
+        fullUser = { ...u, ...meRes.data };
+      }
+    } catch {}
+
+    const userRole = (fullUser.role.charAt(0).toUpperCase() +
+      fullUser.role.slice(1)) as Role;
     const authUser: ClinicUser = {
-      id: u.id,
-      name: u.nama || u.email?.split("@")[0] || "Pengguna",
-      email: u.email || cleanEmail,
+      id: fullUser.id,
+      name: fullUser.nama || fullUser.email?.split("@")[0] || "Pengguna",
+      email: fullUser.email || cleanEmail,
       role: userRole,
       active: true,
-      pasienId: u.pasienId ?? null,
-      noRekamMedis: u.noRekamMedis ?? null,
-      nik: u.nik || "",
-      tanggalLahir: u.tanggalLahir || "2000-01-01",
+      pasienId: fullUser.pasienId ?? null,
+      noRekamMedis: fullUser.noRekamMedis ?? null,
+      nik: fullUser.nik || "",
+      tanggalLahir: fullUser.tanggalLahir || "2000-01-01",
       jenisKelamin:
-        u.jenisKelamin === "P" || u.jenisKelamin === "Perempuan"
+        fullUser.jenisKelamin === "P" || fullUser.jenisKelamin === "Perempuan"
           ? "Perempuan"
           : "Laki-laki",
-      alamat: u.alamat || "-",
-      kontakDarurat: u.kontakDarurat || "-",
-      telepon: u.telepon || "-",
-    }
-    setCurrentUser(authUser)
-    setRole(userRole)
-    setPage("Dashboard")
+      alamat: fullUser.alamat || "-",
+      kontakDarurat: fullUser.kontakDarurat || "-",
+      telepon: fullUser.telepon || "-",
+    };
+    setCurrentUser(authUser);
+    setRole(userRole);
+    setPage("Dashboard");
     if (typeof window !== "undefined") {
-      sessionStorage.setItem("sehatklinik_welcome_sent", "1")
+      sessionStorage.setItem("sehatklinik_welcome_sent", "1");
     }
 
     if (userRole === "Pasien" || authUser.pasienId) {
@@ -1811,7 +1961,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         emergency: authUser.kontakDarurat || "-",
         account: true,
         nik: authUser.nik || "-",
-      }
+      };
       setPatients((prev) => {
         const rest = prev.filter(
           (p) =>
@@ -1819,119 +1969,125 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
             p.id !== authUser.id &&
             (!authUser.pasienId || p.id !== authUser.pasienId) &&
             (!authUser.noRekamMedis || p.id !== authUser.noRekamMedis) &&
-            p.name.trim().toLowerCase() !== authUser.name.trim().toLowerCase()
-        )
-        return [currentPatient, ...rest]
-      })
+            p.name.trim().toLowerCase() !== authUser.name.trim().toLowerCase(),
+        );
+        return [currentPatient, ...rest];
+      });
     }
 
     // Segera muat notifikasi backend terisolasi untuk profileId pengguna yang baru login
-    await refreshNotifications(userRole, u.id)
+    await refreshNotifications(userRole, fullUser.id);
 
-    const welcomeTitle = "Selamat Datang di SehatKlinik"
-    const welcomeMessage = `Halo ${authUser.name}, akun Anda siap digunakan untuk pendaftaran antrean dan pemantauan kunjungan.`
+    const welcomeTitle = "Selamat Datang di SehatKlinik";
+    const welcomeMessage = `Halo ${authUser.name}, akun Anda siap digunakan untuk pendaftaran antrean dan pemantauan kunjungan.`;
     addNotification(
       {
         targetRole: userRole,
-        targetUserId: u.id,
+        targetUserId: fullUser.id,
         type: "INFO",
         title: welcomeTitle,
         message: welcomeMessage,
       },
-      true
-    )
+      true,
+    );
     return {
       success: true,
       message: `Selamat datang, ${authUser.name}!`,
       user: authUser,
-    }
-  }
+    };
+  };
 
   const login = async (
     email: string,
-    password?: string
+    password?: string,
   ): Promise<{ success: boolean; message: string; user?: ClinicUser }> => {
-    const cleanEmail = email.trim().toLowerCase()
+    const cleanEmail = email.trim().toLowerCase();
 
     // Reset notifikasi saat berganti/mencoba login akun baru agar tidak bercampur
-    setNotifications([])
-    setNotificationJobs([])
+    setNotifications([]);
+    setNotificationJobs([]);
 
     if (!password) {
       return {
         success: false,
         message: "Kata sandi wajib diisi",
-      }
+      };
     }
 
     try {
-      const res = await apiLogin({ email: cleanEmail, password })
+      const res = await apiLogin({ email: cleanEmail, password });
       if (res.data?.user) {
-        return await pasangSesiUser(res.data.user, cleanEmail)
+        return await pasangSesiUser(res.data.user, cleanEmail);
       }
       return {
         success: false,
         message: res.error?.message || "Gagal masuk akun",
-      }
+      };
     } catch (authErr: any) {
       return {
         success: false,
         message: authErr?.message || "Gagal terhubung ke server autentikasi",
-      }
+      };
     }
-  }
+  };
 
   const loginCepat = async (
-    peran: "pasien" | "petugas" | "dokter" | "admin"
+    peran: "pasien" | "petugas" | "dokter" | "admin",
   ): Promise<{ success: boolean; message: string; user?: ClinicUser }> => {
-    setNotifications([])
-    setNotificationJobs([])
+    setNotifications([]);
+    setNotificationJobs([]);
 
     try {
-      const res = await apiLoginCepat(peran)
+      const res = await apiLoginCepat(peran);
       if (res.data?.user) {
-        return await pasangSesiUser(res.data.user, res.data.user.email)
+        return await pasangSesiUser(res.data.user, res.data.user.email);
       }
       return {
         success: false,
         message: res.error?.message || "Gagal masuk lewat login cepat demo",
-      }
+      };
     } catch (authErr: any) {
       return {
         success: false,
         message: authErr?.message || "Gagal terhubung ke server autentikasi",
-      }
+      };
     }
-  }
+  };
 
   const logout = async () => {
     try {
-      let currentEndpoint: string | undefined
+      let currentEndpoint: string | undefined;
       if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-        const reg = await navigator.serviceWorker.getRegistration("/sw.js").catch(() => null)
-        const sub = await reg?.pushManager?.getSubscription().catch(() => null)
+        const reg = await navigator.serviceWorker
+          .getRegistration("/sw.js")
+          .catch(() => null);
+        const sub = await reg?.pushManager?.getSubscription().catch(() => null);
         if (sub?.endpoint) {
-          currentEndpoint = sub.endpoint
-          await apiHapusPushSubscription({ endpoint: sub.endpoint }).catch(() => null)
-          await sub.unsubscribe().catch(() => null)
+          currentEndpoint = sub.endpoint;
+          await apiHapusPushSubscription({ endpoint: sub.endpoint }).catch(
+            () => null,
+          );
+          await sub.unsubscribe().catch(() => null);
         }
       }
-      await apiLogout(currentEndpoint ? { endpoint: currentEndpoint } : undefined)
+      await apiLogout(
+        currentEndpoint ? { endpoint: currentEndpoint } : undefined,
+      );
     } catch {}
-    setVisits([])
-    setPatients([])
-    setUsers([])
-    setPushSubscriptionActive(false)
-    setPushSubscriptionError(null)
-    setCurrentUser(null)
-    setRole("Publik")
-    setNotifications([])
-    setNotificationJobs([])
+    setVisits([]);
+    setPatients([]);
+    setUsers([]);
+    setPushSubscriptionActive(false);
+    setPushSubscriptionError(null);
+    setCurrentUser(null);
+    setRole("Publik");
+    setNotifications([]);
+    setNotificationJobs([]);
     if (typeof window !== "undefined") {
-      sessionStorage.removeItem("sehatklinik_welcome_sent")
-      window.location.href = "/"
+      sessionStorage.removeItem("sehatklinik_welcome_sent");
+      window.location.href = "/";
     }
-  }
+  };
 
   return (
     <ClinicContext.Provider
@@ -2060,13 +2216,13 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     >
       {children}
     </ClinicContext.Provider>
-  )
+  );
 }
 
 export function useClinic() {
-  const context = useContext(ClinicContext)
+  const context = useContext(ClinicContext);
   if (!context) {
-    throw new Error("useClinic must be used within a ClinicProvider")
+    throw new Error("useClinic must be used within a ClinicProvider");
   }
-  return context
+  return context;
 }
