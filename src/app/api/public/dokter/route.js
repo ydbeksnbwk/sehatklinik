@@ -34,8 +34,10 @@ async function _GET(request) {
           id: dokter.id,
           nama: dokter.nama,
           spesialisasi: dokter.spesialisasi,
+          noSip: dokter.noSip,
           fotoPath: dokter.fotoPath,
           deskripsi: dokter.deskripsi,
+          detail: dokter.detail,
         })
         .from(dokter)
         .where(and(...conds))
@@ -73,10 +75,23 @@ async function _GET(request) {
             ? r.fotoPath
             : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/foto-dokter/${r.fotoPath}`;
         }
+        const detail = r.detail || {};
         return {
-          ...r,
+          id: r.id,
+          nama: r.nama,
+          spesialisasi: r.spesialisasi,
+          noSip: r.noSip,
+          fotoPath: r.fotoPath,
+          deskripsi: r.deskripsi,
           fotoUrl,
           layanan: peta[r.id] || [],
+          detail,
+          str: detail.str || "",
+          education: detail.education || [],
+          experienceYears: detail.experienceYears ?? 0,
+          almamater: detail.almamater || "",
+          certifications: detail.certifications || [],
+          bio: r.deskripsi || "",
         };
       });
     });

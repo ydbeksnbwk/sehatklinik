@@ -50,7 +50,7 @@ async function _POST(request) {
     await requireRole(request, ["admin"]);
     const b = await request.json().catch(() => ({}));
     const validated = skemaDokterCreate.parse(b);
-    const { email, password, nama, spesialisasi, noSip, deskripsi, layananIds } = validated;
+    const { email, password, nama, spesialisasi, noSip, deskripsi, layananIds, detail } = validated;
 
     // Trigger handle_new_user membaca app_metadata.role dan membuat baris profiles.
     const { data, error } = await admin.auth.admin.createUser({
@@ -80,7 +80,14 @@ async function _POST(request) {
     const hasil = await db.transaction(async (tx) => {
       const [d] = await tx
         .insert(dokter)
-        .values({ profileId: userId, nama, spesialisasi, noSip, deskripsi: deskripsi || null })
+        .values({
+          profileId: userId,
+          nama,
+          spesialisasi,
+          noSip,
+          deskripsi: deskripsi || null,
+          detail: detail || {},
+        })
         .returning({
           id: dokter.id,
           nama: dokter.nama,

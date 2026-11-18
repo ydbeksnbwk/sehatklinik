@@ -6,20 +6,23 @@ import { db } from "@/db";
 import { layanan } from "@/db/schema";
 import { HttpError, handleError, requireRole } from "@/lib/auth";
 
-const LayananCreateSchema = z.object({
-  namaLayanan: z
-    .string({ required_error: "Nama layanan wajib diisi" })
-    .trim()
-    .min(1, "Nama layanan wajib diisi")
-    .max(100, "Nama layanan maksimal 100 karakter"),
-  deskripsi: z.string().trim().optional().nullable(),
-  durasiMenit: z.coerce
-    .number({ required_error: "Durasi menit wajib diisi" })
-    .int("Durasi harus bilangan bulat")
-    .min(1, "Durasi minimal 1 menit")
-    .max(480, "Durasi maksimal 480 menit"),
-  aktif: z.boolean().optional().default(true),
-});
+const LayananCreateSchema = z
+  .object({
+    namaLayanan: z
+      .string({ required_error: "Nama layanan wajib diisi" })
+      .trim()
+      .min(1, "Nama layanan wajib diisi")
+      .max(100, "Nama layanan maksimal 100 karakter"),
+    deskripsi: z.string().trim().optional().nullable(),
+    durasiMenit: z.coerce
+      .number({ required_error: "Durasi menit wajib diisi" })
+      .int("Durasi harus bilangan bulat")
+      .min(1, "Durasi minimal 1 menit")
+      .max(480, "Durasi maksimal 480 menit"),
+    aktif: z.boolean().optional().default(true),
+    detail: z.record(z.any()).optional().default({}),
+  })
+  .strict("Terdapat bidang yang tidak dikenali pada data layanan");
 
 async function _GET(request) {
   try {
@@ -103,7 +106,7 @@ async function _POST(request) {
       );
     }
 
-    const { namaLayanan, deskripsi, durasiMenit, aktif } = parsed.data;
+    const { namaLayanan, deskripsi, durasiMenit, aktif, detail } = parsed.data;
 
     // Cek duplikasi nama layanan (case-insensitive)
     const [existing] = await db
@@ -127,6 +130,7 @@ async function _POST(request) {
         deskripsi: deskripsi || null,
         durasiMenit,
         aktif: aktif ?? true,
+        detail: detail || {},
       })
       .returning();
 

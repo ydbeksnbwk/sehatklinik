@@ -23,6 +23,7 @@ async function _PATCH(request, { params }) {
     if (validated.deskripsi !== undefined) set.deskripsi = validated.deskripsi;
     if (validated.fotoPath !== undefined) set.fotoPath = validated.fotoPath;
     if (validated.aktif !== undefined) set.aktif = validated.aktif;
+    if (validated.detail !== undefined) set.detail = validated.detail;
 
     const layananIds = validated.layananIds;
 

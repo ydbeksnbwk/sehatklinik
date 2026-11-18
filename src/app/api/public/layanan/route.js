@@ -40,6 +40,7 @@ async function _GET(request) {
           namaLayanan: layanan.namaLayanan,
           deskripsi: layanan.deskripsi,
           durasiMenit: layanan.durasiMenit,
+          detail: layanan.detail,
         })
         .from(layanan)
         .where(where)
@@ -50,7 +51,21 @@ async function _GET(request) {
     });
 
     return NextResponse.json({
-      data: rows,
+      data: rows.map((r) => {
+        const detail = r.detail || {};
+        return {
+          id: r.id,
+          namaLayanan: r.namaLayanan,
+          deskripsi: r.deskripsi,
+          durasiMenit: r.durasiMenit,
+          detail,
+          overview: detail.overview || r.deskripsi || "",
+          steps: detail.steps || [],
+          cases: detail.cases || [],
+          facilities: detail.facilities || [],
+          preparation: detail.preparation || "",
+        };
+      }),
       meta: {
         page,
         pageSize,
