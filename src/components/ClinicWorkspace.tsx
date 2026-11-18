@@ -2368,7 +2368,7 @@ export default function ClinicWorkspace({
       } else if (editor.type === "Pengguna") {
         const staffPayload = {
           email: get("email"),
-          password: get("password") || "Password123!",
+          password: get("password"),
           nama: get("name"),
           role: get("role").toLowerCase(),
           telepon: get("phone") || undefined,
@@ -5330,8 +5330,9 @@ export default function ClinicWorkspace({
                       <input
                         name="password"
                         type="password"
+                        required
+                        minLength={8}
                         placeholder="Minimal 8 karakter"
-                        defaultValue="password123"
                       />
                     </Field>
                     <div className="notice">
