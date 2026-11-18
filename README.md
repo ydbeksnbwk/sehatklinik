@@ -228,8 +228,8 @@ npm run lint
 
 ## 📚 Tautan Dokumentasi Terkait
 
-- [Arsitektur & Keputusan Desain](file:///D:/Materi%20Kuliah%20S.5/Pemrograman%20Web/sehatklinik/docs/ARSITEKTUR.md)
-- [Diagram Hubungan Entitas (ERD)](file:///D:/Materi%20Kuliah%20S.5/Pemrograman%20Web/sehatklinik/docs/ERD.md)
-- [Daftar Fitur & Panduan Uji Manual](file:///D:/Materi%20Kuliah%20S.5/Pemrograman%20Web/sehatklinik/docs/FITUR.md)
-- [Bukti Verifikasi Sembilan Butir Evaluasi](file:///D:/Materi%20Kuliah%20S.5/Pemrograman%20Web/sehatklinik/docs/BUKTI_VERIFIKASI.md)
-- [Panduan Deployment & Konfigurasi Cloud](file:///D:/Materi%20Kuliah%20S.5/Pemrograman%20Web/sehatklinik/docs/DEPLOYMENT.md)
+- [Arsitektur & Keputusan Desain](docs/ARSITEKTUR.md)
+- [Diagram Hubungan Entitas (ERD)](docs/ERD.md)
+- [Daftar Fitur & Panduan Uji Manual](docs/FITUR.md)
+- [Bukti Verifikasi Sembilan Butir Evaluasi](docs/BUKTI_VERIFIKASI.md)
+- [Panduan Deployment & Konfigurasi Cloud](docs/DEPLOYMENT.md)
