@@ -522,6 +522,7 @@ export const dokter = pgTable(
     fotoPath: text("foto_path"),
     deskripsi: text(),
     aktif: boolean().default(true).notNull(),
+    detail: jsonb().default({}).notNull(),
   },
   (table) => [
     foreignKey({
@@ -556,6 +557,7 @@ export const layanan = pgTable(
     deskripsi: text(),
     durasiMenit: integer("durasi_menit").notNull(),
     aktif: boolean().default(true).notNull(),
+    detail: jsonb().default({}).notNull(),
   },
   (table) => [
     unique("layanan_nama_layanan_key").on(table.namaLayanan),
@@ -678,6 +680,7 @@ export const profilKlinik = pgTable(
     longitude: numeric({ precision: 9, scale: 6 }),
     kontak: text(),
     jamOperasional: jsonb("jam_operasional").default({}).notNull(),
+    detail: jsonb().default({}).notNull(),
   },
   (table) => [
     uniqueIndex("uq_profil_klinik_satu_baris").using("btree", sql`(true)`),

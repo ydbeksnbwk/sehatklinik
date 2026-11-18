@@ -63,10 +63,97 @@ async function main() {
     // -------------------------------------------------------------------------
     console.log("[1] Memeriksa & menginisialisasi profil klinik...");
     const profilKlinikId = "47feeb52-3ca1-49d3-991f-e6cd44a80314";
+    const clinicDetailData = {
+      tagline: "Perawatan Sepenuh Hati, Hidup Lebih Berarti",
+      emergencyPhone: "021-555-0911 (Layanan Darurat Ringan 24 Jam)",
+      whatsapp: "0812-9988-7700",
+      email: "halo@sehatklinik.id",
+      history: "Didirikan pada tahun 2018 di kawasan Jakarta Selatan, Klinik Sehat Sentosa lahir dari kepedulian mendalam terhadap kebutuhan keluarga urban akan layanan kesehatan tingkat pertama yang terpercaya, bersih, dan bebas dari kelelahan mengantre fisik. Berawal dari 2 ruang periksa sederhana, kini Klinik Sehat Sentosa telah berkembang menjadi sentra kesehatan primer terakreditasi paripurna yang melayani lebih dari 15.000 kunjungan pasien dengan dukungan sistem informasi kesehatan digital dan antrean cerdas.",
+      vision: "Menjadi mitra fasilitas kesehatan primer pilihan utama keluarga di Indonesia yang unggul dalam mutu klinis, berpusat pada kepedulian pasien, dan terdepan dalam adopsi teknologi kesehatan digital.",
+      mission: [
+        "Menyelenggarakan pelayanan kesehatan primer yang komprehensif, promotif, preventif, kuratif, dan rehabilitatif secara berkesinambungan.",
+        "Mengedepankan transparansi waktu tunggu dan kemudahan akses konsultasi dokter melalui sistem antrean digital terintegrasi.",
+        "Menjamin mutu keselamatan pasien (patient safety) melalui protokol sterilisasi medis berstandar Kemenkes RI dan tenaga kesehatan tersertifikasi.",
+        "Membangun hubungan jangka panjang yang empatik antara tenaga medis dan keluarga pasien dalam suasana klinik yang hangat dan menenangkan."
+      ],
+      values: [
+        {
+          title: "Kepedulian Tulus (Care & Empathy)",
+          subtitle: "Mendengarkan Sebelum Mendiagnosis",
+          desc: "Setiap pasien diperlakukan sebagai pribadi seutuhnya, bukan sekadar angka statistik. Kami mendengar setiap keluhan dengan seksama dan empati.",
+          icon: "heart"
+        },
+        {
+          title: "Integritas & Keahlian (Professional Clinical)",
+          subtitle: "Standar Medis Tanpa Kompromi",
+          desc: "Seluruh dokter dan tenaga kesehatan mengantongi STR aktif, SIP resmi, dan terus memperbarui kompetensi ilmiah demi keselamatan pasien.",
+          icon: "shield"
+        },
+        {
+          title: "Aksesibilitas Modern (Smart & Transparent)",
+          subtitle: "Bebas Antre Panjang & Terbuka",
+          desc: "Integrasi sistem pendaftaran daring, kuota terukur, dan notifikasi Web Push real-time memastikan waktu pasien dihargai secara maksimal.",
+          icon: "clock"
+        },
+        {
+          title: "Keamanan & Higiene (Hygiene Excellence)",
+          subtitle: "Pencegahan & Pengendalian Infeksi",
+          desc: "Penerapan standar PPI (Pencegahan & Pengendalian Infeksi) ketat, sterilisasi instrumen autoclave kelas B, serta sanitasi ruangan terjadwal.",
+          icon: "check"
+        }
+      ],
+      accreditation: "Terakreditasi PARIPURNA oleh Kementerian Kesehatan RI",
+      accreditationNumber: "Sertifikat Fasyankes: No. YM.02.01/REG/1429/2024",
+      facilities: [
+        {
+          name: "Ruang Pemeriksaan Dokter Ergonomis",
+          category: "Klinis",
+          desc: "Ruang konsultasi privat dengan peredam suara, tata cahaya menenangkan, dan peralatan diagnostik modern kelas medis.",
+          icon: "clinic"
+        },
+        {
+          name: "Ruang Tindakan & Gawat Darurat Ringan",
+          category: "Tindakan",
+          desc: "Dilengkapi monitor tanda vital, oksigen terpusat, nebulizer kompresor, dan instrumen bedah minor steril sekali pakai.",
+          icon: "heart"
+        },
+        {
+          name: "Instalasi Farmasi Terpadu",
+          category: "Farmasi",
+          desc: "Penyimpanan obat terstandar suhu dingin, apoteker siaga untuk konseling cara minum obat, dan jaminan obat asli dari distributor resmi.",
+          icon: "shield"
+        },
+        {
+          name: "Pojok Laktasi & Tumbuh Kembang Anak",
+          category: "Ibu & Anak",
+          desc: "Area ramah anak dengan mainan terdisinfeksi, ruang menyusui privat yang nyaman, serta alat ukur antropometri standar WHO.",
+          icon: "users"
+        },
+        {
+          name: "Laboratorium Rujukan Terintegrasi",
+          category: "Diagnostik",
+          desc: "Titik sampling darah & urine higienis yang terhubung dengan laboratorium diagnostik tersertifikasi ISO untuk hasil akurat dan cepat.",
+          icon: "file"
+        },
+        {
+          name: "Ruang Tunggu Sejuk & Ramah Difabel",
+          category: "Kenyamanan",
+          desc: "Layar monitor display antrean suara, akses kursi roda tanpa undakan, pendingin udara HEPA filter, dan Wi-Fi kecepatan tinggi gratis.",
+          icon: "check"
+        }
+      ],
+      stats: [
+        { value: "15.000+", label: "Pasien Terlayani", sub: "Sejak tahun 2018 di Jakarta Selatan" },
+        { value: "99.4%", label: "Tingkat Kepuasan", sub: "Survei pengalaman layanan pasien berkala" },
+        { value: "5 Poli", label: "Layanan Spesialis & Umum", sub: "Dipimpin dokter berkompeten & bersertifikasi" },
+        { value: "100%", label: "Digital Outbox Notifikasi", sub: "Transparansi status pendaftaran & antrean" }
+      ]
+    };
+
     await client.query(
       `
-      INSERT INTO profil_klinik (id, nama, deskripsi, alamat, latitude, longitude, kontak, jam_operasional)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO profil_klinik (id, nama, deskripsi, alamat, latitude, longitude, kontak, jam_operasional, detail)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       ON CONFLICT (id) DO UPDATE SET
         nama = EXCLUDED.nama,
         deskripsi = EXCLUDED.deskripsi,
@@ -74,7 +161,8 @@ async function main() {
         latitude = EXCLUDED.latitude,
         longitude = EXCLUDED.longitude,
         kontak = EXCLUDED.kontak,
-        jam_operasional = EXCLUDED.jam_operasional
+        jam_operasional = EXCLUDED.jam_operasional,
+        detail = EXCLUDED.detail
       `,
       [
         profilKlinikId,
@@ -93,6 +181,7 @@ async function main() {
           sabtu: "08:00 - 17:00",
           minggu: "09:00 - 14:00",
         }),
+        JSON.stringify(clinicDetailData),
       ]
     );
 
@@ -205,6 +294,22 @@ async function main() {
         fotoPath: "dokter/reyhan.png",
         deskripsi: "Dokter umum berpengalaman lebih dari 8 tahun dalam pelayanan medis primer keluarga.",
         aktif: true,
+        detail: {
+          str: "STR-2026-001",
+          education: [
+            { degree: "Pendidikan Dokter Umum", institution: "Fakultas Kedokteran Universitas Indonesia", year: "2016" },
+            { degree: "Profesi Dokter (dr.)", institution: "FKUI - RSUPN Dr. Cipto Mangunkusumo", year: "2018" },
+            { degree: "Continuing Medical Education (CME)", institution: "Ikatan Dokter Indonesia", year: "2023" }
+          ],
+          experienceYears: 8,
+          almamater: "Universitas Indonesia",
+          certifications: [
+            "Surat Tanda Registrasi (STR) Dokter Aktif KKI",
+            "Advanced Cardiac Life Support (ACLS) - PERKI",
+            "Advanced Trauma Life Support (ATLS) - IKABI",
+            "Sertifikasi Tata Laksana Terpadu Penyakit Tidak Menular"
+          ]
+        }
       },
       {
         id: "c92bc40c-50f7-4801-be98-8b709d968ddd",
@@ -215,6 +320,21 @@ async function main() {
         fotoPath: "dokter/nadira.png",
         deskripsi: "Dokter gigi spesialis konservasi dan estetik gigi keluarga.",
         aktif: true,
+        detail: {
+          str: "STR-2026-002",
+          education: [
+            { degree: "Sarjana Kedokteran Gigi (S.KG)", institution: "Fakultas Kedokteran Gigi Universitas Gadjah Mada", year: "2017" },
+            { degree: "Profesi Dokter Gigi (drg.)", institution: "FKG UGM - RSGM Prof. Soedomo", year: "2019" }
+          ],
+          experienceYears: 7,
+          almamater: "Universitas Gadjah Mada",
+          certifications: [
+            "Surat Tanda Registrasi (STR) Dokter Gigi Aktif KKI",
+            "Persatuan Dokter Gigi Indonesia (PDGI) Cabang Jakarta Selatan",
+            "Hands-on Aesthetic Composite Restoration Mastery",
+            "Workshop Rotary Endodontic in Daily Practice"
+          ]
+        }
       },
       {
         id: "f9473e8b-8d4e-43b9-a54e-3ce6102b3730",
@@ -225,6 +345,21 @@ async function main() {
         fotoPath: "dokter/raka.png",
         deskripsi: "Dokter spesialis anak dengan fokus tumbuh kembang dan imunisasi pediatrik.",
         aktif: true,
+        detail: {
+          str: "STR-2026-003",
+          education: [
+            { degree: "Sarjana Kedokteran & Profesi Dokter", institution: "Fakultas Kedokteran Universitas Airlangga", year: "2014" },
+            { degree: "Spesialis Anak (Sp.A)", institution: "Fakultas Kedokteran Universitas Indonesia", year: "2020" }
+          ],
+          experienceYears: 10,
+          almamater: "Universitas Airlangga & UI",
+          certifications: [
+            "Surat Tanda Registrasi (STR) Dokter Spesialis Anak KKI",
+            "Anggota Ikatan Dokter Anak Indonesia (IDAI) Jaya",
+            "Pediatric Advanced Life Support (PALS) Certified",
+            "Pelatihan Resusitasi Neonatus Terstandar IDAI & Kemenkes"
+          ]
+        }
       },
       {
         id: "e14e6fa1-20f3-4b69-8757-005aa071f2f6",
@@ -235,6 +370,21 @@ async function main() {
         fotoPath: "dokter/annisa.png",
         deskripsi: "Spesialis obstetri dan ginekologi dengan keahlian perawatan antenatal komprehensif.",
         aktif: true,
+        detail: {
+          str: "STR-2026-004",
+          education: [
+            { degree: "Sarjana Kedokteran & Dokter Umum", institution: "Fakultas Kedokteran Universitas Padjadjaran", year: "2015" },
+            { degree: "Spesialis Obstetri & Ginekologi (Sp.OG)", institution: "Fakultas Kedokteran Universitas Indonesia", year: "2021" }
+          ],
+          experienceYears: 9,
+          almamater: "Universitas Padjadjaran & UI",
+          certifications: [
+            "STR Dokter Spesialis Obstetri & Ginekologi KKI",
+            "Perkumpulan Obstetri dan Ginekologi Indonesia (POGI)",
+            "Sertifikasi Ultrasonografi Dasar & Madya ISUOG",
+            "Pelatihan Basic Surgical Skills in Obstetrics & Gynecology"
+          ]
+        }
       },
       {
         id: "a08b318d-4287-4ff6-9a8a-48370b650127",
@@ -245,14 +395,29 @@ async function main() {
         fotoPath: "dokter/alea.png",
         deskripsi: "Dokter spesialis gizi klinis untuk penanganan diet metabolik dan nutrisi klinis.",
         aktif: true,
+        detail: {
+          str: "STR-2026-005",
+          education: [
+            { degree: "Sarjana Kedokteran & Profesi Dokter", institution: "Fakultas Kedokteran Universitas Diponegoro", year: "2018" },
+            { degree: "Spesialis Gizi Klinik (Sp.GK)", institution: "Fakultas Kedokteran Universitas Indonesia", year: "2023" }
+          ],
+          experienceYears: 6,
+          almamater: "Universitas Diponegoro & UI",
+          certifications: [
+            "Surat Tanda Registrasi (STR) Spesialis Gizi Klinis KKI",
+            "Perhimpunan Dokter Spesialis Gizi Klinik Indonesia (PDGKI)",
+            "Clinical Nutrition Course ESPEN (European Society for Clinical Nutrition)",
+            "Sertifikasi Manajemen Terapi Nutrisi pada Sindrom Metabolik"
+          ]
+        }
       },
     ];
 
     for (const d of dokterList) {
       await client.query(
         `
-        INSERT INTO dokter (id, profile_id, nama, spesialisasi, no_sip, foto_path, deskripsi, aktif)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        INSERT INTO dokter (id, profile_id, nama, spesialisasi, no_sip, foto_path, deskripsi, aktif, detail)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         ON CONFLICT (id) DO UPDATE SET
           profile_id = EXCLUDED.profile_id,
           nama = EXCLUDED.nama,
@@ -260,9 +425,10 @@ async function main() {
           no_sip = EXCLUDED.no_sip,
           foto_path = EXCLUDED.foto_path,
           deskripsi = EXCLUDED.deskripsi,
-          aktif = EXCLUDED.aktif
+          aktif = EXCLUDED.aktif,
+          detail = EXCLUDED.detail
         `,
-        [d.id, d.profileId, d.nama, d.spesialisasi, d.noSip, d.fotoPath, d.deskripsi, d.aktif]
+        [d.id, d.profileId, d.nama, d.spesialisasi, d.noSip, d.fotoPath, d.deskripsi, d.aktif, JSON.stringify(d.detail || {})]
       );
     }
 
@@ -276,50 +442,193 @@ async function main() {
         deskripsi: "Pelayanan kesehatan umum, diagnosis keluhan harian, dan rujukan pengobatan.",
         durasiMenit: 30,
         aktif: true,
+        detail: {
+          overview: "Poli Umum merupakan pintu utama pelayanan kesehatan primer bagi pasien dari segala usia. Dokter umum kami siap mendengarkan riwayat kesehatan Anda, melakukan skrining fisik yang teliti, mendiagnosis keluhan medis secara rasional, serta merumuskan penanganan medis dan pola hidup preventif yang tepat sasaran.",
+          steps: [
+            { step: 1, title: "Skrining Tanda Vital & Antropometri", description: "Pemeriksaan tekanan darah, frekuensi denyut nadi, laju napas, suhu tubuh, saturasi oksigen (SpO2), serta indeks massa tubuh (BB/TB)." },
+            { step: 2, title: "Anamnesis Medis Mendalam", description: "Konsultasi terperinci mengenai keluhan utama, kronologi sakit, riwayat pengobatan berjalan, alergi obat, dan pola aktivitas harian." },
+            { step: 3, title: "Pemeriksaan Fisik Terfokus", description: "Pemeriksaan menyeluruh pada saluran napas, pendengaran, tenggorokan, bunyi jantung dan paru, serta palpasi rongga perut." },
+            { step: 4, title: "Diagnosis, Terapi & Edukasi", description: "Penyampaian penjelasan kondisi medis yang mudah dipahami, peresepan obat rasional, surat rujukan bila diperlukan, dan rencana evaluasi." }
+          ],
+          cases: [
+            "Infeksi Saluran Pernapasan Akut (ISPA), batuk, pilek, influenza, dan radang tenggorokan",
+            "Demam berdarah dengue (DBD) derajat awal, demam tifoid, dan malaria",
+            "Hipertensi (tekanan darah tinggi) dan evaluasi penyakit kardiovaskular dasar",
+            "Diabetes Melitus tipe 2 dan pemantauan gula darah sewaktu/puasa",
+            "Dispepsia, gastritis (maag), GERD, dan gangguan saluran pencernaan",
+            "Alergi musiman, dermatitis kontak, urtikaria (biduran), dan infeksi kulit ringan",
+            "Pemeriksaan kesehatan untuk Surat Keterangan Sehat dan kebutuhan administrasi kerja/studi"
+          ],
+          facilities: [
+            "Tensimeter digital aneroid kelas medis terkalibrasi",
+            "Stetoskop akustik Littmann Cardiology Series",
+            "Pulse Oximeter dan Nebulizer kompresor Omron untuk terapi uap pernapasan",
+            "Glukometer, alat tes kolesterol, dan asam urat instan steril",
+            "Perangkat minor surgery kit berbahan stainless steel medis bersertifikasi"
+          ],
+          preparation: "Membawa kartu identitas resmi, membawa daftar nama obat yang sedang dikonsumsi dalam 2 minggu terakhir, dan mencatat riwayat alergi obat/makanan bila ada."
+        }
       },
       {
         namaLayanan: "Kesehatan Gigi",
         deskripsi: "Pemeriksaan kesehatan rongga mulut, pembersihan karang gigi, dan penambalan.",
         durasiMenit: 45,
         aktif: true,
+        detail: {
+          overview: "Poli Gigi Klinik Sehat Sentosa menghadirkan kenyamanan prima bagi pasien yang membutuhkan penanganan masalah gigi dan mulut. Dilengkapi dental chair ergonomis dan pencahayaan sensor LED, dokter gigi kami mengutamakan prosedur minim nyeri serta edukasi pemeliharaan higienitas gigi jangka panjang.",
+          steps: [
+            { step: 1, title: "Pemeriksaan Ekstraoral & Intraoral", description: "Inspeksi menyeluruh pada gusi, mukosa mulut, lidah, oklusi gigi, serta deteksi dini karies atau karang gigi dengan kaca mulut steril." },
+            { step: 2, title: "Rencana Perawatan & Edukasi Visual", description: "Menjelaskan kondisi gigi secara transparan dan mendiskusikan opsi tindakan restoratif yang paling aman dan estetis bagi pasien." },
+            { step: 3, title: "Tindakan Klinis Steril & Terarah", description: "Pelaksanaan pembersihan karang gigi (scaling), penambalan estetik komposit sewarna gigi, atau pencabutan atraumatik." },
+            { step: 4, title: "Aplikasi Pencegahan & Perawatan Lanjut", description: "Instruksi cara sikat gigi yang benar, anjuran pasta gigi terapeutik, serta penjadwalan pemeliharaan berkala tiap 6 bulan." }
+          ],
+          cases: [
+            "Pembersihan karang gigi (Scaling & Root Planing) supragingiva dan subgingiva",
+            "Penambalan gigi karies/berlubang dengan komposit resin estetik sewarna gigi asli",
+            "Penanganan radang gusi (Gingivitis) dan periodontitis tahap awal",
+            "Pencabutan gigi susu (pediatrik) dan pencabutan gigi dewasa non-komplikasi",
+            "Penanganan darurat sakit gigi akibat pulpitis atau infeksi ujung akar",
+            "Konsultasi perawatan estetik dan pemutihan gigi (bleaching gigi) yang aman"
+          ],
+          facilities: [
+            "Dental Unit ergonomis dengan foot-control dan sistem penyaringan air steril",
+            "Ultrasonic Scaler terkalibrasi frekuensi tinggi untuk pembersihan karang gigi lembut",
+            "Light-curing unit LED intensitas tinggi untuk polimerisasi tambalan komposit cepat",
+            "Autoclave Class B vakum untuk sterilisasi mikroba instrumen dental 134°C"
+          ],
+          preparation: "Menyikat gigi bersih sebelum datang ke klinik, sarapan ringan sebelum tindakan dental, dan memberitahukan riwayat konsumsi obat pengencer darah atau alergi anestesi lokal."
+        }
       },
       {
         namaLayanan: "Kesehatan Anak",
         deskripsi: "Konsultasi tumbuh kembang balita, imunisasi dasar, dan penanganan demam anak.",
         durasiMenit: 30,
         aktif: true,
+        detail: {
+          overview: "Kesehatan buah hati Anda adalah prioritas utama kami. Poli Anak dirancang dengan atmosfer yang ceria dan menenangkan untuk mengurangi kecemasan si kecil saat bertemu dokter. Dokter spesialis anak kami mendampingi orang tua memantau kurva pertumbuhan, vaksinasi tepat waktu, serta menangani keluhan kesehatan balita hingga remaja.",
+          steps: [
+            { step: 1, title: "Antropometri Terstandar WHO", description: "Penimbangan berat badan bayi/anak, pengukuran panjang/tinggi badan, dan lingkar kepala yang diplot langsung ke kurva KMS digital." },
+            { step: 2, title: "Skrining Milestone Perkembangan", description: "Evaluasi kemampuan motorik kasar, motorik halus, respons komunikasi, bahasa, serta kemandirian sosial sesuai usia." },
+            { step: 3, title: "Pemeriksaan Fisik Ramah Anak", description: "Pemeriksaan dengan teknik bermain (child-friendly examination) tanpa paksaan untuk memeriksa dada, perut, telinga, dan tenggorokan." },
+            { step: 4, title: "Vaksinasi / Tata Laksana & Edukasi Orang Tua", description: "Pemberian vaksin sesuai jadwal IDAI, panduan nutrisi MPASI gizi seimbang, serta cara tepat menangani demam di rumah." }
+          ],
+          cases: [
+            "Program Imunisasi Dasar & Tambahan (Hepatitis B, BCG, DPT-HB-Hib, Polio, PCV, Rotavirus, MR/MMR, Influenza, Varicela)",
+            "Pemantauan status gizi, pencegahan stunting, dan evaluasi gagal tumbuh (weight faltering)",
+            "Batuk, pilek berulang, bronkiolitis, dan penanganan asma pediatrik",
+            "Diare akut, muntah, dan pencegahan dehidrasi pada bayi dan balita",
+            "Ruam popok, eksim atopik anak, dan kecurigaan alergi susu sapi (CMPA)",
+            "Konseling pemberian Makanan Pendamping ASI (MPASI) bertahap dan konseling laktasi"
+          ],
+          facilities: [
+            "Timbangan bayi digital presisi ketelitian 5 gram dengan infantometer terintegrasi",
+            "Stadiometer presisi tinggi untuk balita dan anak usia sekolah",
+            "Lemari pendingin vaksin khusus medis (2°C – 8°C) dengan pemantau suhu digital 24 jam",
+            "Pojok mainan anak edukatif yang disterilisasi rutin dengan sinar UV-C",
+            "Nebulizer anak dengan masker silikon lembut beraroma buah"
+          ],
+          preparation: "Membawa buku KIA (Buku Pink) atau catatan imunisasi sebelumnya, membawa mainan atau selimut favorit anak, dan mengenakan pakaian longgar berkancing depan."
+        }
       },
       {
         namaLayanan: "Kebidanan dan Kandungan",
         deskripsi: "Pemeriksaan kehamilan rutin, USG kebidanan dasar, dan konseling reproduksi.",
         durasiMenit: 45,
         aktif: true,
+        detail: {
+          overview: "Pelayanan kesehatan reproduksi wanita, pemantauan masa kehamilan, dan deteksi dini komplikasi obstetrik dengan pendekatan menyeluruh dan penuh empati bersama dokter spesialis kebidanan dan kandungan terpercaya.",
+          steps: [
+            { step: 1, title: "Skrining Tanda Vital & Berat Badan Ibu", description: "Pengukuran tekanan darah, denyut nadi, indeks massa tubuh, dan evaluasi kenaikan berat badan kehamilan." },
+            { step: 2, title: "Pemeriksaan Fisik & Ultrasonografi (USG)", description: "Evaluasi denyut jantung janin, taksiran berat janin, posisi plasenta, volume air ketuban, dan anatomi organ." },
+            { step: 3, title: "Konseling & Edukasi Kehamilan Sehat", description: "Panduan nutrisi ibu hamil, tanda bahaya kehamilan, persiapan persalinan matang, serta perencanaan kontrol berkala." }
+          ],
+          cases: [
+            "Pemeriksaan antenatal rutin (Antenatal Care - ANC) trimester I, II, dan III",
+            "Konsultasi program hamil (promil) dan evaluasi kesuburan pasangan",
+            "Pemeriksaan ultrasonografi (USG) kebidanan 2D/4D dasar",
+            "Penanganan keputihan patologis, gangguan menstruasi, dan nyeri panggul",
+            "Konseling kontrasepsi dan pemasangan IUD/implan pascasalin"
+          ],
+          facilities: [
+            "Mesin USG resolusi tinggi dengan probe konveks dan transvaginal",
+            "Fetal Doppler digital untuk pemantauan detak jantung janin presisi",
+            "Ranjang periksa ginekologi elektrik ergonomis dengan pencahayaan medis terarah",
+            "Alat tes laboratorium cepat untuk protein urine dan glukosa urine"
+          ],
+          preparation: "Membawa buku KIA/buku kontrol kehamilan sebelumnya, mencatat hari pertama haid terakhir (HPHT), dan mengenakan pakaian dua potong yang nyaman."
+        }
       },
       {
         namaLayanan: "Konsultasi Gizi",
         deskripsi: "Pengaturan pola makan klinis untuk manajemen berat badan dan penyakit metabolik.",
         durasiMenit: 30,
         aktif: true,
+        detail: {
+          overview: "Pola makan yang tepat adalah pilar fundamental pemulihan dan pencegahan penyakit. Bersama dokter spesialis gizi klinik kami, Anda akan dipandu memahami kebutuhan nutrisi spesifik tubuh Anda berdasarkan tes komposisi bioimpedansi, riwayat penyakit metabolik, serta preferensi menu sehari-hari yang realistis dijalani.",
+          steps: [
+            { step: 1, title: "Pengukuran Bioelectrical Impedance Analysis (BIA)", description: "Analisis mendalam mengenai persentase lemak tubuh, massa otot rangka, lemak viseral, kadar air tubuh, dan laju metabolisme basal (BMR)." },
+            { step: 2, title: "Analisis Dietary Recall 24 Jam", description: "Evaluasi pola konsumsi makan harian, kebiasaan camilan, asupan garam dan gula tersembunyi, serta kecukupan mikronutrien." },
+            { step: 3, title: "Perumusan Terapi Nutrisi Personal", description: "Menghitung target kalori dan distribusi makronutrien (karbohidrat, protein, lemak sehat) yang sesuai dengan kondisi klinis pasien." },
+            { step: 4, title: "Pemberian Meal Plan & Evaluasi Berkala", description: "Menyusun contoh menu mingguan yang fleksibel dan lezat, alternatif bahan makanan pengganti, dan jadwal kontrol progres 2-4 minggu." }
+          ],
+          cases: [
+            "Manajemen gizi penderita Sindrom Metabolik, Diabetes Melitus, dan Prediabetes",
+            "Diet penurunan kolesterol (Dislipidemia) dan pengendalian asam urat (Hiperurisemia)",
+            "Program penurunan berat badan aman (Medical Weight Loss) untuk obesitas",
+            "Program peningkatan berat badan dan massa otot bagi pasien malnutrisi atau sarcopenia",
+            "Konseling gizi ibu hamil, persiapan menyusui, dan nutrisi pascamelahirkan",
+            "Pengaturan pola makan penderita penyakit ginjal kronis stadium awal dan fatty liver"
+          ],
+          facilities: [
+            "Body Composition Analyzer multifrekuensi modern",
+            "Food Model takaran porsi edukatif visual",
+            "Perangkat lunak kalkulasi gizi medik klinis",
+            "Panduan meal plan cetak dan panduan digital praktis untuk dibawa pulang"
+          ],
+          preparation: "Dianjurkan membawa hasil laboratorium darah terbaru (profil lipid, HbA1c, fungsi ginjal bila ada), serta mencatat jenis makanan yang dikonsumsi 2 hari terakhir."
+        }
       },
       {
         namaLayanan: "Pemeriksaan Berkala",
         deskripsi: "Medical check-up berkala untuk evaluasi tekanan darah, gula darah, dan kolesterol.",
         durasiMenit: 45,
         aktif: true,
+        detail: {
+          overview: "Mencegah selalu lebih bijak dan terjangkau daripada mengobati. Program Pemeriksaan Berkala (Medical Check-Up) Klinik Sehat Sentosa dirancang untuk memberikan gambaran komprehensif mengenai kondisi vital organ Anda, mendeteksi kelainan yang seringkali tidak bergejala sejak stadium awal, serta memberikan rencana hidup sehat jangka panjang.",
+          steps: [
+            { step: 1, title: "Registrasi & Kuesioner Riwayat Hidup", description: "Pengisian riwayat penyakit keluarga, kebiasaan merokok, tingkat aktivitas fisik, pola stres, dan riwayat kesehatan lampau." },
+            { step: 2, title: "Pemeriksaan Fisik Head-to-Toe", description: "Pemeriksaan mata, saraf cranial, fungsi kardiovaskular, pernapasan, kelenjar getah bening, dan organ abdomen oleh dokter." },
+            { step: 3, title: "Skrining Penunjang Cepat", description: "Pemeriksaan gula darah puasa/sewaktu, panel kolesterol total, asam urat, rekam jantung (EKG) dasar bila terindikasi, dan tes urine cepat." },
+            { step: 4, title: "Resume Medis & Rekomendasi Terpadu", description: "Penjelasan buku resume hasil cek kesehatan dalam bahasa yang mudah dipahami disertai rekomendasi gaya hidup dan rujukan spesifik." }
+          ],
+          cases: [
+            "Medical Check-Up rutin tahunan untuk deteksi dini risiko penyakit degeneratif",
+            "Skrining kesehatan pranikah (Pre-marital Check) bagi calon pengantin",
+            "Pemeriksaan kesehatan syarat kerja, sertifikasi bebas narkoba awal, dan MCU institusi",
+            "Evaluasi fungsi organ vital bagi kelompok usia dewasa muda hingga lanjut usia (geriatri)"
+          ],
+          facilities: [
+            "Alat rekam jantung digital (EKG) 12-lead dengan analisis gelombang otomatis",
+            "Point-of-Care Testing (POCT) laboratorium mikro berstandar akurasi tinggi",
+            "Ruang konsultasi pribadi untuk mendiskusikan resume medis secara rahasia"
+          ],
+          preparation: "Berpuasa 8-10 jam sebelum jadwal pemeriksaan jika paket mencakup pemeriksaan gula darah puasa (hanya diperbolehkan minum air putih), dan cukup tidur minimal 7 jam."
+        }
       },
     ];
 
     for (const l of layananList) {
       await client.query(
         `
-        INSERT INTO layanan (nama_layanan, deskripsi, durasi_menit, aktif)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO layanan (nama_layanan, deskripsi, durasi_menit, aktif, detail)
+        VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT (nama_layanan) DO UPDATE SET
           deskripsi = EXCLUDED.deskripsi,
           durasi_menit = EXCLUDED.durasi_menit,
-          aktif = EXCLUDED.aktif
+          aktif = EXCLUDED.aktif,
+          detail = EXCLUDED.detail
         `,
-        [l.namaLayanan, l.deskripsi, l.durasiMenit, l.aktif]
+        [l.namaLayanan, l.deskripsi, l.durasiMenit, l.aktif, JSON.stringify(l.detail || {})]
       );
     }
 
