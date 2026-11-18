@@ -209,6 +209,8 @@ export default function ClinicWorkspace({
     busy,
     setBusy,
     loadingData,
+    dataError,
+    reloadAllData,
     authChecked,
     editingProfile,
     setEditingProfile,
@@ -2310,14 +2312,11 @@ export default function ClinicWorkspace({
                     description: l.deskripsi || "",
                     duration: l.durasiMenit || 20,
                     active: l.aktif ?? true,
-                    overview: l.deskripsi || existing?.overview || "",
-                    steps: existing?.steps || [
-                      { step: 1, title: "Registrasi & Skrining", description: "Pemeriksaan tanda vital" },
-                      { step: 2, title: "Konsultasi Dokter", description: "Pemeriksaan dan tindakan" },
-                    ],
-                    cases: existing?.cases || ["Pemeriksaan umum"],
-                    facilities: existing?.facilities || ["Ruang periksa terstandar"],
-                    preparation: existing?.preparation || "Bawa kartu identitas resmi.",
+                    overview: l.overview || l.detail?.overview || l.deskripsi || "",
+                    steps: l.steps || l.detail?.steps || [],
+                    cases: l.cases || l.detail?.cases || [],
+                    facilities: l.facilities || l.detail?.facilities || [],
+                    preparation: l.preparation || l.detail?.preparation || "",
                   };
                 })
               );
@@ -2986,14 +2985,11 @@ export default function ClinicWorkspace({
                                   description: l.deskripsi || "",
                                   duration: l.durasiMenit || 20,
                                   active: l.aktif ?? true,
-                                  overview: l.deskripsi || existing?.overview || "",
-                                  steps: existing?.steps || [
-                                    { step: 1, title: "Registrasi & Skrining", description: "Pemeriksaan tanda vital" },
-                                    { step: 2, title: "Konsultasi Dokter", description: "Pemeriksaan dan tindakan" },
-                                  ],
-                                  cases: existing?.cases || ["Pemeriksaan umum"],
-                                  facilities: existing?.facilities || ["Ruang periksa terstandar"],
-                                  preparation: existing?.preparation || "Bawa kartu identitas resmi.",
+                                  overview: l.overview || l.detail?.overview || l.deskripsi || "",
+                                  steps: l.steps || l.detail?.steps || [],
+                                  cases: l.cases || l.detail?.cases || [],
+                                  facilities: l.facilities || l.detail?.facilities || [],
+                                  preparation: l.preparation || l.detail?.preparation || "",
                                 };
                               })
                             );
@@ -4215,6 +4211,85 @@ export default function ClinicWorkspace({
               </div>
             ))}
           </div>
+        </div>
+      </div>
+    );
+  }
+  if (dataError && doctors.length === 0 && services.length === 0) {
+    return (
+      <div
+        className="app ws-app"
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "24px",
+          background: "#f8fafc",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: "460px",
+            width: "100%",
+            background: "#ffffff",
+            border: "1px solid #fecaca",
+            borderRadius: "16px",
+            padding: "36px 28px",
+            textAlign: "center",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.05)",
+          }}
+        >
+          <div
+            style={{
+              width: "56px",
+              height: "56px",
+              borderRadius: "50%",
+              background: "#fee2e2",
+              color: "#dc2626",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 18px",
+            }}
+          >
+            <Icon name="alert" size={28} />
+          </div>
+          <h2
+            style={{
+              fontSize: "19px",
+              fontWeight: 700,
+              color: "#0f172a",
+              marginBottom: "8px",
+            }}
+          >
+            Gagal Memuat Data Server
+          </h2>
+          <p
+            style={{
+              fontSize: "13.5px",
+              color: "#64748b",
+              lineHeight: 1.65,
+              marginBottom: "24px",
+            }}
+          >
+            {dataError}
+          </p>
+          <button
+            onClick={() => reloadAllData && reloadAllData()}
+            className="primary"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "10px 24px",
+              fontWeight: 600,
+              fontSize: "14px",
+              cursor: "pointer",
+            }}
+          >
+            <Icon name="refresh" size={16} /> Coba Lagi
+          </button>
         </div>
       </div>
     );

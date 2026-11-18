@@ -29,14 +29,6 @@ import {
 } from "@/utils/api"
 import {
   DEMO_DATE,
-  doctorsSeed,
-  patientsSeed,
-  schedulesSeed,
-  servicesSeed,
-  visitsSeed,
-  notificationsSeed,
-  notificationJobsSeed,
-  clinicDetailSeed,
   remaining,
   queueLabel,
   type Role,
@@ -263,28 +255,30 @@ type ClinicContextType = {
   saveExamination: (e: FormEvent<HTMLFormElement>) => Promise<void>
   showEditor: (type: string, id?: string) => void
   resetToDefaults: () => void
+  dataError: string | null
+  reloadAllData: () => Promise<void>
 }
 
-const defaultClinic: ClinicProfile = {
-  name: clinicDetailSeed.name,
-  description: clinicDetailSeed.description,
-  address: clinicDetailSeed.address,
-  phone: clinicDetailSeed.phone,
-  latitude: clinicDetailSeed.latitude,
-  longitude: clinicDetailSeed.longitude,
-  hours: clinicDetailSeed.hours,
-  emergencyPhone: clinicDetailSeed.emergencyPhone,
-  whatsapp: clinicDetailSeed.whatsapp,
-  email: clinicDetailSeed.email,
-  tagline: clinicDetailSeed.tagline,
-  history: clinicDetailSeed.history,
-  vision: clinicDetailSeed.vision,
-  mission: clinicDetailSeed.mission,
-  values: clinicDetailSeed.values,
-  accreditation: clinicDetailSeed.accreditation,
-  accreditationNumber: clinicDetailSeed.accreditationNumber,
-  facilities: clinicDetailSeed.facilities,
-  stats: clinicDetailSeed.stats,
+const emptyClinic: ClinicProfile = {
+  name: "",
+  description: "",
+  address: "",
+  phone: "",
+  latitude: "-6.208800",
+  longitude: "106.845600",
+  hours: "",
+  emergencyPhone: "",
+  whatsapp: "",
+  email: "",
+  tagline: "",
+  history: "",
+  vision: "",
+  mission: [],
+  values: [],
+  accreditation: "",
+  accreditationNumber: "",
+  facilities: [],
+  stats: [],
 }
 
 const defaultUsers: ClinicUser[] = [
@@ -391,18 +385,19 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role>("Publik")
   const [page, setPage] = useState("Beranda")
 
-  const [visits, setVisits] = useState<Visit[]>(visitsSeed)
-  const [patients, setPatients] = useState<Patient[]>(patientsSeed)
-  const [doctors, setDoctors] = useState<Doctor[]>(doctorsSeed)
-  const [services, setServices] = useState<Service[]>(servicesSeed)
-  const [schedules, setSchedules] = useState<Schedule[]>(schedulesSeed)
+  const [visits, setVisits] = useState<Visit[]>([])
+  const [patients, setPatients] = useState<Patient[]>([])
+  const [doctors, setDoctors] = useState<Doctor[]>([])
+  const [services, setServices] = useState<Service[]>([])
+  const [schedules, setSchedules] = useState<Schedule[]>([])
   const [users, setUsers] = useState<ClinicUser[]>([])
   const [currentUser, setCurrentUser] = useState<ClinicUser | null>(null)
-  const [clinic, setClinic] = useState<ClinicProfile>(defaultClinic)
+  const [clinic, setClinic] = useState<ClinicProfile>(emptyClinic)
+  const [dataError, setDataError] = useState<string | null>(null)
 
   // Notification States
-  const [notifications, setNotifications] = useState<NotificationItem[]>(notificationsSeed)
-  const [notificationJobs, setNotificationJobs] = useState<NotificationJob[]>(notificationJobsSeed)
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
+  const [notificationJobs, setNotificationJobs] = useState<NotificationJob[]>([])
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false)
   const [webPushPermission, setWebPushPermission] = useState<
     "default" | "granted" | "denied" | "unsupported"
@@ -595,24 +590,23 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   }
 
   // Muat data live dari Backend API internal (/api/public/*, /api/auth/me, /api/kunjungan)
-  useEffect(() => {
-    async function fetchVisits(): Promise<boolean> {
-      try {
-        const res = await apiGetKunjungan()
-        if (res.data && res.data.length > 0) {
-          const dbVisits: Visit[] = res.data.map(konversiKunjungan)
-          setVisits(dbVisits)
-          return true
-        }
-      } catch (err) {
-        console.warn("Gagal memuat kunjungan dari backend:", err)
+  async function fetchVisits(): Promise<boolean> {
+    try {
+      const res = await apiGetKunjungan()
+      if (res.data && res.data.length > 0) {
+        const dbVisits: Visit[] = res.data.map(konversiKunjungan)
+        setVisits(dbVisits)
+        return true
       }
-      return false
+    } catch (err) {
+      console.warn("Gagal memuat kunjungan dari backend:", err)
     }
+    return false
+  }
 
-    async function loadBackendData() {
-      setLoadingData(true)
-      let currentRole: Role | null = null
+  const loadBackendData = async () => {
+    setLoadingData(true)
+    let currentRole: Role | null = null
       try {
         // 1. Cek sesi login aktif via cookie httpOnly
         try {
@@ -699,40 +693,54 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           apiGetProfilKlinik(),
         ])
 
+        // Cek apakah data katalog gagal dimuat karena server down/offline
+        if (clinicRes.error && docsRes.error && svcsRes.error) {
+          setDataError(clinicRes.error.message || "Gagal memuat data dari server klinik. Periksa koneksi dan coba lagi.")
+        } else {
+          setDataError(null)
+        }
+
         if (clinicRes.data) {
           const c = clinicRes.data
-          setClinic((prev) => ({
-            ...prev,
-            name: c.nama || prev.name,
-            description: c.deskripsi || prev.description,
-            address: c.alamat || prev.address,
-            phone: c.kontak || prev.phone,
-            latitude: String(c.latitude ?? prev.latitude),
-            longitude: String(c.longitude ?? prev.longitude),
-          }))
+          const detail = c.detail || {}
+          setClinic({
+            name: c.nama || "",
+            description: c.deskripsi || "",
+            address: c.alamat || "",
+            phone: c.kontak || "",
+            latitude: String(c.latitude ?? "-6.208800"),
+            longitude: String(c.longitude ?? "106.845600"),
+            hours: typeof c.jamOperasional === "string" ? c.jamOperasional : (c.hours || "Senin – Sabtu, 08.00 – 20.00 WIB"),
+            emergencyPhone: c.emergencyPhone || detail.emergencyPhone || "",
+            whatsapp: c.whatsapp || detail.whatsapp || "",
+            email: c.email || detail.email || "",
+            tagline: c.tagline || detail.tagline || "",
+            history: c.history || detail.history || c.deskripsi || "",
+            vision: c.vision || detail.vision || "",
+            mission: c.mission || detail.mission || [],
+            values: c.values || detail.values || [],
+            accreditation: c.accreditation || detail.accreditation || "",
+            accreditationNumber: c.accreditationNumber || detail.accreditationNumber || "",
+            facilities: c.facilities || detail.facilities || [],
+            stats: c.stats || detail.stats || [],
+          })
         }
 
         let loadedServices: Service[] = []
         if (svcsRes.data && svcsRes.data.length > 0) {
           loadedServices = svcsRes.data.map((l: any) => {
-            const existing = servicesSeed.find(
-              (s) => s.id === l.id || s.name.toLowerCase() === (l.namaLayanan || l.nama_layanan)?.toLowerCase()
-            )
+            const detail = l.detail || {}
             return {
               id: l.id,
-              name: l.namaLayanan || l.nama_layanan,
+              name: l.namaLayanan || l.nama_layanan || "",
               description: l.deskripsi || "",
-              duration: l.durasiMenit || l.durasi_menit || 20,
+              duration: l.durasiMenit || l.durasi_menit || 30,
               active: l.aktif ?? true,
-              overview: l.deskripsi || existing?.overview || "",
-              steps: existing?.steps || [
-                { step: 1, title: "Registrasi & Skrining", description: "Pemeriksaan tanda vital dasar." },
-                { step: 2, title: "Konsultasi & Pemeriksaan", description: "Konsultasi langsung bersama dokter." },
-                { step: 3, title: "Tindakan & Resep", description: "Pemberian instruksi medis dan edukasi." },
-              ],
-              cases: existing?.cases || ["Pemeriksaan umum", "Konsultasi keluhan awal"],
-              facilities: existing?.facilities || ["Ruang periksa ber-AC", "Alat diagnosa standar"],
-              preparation: existing?.preparation || "Bawa kartu identitas atau bukti pendaftaran.",
+              overview: l.overview || detail.overview || l.deskripsi || "",
+              steps: l.steps || detail.steps || [],
+              cases: l.cases || detail.cases || [],
+              facilities: l.facilities || detail.facilities || [],
+              preparation: l.preparation || detail.preparation || "",
             }
           })
           setServices(loadedServices)
@@ -742,20 +750,20 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         if (docsRes.data && docsRes.data.length > 0) {
           loadedDoctors = docsRes.data.map((d: any) => {
             const docServices = (d.layanan || []).map((rel: any) => rel.id)
-            const existing = doctorsSeed.find((seed) => seed.name.toLowerCase() === d.nama?.toLowerCase())
+            const detail = d.detail || {}
             return {
               id: d.id,
               name: d.nama,
               specialty: d.spesialisasi,
-              sip: d.noSip || d.no_sip || "SIP-2026-000",
-              str: existing?.str || "STR-2026-000",
-              services: docServices.length > 0 ? docServices : (existing?.services || []),
+              sip: d.noSip || d.no_sip || "",
+              str: d.str || detail.str || "",
+              services: docServices,
               active: d.aktif ?? true,
-              education: existing?.education || [{ degree: d.spesialisasi, institution: "Fakultas Kedokteran" }],
-              experienceYears: existing?.experienceYears || 5,
-              almamater: existing?.almamater || "Fakultas Kedokteran",
-              certifications: existing?.certifications || ["Ikatan Dokter Indonesia (IDI)"],
-              bio: d.deskripsi || existing?.bio || "Dokter berkompeten dan berdedikasi tinggi.",
+              education: d.education || detail.education || [],
+              experienceYears: d.experienceYears ?? detail.experienceYears ?? 0,
+              almamater: d.almamater || detail.almamater || "",
+              certifications: d.certifications || detail.certifications || [],
+              bio: d.bio || detail.bio || d.deskripsi || "",
               photoUrl: d.fotoUrl || undefined,
             }
           })
@@ -838,8 +846,9 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    loadBackendData()
-  }, [])
+    useEffect(() => {
+      loadBackendData()
+    }, [])
 
   // Polling antrean setiap 5 detik HANYA saat currentUser aktif (PRD §8.5 & K5)
   // Polling TIDAK BOLEH berjalan bila currentUser kosong.
@@ -1804,13 +1813,9 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   }
 
   const resetToDefaults = () => {
-    setVisits(visitsSeed)
-    setPatients(patientsSeed)
-    setDoctors(doctorsSeed)
-    setServices(servicesSeed)
-    setSchedules(schedulesSeed)
+    setVisits([])
+    setPatients([])
     setUsers([])
-    setClinic(defaultClinic)
     setNotifications([])
     setNotificationJobs([])
     setRole("Publik")
@@ -1820,6 +1825,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("sehatklinik_state_v3")
     localStorage.removeItem("sehatklinik_current_user")
     setCurrentUser(null)
+    loadBackendData()
     notify("Data sistem berhasil direset.")
   }
 
@@ -2034,6 +2040,9 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
       }
       await apiLogout(currentEndpoint ? { endpoint: currentEndpoint } : undefined)
     } catch {}
+    setVisits([])
+    setPatients([])
+    setUsers([])
     setPushSubscriptionActive(false)
     setPushSubscriptionError(null)
     setCurrentUser(null)
@@ -2166,6 +2175,8 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         saveExamination,
         showEditor,
         resetToDefaults,
+        dataError,
+        reloadAllData: loadBackendData,
       }}
     >
       {children}
