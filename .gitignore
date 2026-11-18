@@ -45,12 +45,12 @@ docs/DOKUMEN_INDUK.md
 docs/Kontrak API*.md
 docs/RENCANA_PENGERJAAN.md
 
-# Historical test scripts
-scripts/bersihkan-outbox.mjs
-scripts/uji-1d.*
-scripts/uji-1e.*
-scripts/uji-api.ps1
-scripts/uji-celah-role.ps1
-scripts/uji-pembatalan.ps1
-scripts/uji-verifikasi-1c.ps1
+# Historical test scripts (dipindah ke scripts/uji/)
+scripts/db/bersihkan-outbox.mjs
+scripts/uji/uji-1d.*
+scripts/uji/uji-1e.*
+scripts/uji/uji-api.ps1
+scripts/uji/uji-celah-role.ps1
+scripts/uji/uji-pembatalan.ps1
+scripts/uji/uji-verifikasi-1c.ps1
 

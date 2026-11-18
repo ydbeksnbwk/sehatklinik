@@ -8,8 +8,8 @@
     "start": "node ./node_modules/next/dist/bin/next start",
     "lint": "node ./node_modules/next/dist/bin/next lint",
     "db:pull": "node --env-file=.env.local ./node_modules/drizzle-kit/bin.cjs pull",
-    "db:migrate": "node --env-file=.env.local scripts/migrate.mjs",
-    "db:seed": "node --env-file=.env.local scripts/seed.mjs",
+    "db:migrate": "node --env-file=.env.local scripts/db/migrate.mjs",
+    "db:seed": "node --env-file=.env.local scripts/db/seed.mjs",
     "worker": "node --env-file=.env.local worker/index.mjs",
     "worker:prod": "node worker/index.mjs"
   },

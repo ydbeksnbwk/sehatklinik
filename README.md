@@ -103,7 +103,7 @@ REDIS_URL=rediss://default:token@host.upstash.io:6379
 ### 1. Eksekusi Migrasi Skema
 Menjalankan berkas migrasi SQL berurutan (`01` sampai `12`) pada database:
 ```bash
-npm run db:migrate
+node --env-file=.env.local scripts/db/migrate.mjs
 ```
 
 ### 2. Eksekusi Seed Data Idempoten
@@ -111,7 +111,7 @@ Mengisi master data klinik, katalog layanan, jadwal praktik terstandar, 6 akun p
 
 **PowerShell (Windows):**
 ```powershell
-$env:SEED_ALLOW="1"; npm run db:seed
+$env:SEED_ALLOW="1"; node --env-file=.env.local scripts/db/seed.mjs
 ```
 
 **Bash / Linux / macOS:**
@@ -200,10 +200,10 @@ npm run worker
 Repositori dilengkapi dengan suite pengujian otomatis untuk memverifikasi integritas backend:
 ```powershell
 # 1. Master Suite Pengujian Alur PRD §5 & Keamanan API
-powershell -ExecutionPolicy Bypass -File scripts/uji-suite.ps1
+powershell -ExecutionPolicy Bypass -File scripts/uji/uji-suite.ps1
 
 # 2. Pembuktian Integritas Constraint Database (SQL ROLLBACK)
-node --env-file=.env.local scripts/run-verifikasi-db.mjs # atau eksekusi scripts/verifikasi-db.sql di PostgreSQL client
+node --env-file=.env.local scripts/db/verifikasi-db.sql # atau eksekusi langsung di PostgreSQL client
 
 # 3. Pengecekan Type Safety & Linting
 npx tsc --noEmit
