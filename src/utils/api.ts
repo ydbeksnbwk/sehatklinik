@@ -365,7 +365,7 @@ export type PekerjaanNotifikasiItem = {
   id: string;
   jenisKejadian: string | null;
   pesan: string;
-  pushStatus: "menunggu" | "berhasil" | "gagal";
+  pushStatus: "menunggu" | "berhasil" | "terkirim" | "gagal";
   pushPercobaan: number;
   pushError: string | null;
   pushDiprosesAt: string | null;

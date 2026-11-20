@@ -206,3 +206,139 @@ export const remaining = (schedule: Schedule, date: string, visits: Visit[]) =>
           v.status !== "Dibatalkan",
       ).length,
   )
+
+export const formatNotificationMessage = (
+  rawPesan: string,
+  doctors?: Doctor[],
+  visits?: Visit[],
+): string => {
+  if (!rawPesan) return ""
+  let formatted = String(rawPesan).replace(/^\[SEED\]\s*/i, "")
+
+  // Tentukan indeks dokter dari pencocokan nama dokter dalam pesan
+  let doctorIdx = -1
+  if (doctors && doctors.length > 0) {
+    for (let i = 0; i < doctors.length; i++) {
+      const doc = doctors[i]
+      if (!doc?.name) continue
+      if (formatted.toLowerCase().includes(doc.name.toLowerCase())) {
+        doctorIdx = i
+        break
+      }
+      const cleanDocName = doc.name
+        .replace(/^(?:drg?\.\s*|dr\.\s*)/i, "")
+        .split(",")[0]
+        .trim()
+      if (
+        cleanDocName.length > 3 &&
+        formatted.toLowerCase().includes(cleanDocName.toLowerCase())
+      ) {
+        doctorIdx = i
+        break
+      }
+    }
+  }
+
+  const formatQueueTicket = (rawNum: number | string, docIndex: number) => {
+    const n = typeof rawNum === "string" ? parseInt(rawNum, 10) : rawNum
+    const numPart = String(isNaN(n) ? rawNum : n).padStart(3, "0")
+    const prefix = docIndex >= 0 ? String(docIndex + 1).padStart(2, "0") : "01"
+    return `${prefix}-${numPart}`
+  }
+
+  // Pola: "Kunjungan <UUID> (<label>)" -> "Kunjungan <label>"
+  formatted = formatted.replace(
+    /Kunjungan\s+([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s*\(([^)]+)\)/gi,
+    "Kunjungan $2",
+  )
+
+  // Pola: "<UUID> (<label>)" -> "<label>"
+  formatted = formatted.replace(
+    /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s*\(([^)]+)\)/gi,
+    "$2",
+  )
+
+  // Seragamkan format tanggal di pesan (DD-MM-YYYY atau YYYY-MM-DD) menggunakan dateLabel(...)
+  formatted = formatted.replace(
+    /\b(\d{2})-(\d{2})-(\d{4})\b/g,
+    (_, day, month, year) => {
+      const dNum = parseInt(day, 10)
+      const mNum = parseInt(month, 10)
+      const yNum = parseInt(year, 10)
+      if (
+        dNum >= 1 &&
+        dNum <= 31 &&
+        mNum >= 1 &&
+        mNum <= 12 &&
+        yNum >= 2000 &&
+        yNum <= 2099
+      ) {
+        return dateLabel(`${year}-${month}-${day}`)
+      }
+      return `${day}-${month}-${year}`
+    },
+  )
+  formatted = formatted.replace(
+    /\b(\d{4})-(\d{2})-(\d{2})\b/g,
+    (_, year, month, day) => {
+      const dNum = parseInt(day, 10)
+      const mNum = parseInt(month, 10)
+      const yNum = parseInt(year, 10)
+      if (
+        dNum >= 1 &&
+        dNum <= 31 &&
+        mNum >= 1 &&
+        mNum <= 12 &&
+        yNum >= 2000 &&
+        yNum <= 2099
+      ) {
+        return dateLabel(`${year}-${month}-${day}`)
+      }
+      return `${year}-${month}-${day}`
+    },
+  )
+
+  // Konversi pola nomor antrean mentah dari backend ke format tiket queueLabel (contoh: "01-001", "02-001")
+  formatted = formatted.replace(
+    /(nomor\s+antrean(?:\s+Anda)?(?:\s*:)?\s*|antrean(?:\s+nomor)?(?:\s*:)?\s*)(\d+)\b(?!-\d)/gi,
+    (_, prefix, num) => {
+      return `${prefix}${formatQueueTicket(num, doctorIdx)}`
+    },
+  )
+
+  // Pola UUID: ganti dengan queueLabel jika cocok dengan kunjungan lokal
+  if (visits && visits.length > 0) {
+    formatted = formatted.replace(
+      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+      (uuid) => {
+        const v = visits.find(
+          (vis) => vis.id.toLowerCase() === uuid.toLowerCase(),
+        )
+        if (v) {
+          const dIdx = doctors ? doctors.findIndex((d) => d.id === v.doctor) : -1
+          return queueLabel(v, dIdx)
+        }
+        return ""
+      },
+    )
+  }
+
+  // Hapus sisa UUID panjang / hex ID apa pun yang masih muncul di dalam pesan
+  formatted = formatted.replace(/#[0-9a-f]{6,}/gi, "")
+  formatted = formatted.replace(
+    /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
+    "",
+  )
+  formatted = formatted.replace(/\b[0-9a-f]{16,}\b/gi, "")
+
+  // Bersihkan kurung kosong, pemisah ganda, dan spasi berlebih
+  formatted = formatted
+    .replace(/\(\s*\)/g, "")
+    .replace(/·\s*·/g, "·")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+([,.:;)])/g, "$1")
+    .trim()
+
+  return formatted
+}
+

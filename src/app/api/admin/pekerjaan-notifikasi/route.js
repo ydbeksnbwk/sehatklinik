@@ -6,7 +6,7 @@ import { apiHandler } from "@/lib/api-handler";
 
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { notifikasi, profiles } from "@/db/schema";
 import { handleError, requireRole } from "@/lib/auth";
@@ -14,7 +14,7 @@ import { handleError, requireRole } from "@/lib/auth";
 const QuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(10),
-  status: z.enum(["semua", "menunggu", "berhasil", "gagal"]).default("semua"),
+  status: z.enum(["semua", "menunggu", "berhasil", "terkirim", "gagal"]).default("semua"),
 });
 
 async function _GET(request) {
@@ -49,7 +49,16 @@ async function _GET(request) {
     // 3. Kondisi filter push_status
     const conditions = [];
     if (status !== "semua") {
-      conditions.push(eq(notifikasi.pushStatus, status));
+      if (status === "terkirim" || status === "berhasil") {
+        conditions.push(
+          or(
+            eq(notifikasi.pushStatus, "berhasil"),
+            eq(notifikasi.pushStatus, "terkirim")
+          )
+        );
+      } else {
+        conditions.push(eq(notifikasi.pushStatus, status));
+      }
     }
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -68,7 +77,7 @@ async function _GET(request) {
         id: notifikasi.id,
         jenisKejadian: notifikasi.jenisKejadian,
         pesan: notifikasi.pesan,
-        pushStatus: notifikasi.pushStatus,
+        pushStatus: sql`CASE WHEN ${notifikasi.pushStatus} = 'berhasil' THEN 'terkirim' ELSE ${notifikasi.pushStatus} END`.as("push_status"),
         pushPercobaan: notifikasi.pushPercobaan,
         pushError: notifikasi.pushError,
         pushDiprosesAt: notifikasi.pushDiprosesAt,

@@ -35,6 +35,7 @@ import {
   remaining,
   dateLabel,
   queueLabel,
+  formatNotificationMessage,
   type Role,
   type Visit,
   type Patient,
@@ -256,6 +257,48 @@ export default function ClinicWorkspace({
   const [jobsLiveLoading, setJobsLiveLoading] = useState(false);
   const [jobsLiveError, setJobsLiveError] = useState<string | null>(null);
   const [jobsLiveStatus, setJobsLiveStatus] = useState("semua");
+  const [jobsLiveRefreshKey, setJobsLiveRefreshKey] = useState(0);
+
+  useEffect(() => {
+    if (page !== "Pekerjaan Notifikasi") return;
+    let isMounted = true;
+    setJobsLiveLoading(true);
+    setJobsLiveError(null);
+    apiGetPekerjaanNotifikasi({
+      page: pagination,
+      pageSize: 10,
+      status: jobsLiveStatus,
+    })
+      .then((res) => {
+        if (!isMounted) return;
+        if (res.error) {
+          setJobsLiveError(
+            res.error.message || "Gagal memuat pekerjaan notifikasi.",
+          );
+        } else {
+          setJobsLive(res.data || []);
+          if (res.meta) {
+            setJobsLiveMeta({
+              page: res.meta.page || pagination,
+              pageSize: res.meta.pageSize || 10,
+              total: res.meta.total || 0,
+              totalPages: res.meta.totalPages || 1,
+            });
+          }
+        }
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        setJobsLiveError(err.message || "Gagal memuat pekerjaan notifikasi.");
+      })
+      .finally(() => {
+        if (isMounted) setJobsLiveLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [page, pagination, jobsLiveStatus, jobsLiveRefreshKey]);
 
   useEffect(() => {
     setMounted(true);
@@ -3554,12 +3597,20 @@ export default function ClinicWorkspace({
         </div>
       );
     if (page === "Pekerjaan Notifikasi") {
+      const filteredJobsLive = jobsLive.filter((j) => {
+        if (jobsLiveStatus === "semua") return true;
+        if (jobsLiveStatus === "terkirim") {
+          return j.pushStatus === "terkirim" || j.pushStatus === "berhasil";
+        }
+        return j.pushStatus === jobsLiveStatus;
+      });
+
       return (
         <section className="panel queue-panel">
           <div className="panel-heading">
             <div>
               <span className="eyebrow">
-                MONITORING WEB PUSH & WORKER (PRD §7.5)
+                MONITORING WEB PUSH & WORKER
               </span>
               <h3>Pekerjaan Notifikasi Web Push</h3>
               <p>
@@ -3573,31 +3624,7 @@ export default function ClinicWorkspace({
                 className="secondary"
                 disabled={jobsLiveLoading}
                 onClick={() => {
-                  setJobsLiveLoading(true);
-                  setJobsLiveError(null);
-                  apiGetPekerjaanNotifikasi({
-                    page: pagination,
-                    pageSize: 10,
-                    status: jobsLiveStatus,
-                  })
-                    .then((res) => {
-                      if (res.error)
-                        setJobsLiveError(
-                          res.error.message ||
-                            "Gagal memuat pekerjaan notifikasi.",
-                        );
-                      else {
-                        setJobsLive(res.data || []);
-                        if (res.meta)
-                          setJobsLiveMeta({
-                            page: res.meta.page || pagination,
-                            pageSize: res.meta.pageSize || 10,
-                            total: res.meta.total || 0,
-                            totalPages: res.meta.totalPages || 1,
-                          });
-                      }
-                    })
-                    .finally(() => setJobsLiveLoading(false));
+                  setJobsLiveRefreshKey((k) => k + 1);
                 }}
               >
                 <Icon name="refresh" size={14} />
@@ -3646,7 +3673,7 @@ export default function ClinicWorkspace({
                 >
                   <option value="semua">Semua Status</option>
                   <option value="menunggu">Menunggu</option>
-                  <option value="berhasil">Berhasil</option>
+                  <option value="terkirim">Terkirim</option>
                   <option value="gagal">Gagal</option>
                 </select>
               </div>
@@ -3665,15 +3692,15 @@ export default function ClinicWorkspace({
             <table>
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Waktu Dibuat</th>
+                  <th className="whitespace-nowrap">ID</th>
+                  <th className="whitespace-nowrap">Waktu Dibuat</th>
                   <th>Penerima</th>
                   <th>Jenis Kejadian</th>
-                  <th>Pesan</th>
-                  <th>Status Push</th>
-                  <th>Percobaan</th>
-                  <th>Diproses Pada</th>
-                  <th>Keterangan / Error</th>
+                  <th className="whitespace-normal break-words max-w-xs">Pesan</th>
+                  <th className="whitespace-nowrap">Status Push</th>
+                  <th className="whitespace-nowrap">Percobaan</th>
+                  <th className="whitespace-nowrap">Diproses Pada</th>
+                  <th className="whitespace-normal break-words max-w-xs">Keterangan / Error</th>
                 </tr>
               </thead>
               <tbody>
@@ -3685,14 +3712,14 @@ export default function ClinicWorkspace({
                         </td>
                       </tr>
                     ))
-                  : jobsLive.map((j) => (
+                  : filteredJobsLive.map((j) => (
                       <tr key={j.id}>
-                        <td>
+                        <td className="whitespace-nowrap">
                           <code title={j.id} style={{ fontSize: "11px" }}>
                             {j.id ? j.id.slice(0, 8) : "-"}
                           </code>
                         </td>
-                        <td>
+                        <td className="whitespace-nowrap">
                           <small
                             style={{ color: "var(--text-muted, #64748b)" }}
                           >
@@ -3707,28 +3734,30 @@ export default function ClinicWorkspace({
                         <td>
                           <code>{j.jenisKejadian || "-"}</code>
                         </td>
-                        <td style={{ maxWidth: "260px" }}>
-                          <span style={{ fontSize: "12.5px" }}>{j.pesan}</span>
+                        <td className="whitespace-normal break-words max-w-xs">
+                          <span style={{ fontSize: "12.5px" }}>
+                            {formatNotificationMessage(j.pesan, doctors, visits)}
+                          </span>
                         </td>
-                        <td>
+                        <td className="whitespace-nowrap">
                           <span
                             className={`job-status-badge ${
-                              j.pushStatus === "berhasil"
+                              j.pushStatus === "terkirim" || j.pushStatus === "berhasil"
                                 ? "status-success"
                                 : j.pushStatus === "gagal"
                                   ? "status-failed"
                                   : "status-queued"
                             }`}
                           >
-                            {j.pushStatus === "berhasil"
-                              ? "Berhasil"
+                            {j.pushStatus === "terkirim" || j.pushStatus === "berhasil"
+                              ? "Terkirim"
                               : j.pushStatus === "gagal"
                                 ? "Gagal"
                                 : "Menunggu"}
                           </span>
                         </td>
-                        <td>{j.pushPercobaan}x</td>
-                        <td>
+                        <td className="whitespace-nowrap">{j.pushPercobaan}x</td>
+                        <td className="whitespace-nowrap">
                           <small
                             style={{ color: "var(--text-muted, #64748b)" }}
                           >
@@ -3739,14 +3768,14 @@ export default function ClinicWorkspace({
                               : "-"}
                           </small>
                         </td>
-                        <td>
+                        <td className="whitespace-normal break-words max-w-xs">
                           {j.pushError ? (
                             <span
                               style={{ color: "#dc2626", fontSize: "11px" }}
                             >
                               {j.pushError}
                             </span>
-                          ) : j.pushStatus === "berhasil" ? (
+                          ) : j.pushStatus === "terkirim" || j.pushStatus === "berhasil" ? (
                             <span
                               style={{ color: "#16a34a", fontSize: "11px" }}
                             >
@@ -3764,13 +3793,13 @@ export default function ClinicWorkspace({
                     ))}
               </tbody>
             </table>
-            {!jobsLiveLoading && !jobsLive.length && !jobsLiveError && (
+            {!jobsLiveLoading && !filteredJobsLive.length && !jobsLiveError && (
               <div className="empty">Tidak ada data pekerjaan notifikasi.</div>
             )}
           </div>
           {renderPaginationBar(
             jobsLiveMeta.total,
-            jobsLive.length,
+            filteredJobsLive.length,
             "pekerjaan",
             jobsLiveMeta.totalPages,
             jobsLiveMeta.page,
